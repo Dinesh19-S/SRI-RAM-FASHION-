@@ -89,7 +89,7 @@ Backend runs at: http://localhost:5000
 ## 🔧 Tech Stack
 
 ### Frontend
-- React 18 + TypeScript
+- React 18 + Javascript 
 - Vite
 - React Router v6
 - Recharts (charts)
