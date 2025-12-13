@@ -1,0 +1,482 @@
+/* Bill Template Styles - A4 Size Layout */
+.bill-template {
+    width: 210mm;
+    height: 297mm;
+    max-height: 297mm;
+    padding: 5mm;
+    margin: 0 auto;
+    background: white;
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+    color: #000;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.bill-template.for-print {
+    padding: 3mm;
+    margin: 0;
+}
+
+/* Header */
+.bill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 3px;
+    padding-bottom: 3px;
+}
+
+.company-name {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1a4d7c;
+    letter-spacing: 1px;
+}
+
+.gstin {
+    font-size: 16px;
+    font-weight: bold;
+    color: #000;
+}
+
+/* Address and Invoice Section */
+.bill-info-section {
+    display: flex;
+    border: 1px solid #000;
+    margin-bottom: 0;
+}
+
+.address-section {
+    flex: 2;
+    padding: 4px 6px;
+    border-right: 1px solid #000;
+}
+
+.address-line {
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+.invoice-section {
+    flex: 1;
+    padding: 4px 6px;
+}
+
+.invoice-row {
+    display: flex;
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.invoice-label {
+    font-weight: 500;
+    min-width: 95px;
+    text-align: left;
+}
+
+.invoice-colon {
+    width: 10px;
+    text-align: center;
+}
+
+.invoice-value {
+    flex: 1;
+    text-align: right;
+}
+
+.invoice-value-inline {
+    width: 70px;
+    text-align: left;
+    margin-right: 5px;
+}
+
+.invoice-label-inline {
+    font-weight: 500;
+    width: 20px;
+    text-align: left;
+}
+
+/* Buyer Section */
+.buyer-section {
+    display: flex;
+    border: 1px solid #000;
+    border-top: none;
+    min-height: 55px;
+}
+
+.buyer-left {
+    flex: 1.2;
+    padding: 4px 6px;
+    border-right: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.consigner-copy {
+    font-size: 8px;
+    margin-bottom: 3px;
+    font-style: italic;
+}
+
+.buyer-row {
+    display: flex;
+    gap: 5px;
+    align-items: baseline;
+}
+
+.buyer-label {
+    font-weight: bold;
+    font-size: 10px;
+}
+
+.buyer-value {
+    font-size: 10px;
+}
+
+.buyer-center {
+    flex: 1.8;
+    padding: 4px 6px;
+    border-right: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+}
+
+.tax-invoice-title {
+    color: #1a4d7c;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.buyer-detail {
+    display: flex;
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.buyer-detail span:first-child {
+    min-width: 75px;
+    font-weight: 500;
+}
+
+.buyer-detail span:last-child {
+    flex: 1;
+}
+
+.buyer-right {
+    flex: 0.8;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-start;
+}
+
+.buyer-right-row {
+    display: flex;
+    justify-content: flex-end;
+    font-size: 9px;
+}
+
+.buyer-right-label {
+    font-weight: bold;
+    text-align: right;
+}
+
+.buyer-right-colon {
+    width: 10px;
+    text-align: center;
+}
+
+.buyer-right-value {
+    min-width: 20px;
+    text-align: right;
+}
+
+.buyer-phone {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    text-align: right;
+}
+
+/* Items Table */
+.items-table-container {
+    border: 1px solid #000;
+    border-top: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9px;
+    table-layout: fixed;
+    flex: 1;
+}
+
+.items-table th,
+.items-table td {
+    border: 1px solid #000;
+    padding: 2px 4px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.items-table th {
+    background: #f0f0f0;
+    font-weight: bold;
+    font-size: 9px;
+    padding: 3px 2px;
+}
+
+.items-table .sno-col {
+    width: 28px;
+}
+
+.items-table .product-col {
+    width: 130px;
+    text-align: left;
+    padding-left: 5px;
+}
+
+.items-table .hsn-col {
+    width: 50px;
+}
+
+.items-table .sizes-col {
+    width: 70px;
+}
+
+.items-table .rate-piece-col {
+    width: 50px;
+}
+
+.items-table .pcs-pack-col {
+    width: 40px;
+}
+
+.items-table .rate-pack-col {
+    width: 55px;
+}
+
+.items-table .packs-col {
+    width: 45px;
+}
+
+.items-table .amount-col {
+    width: 60px;
+    text-align: right;
+    padding-right: 5px;
+}
+
+.items-table tbody tr {
+    height: 16px;
+}
+
+.items-table tbody td {
+    font-size: 9px;
+}
+
+/* Footer Section - Bottom Totals Area */
+.bill-footer-section {
+    display: flex;
+    border: 1px solid #000;
+    border-top: none;
+    min-height: 75px;
+}
+
+.footer-left {
+    flex: 1.8;
+    padding: 5px 8px;
+    border-right: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.totals-row {
+    display: flex;
+    align-items: baseline;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.total-label {
+    font-weight: bold;
+    width: 80px;
+}
+
+.total-colon {
+    width: 15px;
+    text-align: center;
+}
+
+.total-value {
+    flex: 1;
+    font-weight: 500;
+}
+
+.total-value.words {
+    font-size: 9px;
+    font-weight: normal;
+}
+
+.footer-center {
+    flex: 1.2;
+    padding: 5px 8px;
+    border-right: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.bundles-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.gst-box {
+    border: 2px solid #8b0000;
+    padding: 4px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.gst-label {
+    color: #8b0000;
+    font-weight: bold;
+    font-size: 10px;
+}
+
+.gst-value {
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.footer-right {
+    flex: 1;
+    padding: 4px 8px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+.summary-row span:last-child {
+    font-weight: 500;
+    text-align: right;
+    min-width: 50px;
+}
+
+.summary-row.gst-rate {
+    color: #8b0000;
+}
+
+.summary-row.total-final {
+    font-weight: bold;
+    font-size: 10px;
+    border-top: 1px solid #000;
+    margin-top: 2px;
+    padding-top: 3px;
+}
+
+/* Terms and Bank Section */
+.terms-bank-section {
+    display: flex;
+    border: 1px solid #000;
+    border-top: none;
+    font-size: 9px;
+    min-height: 60px;
+}
+
+.terms-section {
+    flex: 1.8;
+    padding: 5px 8px;
+    border-right: 1px solid #000;
+}
+
+.terms-title {
+    font-weight: bold;
+    margin-bottom: 3px;
+    font-size: 9px;
+}
+
+.terms-text {
+    font-size: 8px;
+    line-height: 1.4;
+}
+
+.bank-section {
+    flex: 1.5;
+    padding: 5px 8px;
+    border-right: 1px solid #000;
+}
+
+.bank-row {
+    display: flex;
+    font-size: 9px;
+    line-height: 1.6;
+}
+
+.bank-label {
+    font-weight: bold;
+    min-width: 75px;
+}
+
+.signature-section {
+    flex: 1;
+    padding: 5px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.certified-text {
+    font-size: 8px;
+    color: #8b0000;
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* Print Styles */
+@media print {
+    .bill-template {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 5mm;
+        page-break-after: always;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .items-table th {
+        background: #f0f0f0 !important;
+    }
+}
+
+@page {
+    size: A4;
+    margin: 0;
+}
