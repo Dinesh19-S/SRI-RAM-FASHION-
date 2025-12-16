@@ -13,7 +13,7 @@ const ReportActions = ({ onExcel, onPrint, onEmail, showInvoice = false, onInvoi
 
             <button
                 onClick={onPrint}
-                className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
             >
                 <Printer size={18} />
                 PRINT
@@ -21,7 +21,7 @@ const ReportActions = ({ onExcel, onPrint, onEmail, showInvoice = false, onInvoi
 
             <button
                 onClick={onEmail}
-                className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
             >
                 <Mail size={18} />
                 MAIL TO

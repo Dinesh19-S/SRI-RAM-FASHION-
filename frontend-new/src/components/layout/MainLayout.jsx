@@ -21,7 +21,10 @@ import {
     FileText,
     ShoppingCart,
     TrendingUp,
-    Scale
+    Scale,
+    Users,
+    Hash,
+    Truck
 } from 'lucide-react';
 
 const navigationSections = [
@@ -63,6 +66,15 @@ const navigationSections = [
         ]
     },
     {
+        title: 'Master',
+        items: [
+            { name: 'Supplier Entry', href: '/master/suppliers', icon: Truck },
+            { name: 'Customer Entry', href: '/master/customers', icon: Users },
+            { name: 'Items', href: '/master/items', icon: Package },
+            { name: 'HSN', href: '/master/hsn', icon: Hash },
+        ]
+    },
+    {
         title: 'Main Menu',
         items: [
             { name: 'Settings', href: '/settings', icon: Settings },
@@ -94,6 +106,10 @@ const MainLayout = () => {
         { label: 'Stock Reports', path: '/reports/stock', keywords: ['stock', 'report', 'inventory'] },
         { label: 'Auditor - Purchase', path: '/auditor/purchase', keywords: ['auditor', 'purchase', 'audit'] },
         { label: 'Auditor - Sales', path: '/auditor/sales', keywords: ['auditor', 'sales', 'audit'] },
+        { label: 'Customer Entry', path: '/master/customers', keywords: ['customer', 'entry', 'master', 'company'] },
+        { label: 'Items', path: '/master/items', keywords: ['items', 'hsn', 'product', 'master'] },
+        { label: 'Supplier Entry', path: '/master/suppliers', keywords: ['supplier', 'vendor', 'entry', 'master'] },
+        { label: 'HSN', path: '/master/hsn', keywords: ['hsn', 'code', 'gst', 'tax'] },
         { label: 'Settings', path: '/settings', keywords: ['settings', 'config', 'preferences'] },
     ];
 
@@ -135,7 +151,7 @@ const MainLayout = () => {
     };
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50">
+        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#f9f7f4' }}>
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div
@@ -145,21 +161,21 @@ const MainLayout = () => {
             )}
 
             {/* Sidebar */}
-            <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex items-center gap-3 p-4 border-b border-gray-200">
-                    <div className="w-10 h-10 bg-purple-600 rounded-xl flex items-center justify-center text-white">
-                        <Store size={22} />
+            <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ backgroundColor: '#1e3a5f' }}>
+                <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: '#2d4a6a' }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: '#d4a853' }}>
+                        <Store size={26} />
                     </div>
                     <div>
-                        <div className="font-semibold text-gray-900">Sri Ram Fashions</div>
-                        <div className="text-xs text-gray-500">Business Management</div>
+                        <div className="text-lg font-bold uppercase tracking-wide" style={{ color: '#d4a853', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>Sri Ram Fashions</div>
+                        <div className="text-xs font-medium" style={{ color: '#60a5fa' }}>Business Management</div>
                     </div>
                 </div>
 
                 <nav className="p-4 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
                     {navigationSections.map((section, sectionIndex) => (
                         <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-6' : ''}>
-                            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                            <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#60a5fa' }}>
                                 {section.title}
                             </div>
                             {section.items.map((item) => (
@@ -196,7 +212,7 @@ const MainLayout = () => {
                         </button>
 
                         <div className="hidden md:block relative" ref={searchRef}>
-                            <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 w-80 focus-within:ring-2 focus-within:ring-purple-500 transition-all">
+                            <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2 w-80 focus-within:ring-2 transition-all" style={{ '--tw-ring-color': '#3b82f6' }}>
                                 <Search size={18} className="text-gray-400" />
                                 <input
                                     type="text"
@@ -216,7 +232,7 @@ const MainLayout = () => {
                                     {filteredSuggestions.map((suggestion, index) => (
                                         <div
                                             key={suggestion.path}
-                                            className={`px-4 py-2 cursor-pointer hover:bg-purple-50 flex items-center gap-3 ${index === 0 ? 'bg-purple-50' : ''}`}
+                                            className={`px-4 py-2 cursor-pointer flex items-center gap-3 ${index === 0 ? 'bg-blue-50' : 'hover:bg-blue-50'}`}
                                             onClick={() => handleSearchSelect(suggestion.path)}
                                         >
                                             <Search size={16} className="text-gray-400" />
@@ -244,7 +260,7 @@ const MainLayout = () => {
                                 className="flex items-center gap-3 cursor-pointer"
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                             >
-                                <div className="w-9 h-9 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center font-semibold">
+                                <div className="w-9 h-9 rounded-lg flex items-center justify-center font-semibold text-white" style={{ backgroundColor: '#3b82f6' }}>
                                     {user?.name?.charAt(0) || 'A'}
                                 </div>
                                 <div className="hidden md:block">
@@ -282,8 +298,8 @@ const MainLayout = () => {
                 <main className="flex-1 overflow-y-auto p-4 lg:p-6">
                     <Outlet />
                 </main>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

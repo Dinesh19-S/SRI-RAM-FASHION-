@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Scale } from 'lucide-react';
+import { Scale, Search } from 'lucide-react';
 import DateRangeFilter from '../components/reports/DateRangeFilter';
 import ReportActions from '../components/reports/ReportActions';
 import ReportHeader from '../components/reports/ReportHeader';
@@ -103,8 +103,8 @@ const AuditorPurchasePage = () => {
         <div className="space-y-6 animate-fade-in">
             {/* Page Header */}
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Scale className="text-purple-600" size={20} />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#dbeafe' }}>
+                    <Scale style={{ color: '#1e40af' }} size={20} />
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900">Auditor Report - Purchase</h1>
             </div>
@@ -121,8 +121,8 @@ const AuditorPurchasePage = () => {
                             <label className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
                             <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="form-input w-32 text-sm py-1.5" />
                         </div>
-                        <button onClick={handleSearch} disabled={isLoading} className="flex items-center gap-1.5 px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
-                            <Scale size={14} />
+                        <button onClick={handleSearch} disabled={isLoading} className="btn-search">
+                            <Search size={14} />
                             {isLoading ? 'LOADING...' : 'SEARCH'}
                         </button>
                         <button onClick={() => { setFromDate(''); setToDate(''); }} className="px-3 py-1.5 text-gray-500 hover:text-gray-700 font-medium text-sm">Clear</button>

@@ -115,4 +115,58 @@ export const dashboardAPI = {
     getLowStockAlerts: () => api.get('/dashboard/low-stock-alerts'),
 };
 
+// Customers API
+export const customersAPI = {
+    getAll: (params) => api.get('/customers', { params }),
+    getById: (id) => api.get(`/customers/${id}`),
+    create: (data) => api.post('/customers', data),
+    update: (id, data) => api.put(`/customers/${id}`, data),
+    delete: (id) => api.delete(`/customers/${id}`),
+};
+
+// HSN API
+export const hsnAPI = {
+    getAll: (params) => api.get('/hsn', { params }),
+    getById: (id) => api.get(`/hsn/${id}`),
+    create: (data) => api.post('/hsn', data),
+    update: (id, data) => api.put(`/hsn/${id}`, data),
+    delete: (id) => api.delete(`/hsn/${id}`),
+};
+
+// Suppliers API
+export const suppliersAPI = {
+    getAll: (params) => api.get('/suppliers', { params }),
+    getById: (id) => api.get(`/suppliers/${id}`),
+    create: (data) => api.post('/suppliers', data),
+    update: (id, data) => api.put(`/suppliers/${id}`, data),
+    delete: (id) => api.delete(`/suppliers/${id}`),
+};
+
+// Payments API
+export const paymentsAPI = {
+    getAll: (params) => api.get('/payments', { params }),
+    getById: (id) => api.get(`/payments/${id}`),
+    create: (data) => api.post('/payments', data),
+    update: (id, data) => api.put(`/payments/${id}`, data),
+    delete: (id) => api.delete(`/payments/${id}`),
+};
+
+// Sales Entries API
+export const salesEntriesAPI = {
+    getAll: (params) => api.get('/sales-entries', { params }),
+    getById: (id) => api.get(`/sales-entries/${id}`),
+    create: (data) => api.post('/sales-entries', data),
+    update: (id, data) => api.put(`/sales-entries/${id}`, data),
+    delete: (id) => api.delete(`/sales-entries/${id}`),
+};
+
+// Purchase Entries API
+export const purchaseEntriesAPI = {
+    getAll: (params) => api.get('/purchase-entries', { params }),
+    getById: (id) => api.get(`/purchase-entries/${id}`),
+    create: (data) => api.post('/purchase-entries', data),
+    update: (id, data) => api.put(`/purchase-entries/${id}`, data),
+    delete: (id) => api.delete(`/purchase-entries/${id}`),
+};
+
 export default api;

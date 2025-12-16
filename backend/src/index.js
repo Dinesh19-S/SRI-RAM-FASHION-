@@ -17,6 +17,12 @@ import inventoryRoutes from './routes/inventory.js';
 import reportRoutes from './routes/reports.js';
 import settingsRoutes from './routes/settings.js';
 import dashboardRoutes from './routes/dashboard.js';
+import customerRoutes from './routes/customers.js';
+import hsnRoutes from './routes/hsn.js';
+import supplierRoutes from './routes/suppliers.js';
+import paymentRoutes from './routes/payments.js';
+import salesEntriesRoutes from './routes/salesEntries.js';
+import purchaseEntriesRoutes from './routes/purchaseEntries.js';
 
 const app = express();
 
@@ -92,6 +98,12 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/hsn', hsnRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/sales-entries', salesEntriesRoutes);
+app.use('/api/purchase-entries', purchaseEntriesRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

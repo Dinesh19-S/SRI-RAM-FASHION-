@@ -35,25 +35,25 @@ const ReportsPage = () => {
         } finally { setLoading(false); }
     };
 
-    const COLORS = ['#8b5cf6', '#10b981', '#06b6d4', '#f59e0b'];
+    const COLORS = ['#3b82f6', '#10b981', '#06b6d4', '#d4a853'];
     const formatCurrency = (a) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(a || 0);
     const totalPayments = paymentMethods.reduce((s, p) => s + p.value, 0);
 
     const statsCards = [
-        { title: 'Total Revenue', value: formatCurrency(stats.totalRevenue), icon: IndianRupee, color: 'purple' },
+        { title: 'Total Revenue', value: formatCurrency(stats.totalRevenue), icon: IndianRupee, color: 'sage' },
         { title: 'Total Orders', value: stats.totalOrders || 0, icon: ShoppingBag, color: 'blue' },
         { title: 'Avg Order Value', value: formatCurrency(stats.avgOrderValue), icon: TrendingUp, color: 'green' },
         { title: 'Total Tax Collected', value: formatCurrency(stats.totalTax), icon: Package, color: 'orange' }
     ];
 
     const colorClasses = {
-        purple: 'bg-purple-100 text-purple-600',
+        sage: 'bg-green-100 text-green-700',
         blue: 'bg-blue-100 text-blue-600',
         green: 'bg-green-100 text-green-600',
         orange: 'bg-orange-100 text-orange-600'
     };
 
-    if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" /></div>;
+    if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} /></div>;
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -81,9 +81,9 @@ const ReportsPage = () => {
                 {salesTrend.length === 0 ? <p className="text-gray-500 text-center py-8">No sales data for this period</p> : (
                     <ResponsiveContainer width="100%" height={300}>
                         <AreaChart data={salesTrend}>
-                            <defs><linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient></defs>
+                            <defs><linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" /><XAxis dataKey="date" stroke="#9ca3af" /><YAxis stroke="#9ca3af" tickFormatter={(v) => `₹${v / 1000}K`} />
-                            <Tooltip formatter={(v) => formatCurrency(v)} /><Area type="monotone" dataKey="revenue" stroke="#8b5cf6" fill="url(#colorRev)" strokeWidth={2} />
+                            <Tooltip formatter={(v) => formatCurrency(v)} /><Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="url(#colorRev)" strokeWidth={2} />
                         </AreaChart>
                     </ResponsiveContainer>
                 )}
@@ -96,10 +96,10 @@ const ReportsPage = () => {
                         <div className="space-y-4">
                             {topProducts.map((p, i) => (
                                 <div key={i} className="flex items-center gap-4">
-                                    <span className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-sm font-semibold">{i + 1}</span>
+                                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-semibold" style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}>{i + 1}</span>
                                     <div className="flex-1">
-                                        <div className="flex justify-between mb-1"><span className="font-medium text-gray-900">{p._id}</span><span className="text-purple-600 font-semibold">{formatCurrency(p.totalRevenue)}</span></div>
-                                        <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-gray-100 rounded-full"><div className="h-2 bg-purple-500 rounded-full" style={{ width: `${topProducts[0]?.totalRevenue ? (p.totalRevenue / topProducts[0].totalRevenue) * 100 : 0}%` }} /></div><span className="text-xs text-gray-500">{p.totalQuantity} units</span></div>
+                                        <div className="flex justify-between mb-1"><span className="font-medium text-gray-900">{p._id}</span><span style={{ color: '#1e40af' }} className="font-semibold">{formatCurrency(p.totalRevenue)}</span></div>
+                                        <div className="flex items-center gap-2"><div className="flex-1 h-2 bg-gray-100 rounded-full"><div className="h-2 rounded-full" style={{ backgroundColor: '#3b82f6', width: `${topProducts[0]?.totalRevenue ? (p.totalRevenue / topProducts[0].totalRevenue) * 100 : 0}%` }} /></div><span className="text-xs text-gray-500">{p.totalQuantity} units</span></div>
                                     </div>
                                 </div>
                             ))}
@@ -117,7 +117,7 @@ const ReportsPage = () => {
                                 return (
                                     <div key={i}>
                                         <div className="flex justify-between mb-1"><span className="font-medium text-gray-900">{c._id}</span><span className="text-gray-500">{formatCurrency(c.revenue)} ({percent}%)</span></div>
-                                        <div className="h-3 bg-gray-100 rounded-full"><div className="h-3 bg-purple-500 rounded-full" style={{ width: `${percent}%` }} /></div>
+                                        <div className="h-3 bg-gray-100 rounded-full"><div className="h-3 rounded-full" style={{ backgroundColor: '#3b82f6', width: `${percent}%` }} /></div>
                                     </div>
                                 );
                             })}

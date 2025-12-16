@@ -52,11 +52,11 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 p-4">
+        <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)' }}>
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                    <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1e3a5f', boxShadow: '0 4px 14px rgba(30, 58, 47, 0.3)' }}>
                         <span className="text-2xl font-bold text-white">SRF</span>
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900">Sri Ram Fashions</h1>
@@ -116,7 +116,7 @@ const LoginPage = () => {
                                 <input type="checkbox" className="rounded border-gray-300" />
                                 Remember me
                             </label>
-                            <a href="#" className="text-purple-600 hover:text-purple-700">Forgot password?</a>
+                            <a href="#" className="hover:underline" style={{ color: '#3b82f6' }}>Forgot password?</a>
                         </div>
 
                         <button
@@ -166,7 +166,7 @@ const LoginPage = () => {
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-600">
                             Don't have an account?{' '}
-                            <a href="/register" className="text-purple-600 hover:text-purple-700 font-medium">
+                            <a href="/register" className="font-medium hover:underline" style={{ color: '#3b82f6' }}>
                                 Sign Up
                             </a>
                         </p>
@@ -239,7 +239,8 @@ const LoginPage = () => {
                                     </button>
                                     <div className="text-center">
                                         <button
-                                            className="text-sm text-purple-600 hover:text-purple-700"
+                                            className="text-sm hover:underline"
+                                            style={{ color: '#3b82f6' }}
                                             onClick={() => setOtpStep('phone')}
                                         >
                                             Change Phone Number

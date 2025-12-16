@@ -3,9 +3,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchBills, createBill, deleteBill } from '../store/slices/billsSlice';
 import { fetchProducts } from '../store/slices/productsSlice';
 import { fetchSettings } from '../store/slices/settingsSlice';
-import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download } from 'lucide-react';
+import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users } from 'lucide-react';
 import BillTemplate from '../components/BillTemplate';
 import { downloadBillPDF } from '../utils/pdfGenerator';
+import { customersAPI } from '../services/api';
 
 const BillingPage = () => {
     const dispatch = useDispatch();
@@ -33,12 +34,50 @@ const BillingPage = () => {
     const [billItems, setBillItems] = useState([]);
     const [discount, setDiscount] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('cash');
+    const [customerSearch, setCustomerSearch] = useState('');
+    const [customerSuggestions, setCustomerSuggestions] = useState([]);
+    const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+    const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
 
     useEffect(() => {
         dispatch(fetchBills());
         dispatch(fetchProducts());
         dispatch(fetchSettings());
     }, [dispatch]);
+
+    // Search customers when customerSearch changes
+    useEffect(() => {
+        const searchCustomers = async () => {
+            if (customerSearch.length < 2) {
+                setCustomerSuggestions([]);
+                return;
+            }
+            setIsSearchingCustomers(true);
+            try {
+                const response = await customersAPI.getAll({ search: customerSearch, limit: 5 });
+                setCustomerSuggestions(response.data.data || []);
+            } catch (error) {
+                console.error('Error searching customers:', error);
+            } finally {
+                setIsSearchingCustomers(false);
+            }
+        };
+        const debounce = setTimeout(searchCustomers, 300);
+        return () => clearTimeout(debounce);
+    }, [customerSearch]);
+
+    const selectCustomer = (selectedCustomer) => {
+        setCustomer({
+            name: selectedCustomer.companyName || '',
+            phone: selectedCustomer.mobile || '',
+            address: selectedCustomer.address || '',
+            gstin: selectedCustomer.gstin || '',
+            state: selectedCustomer.state || 'Tamilnadu',
+            stateCode: selectedCustomer.stateCode || '33'
+        });
+        setCustomerSearch(selectedCustomer.companyName);
+        setShowCustomerDropdown(false);
+    };
 
     const addItemToBill = (product) => {
         const existing = billItems.find(item => item.productId === product._id);
@@ -233,7 +272,7 @@ const BillingPage = () => {
 
             <div className="card overflow-hidden p-0">
                 {isLoading ? (
-                    <div className="flex items-center justify-center h-32"><div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" /></div>
+                    <div className="flex items-center justify-center h-32"><div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} /></div>
                 ) : filteredBills.length === 0 ? (
                     <div className="text-center py-12 text-gray-500"><FileText size={48} className="mx-auto mb-2 opacity-50" /><p>No bills found</p></div>
                 ) : (
@@ -242,7 +281,7 @@ const BillingPage = () => {
                         <tbody>
                             {filteredBills.map((bill) => (
                                 <tr key={bill._id}>
-                                    <td className="font-medium text-purple-600">{bill.billNumber}</td>
+                                    <td className="font-medium" style={{ color: '#1e40af' }}>{bill.billNumber}</td>
                                     <td>{new Date(bill.date || bill.createdAt).toLocaleDateString('en-IN')}</td>
                                     <td><div><p className="font-medium">{bill.customer?.name}</p><p className="text-xs text-gray-500">{bill.customer?.phone}</p></div></td>
                                     <td className="font-semibold">{formatCurrency(bill.grandTotal)}</td>
@@ -317,27 +356,94 @@ const BillingPage = () => {
                         <div className="p-4 overflow-y-auto max-h-[70vh]">
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                    <h4 className="font-semibold text-gray-900">Buyer Details</h4>
+                                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                        <Users size={18} style={{ color: '#1e40af' }} />
+                                        Buyer Details
+                                    </h4>
+
+                                    {/* Customer Search */}
+                                    <div className="relative">
+                                        <label className="text-xs text-gray-500 mb-1 block">Search Customer</label>
+                                        <div className="relative">
+                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                            <input
+                                                className="form-input pl-9"
+                                                placeholder="Search by company name, phone, or GSTIN..."
+                                                value={customerSearch}
+                                                onChange={(e) => {
+                                                    setCustomerSearch(e.target.value);
+                                                    setShowCustomerDropdown(true);
+                                                }}
+                                                onFocus={() => setShowCustomerDropdown(true)}
+                                            />
+                                            {isSearchingCustomers && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        {showCustomerDropdown && customerSuggestions.length > 0 && (
+                                            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                {customerSuggestions.map((cust) => (
+                                                    <div
+                                                        key={cust._id}
+                                                        className="px-4 py-3 cursor-pointer hover:bg-green-50 border-b border-gray-100 last:border-b-0"
+                                                        onClick={() => selectCustomer(cust)}
+                                                    >
+                                                        <p className="font-medium text-gray-900">{cust.companyName}</p>
+                                                        <p className="text-xs text-gray-500">{cust.mobile} • {cust.gstin || 'No GSTIN'}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {showCustomerDropdown && customerSearch.length >= 2 && customerSuggestions.length === 0 && !isSearchingCustomers && (
+                                            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-center text-gray-500 text-sm">
+                                                No customers found. Fill details below.
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-3">
-                                        <input className="form-input" placeholder="Buyer Name *" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
-                                        <input className="form-input" placeholder="Phone Number *" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Buyer Name *</label>
+                                            <input className="form-input" placeholder="Enter buyer name" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Phone Number *</label>
+                                            <input className="form-input" placeholder="Enter phone number" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <input className="form-input" placeholder="GSTIN" value={customer.gstin} onChange={(e) => setCustomer({ ...customer, gstin: e.target.value })} />
-                                        <input className="form-input" placeholder="Transport" value={transport} onChange={(e) => setTransport(e.target.value)} />
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">GSTIN</label>
+                                            <input className="form-input" placeholder="Enter GSTIN" value={customer.gstin} onChange={(e) => setCustomer({ ...customer, gstin: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Transport</label>
+                                            <input className="form-input" placeholder="Enter transport" value={transport} onChange={(e) => setTransport(e.target.value)} />
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <input className="form-input" placeholder="State" value={customer.state} onChange={(e) => setCustomer({ ...customer, state: e.target.value })} />
-                                        <input className="form-input" placeholder="State Code" value={customer.stateCode} onChange={(e) => setCustomer({ ...customer, stateCode: e.target.value })} />
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">State</label>
+                                            <input className="form-input" placeholder="State" value={customer.state} onChange={(e) => setCustomer({ ...customer, state: e.target.value })} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">State Code</label>
+                                            <input className="form-input" placeholder="State Code" value={customer.stateCode} onChange={(e) => setCustomer({ ...customer, stateCode: e.target.value })} />
+                                        </div>
                                     </div>
-                                    <input className="form-input" placeholder="Address (optional)" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Address (optional)</label>
+                                        <input className="form-input" placeholder="Enter address" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
+                                    </div>
 
                                     <h4 className="font-semibold text-gray-900 pt-4">Select Products</h4>
                                     <div className="space-y-2 max-h-48 overflow-y-auto">
                                         {products.length === 0 ? <p className="text-gray-500 text-center py-4">No products available</p> : products.map((product) => (
                                             <div key={product._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={() => addItemToBill(product)}>
                                                 <div><p className="font-medium text-gray-900">{product.name}</p><p className="text-sm text-gray-500">{product.sku} • HSN: {product.hsn || 'N/A'}</p></div>
-                                                <div className="text-right"><p className="font-semibold text-purple-600">{formatCurrency(product.sellingPrice)}</p><button className="text-xs text-purple-600">+ Add</button></div>
+                                                <div className="text-right"><p className="font-semibold" style={{ color: '#1e40af' }}>{formatCurrency(product.sellingPrice)}</p><button className="text-xs" style={{ color: '#1e40af' }}>+ Add</button></div>
                                             </div>
                                         ))}
                                     </div>
@@ -388,11 +494,11 @@ const BillingPage = () => {
                                         <div className="flex justify-between text-gray-600"><span>CGST @ {cgstRate}%</span><span>{formatCurrency(cgstAmount)}</span></div>
                                         <div className="flex justify-between text-gray-600"><span>SGST @ {sgstRate}%</span><span>{formatCurrency(sgstAmount)}</span></div>
                                         <div className="flex justify-between text-gray-600"><span>Total Packs</span><span>{totalPacks}</span></div>
-                                        <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200"><span>Grand Total</span><span className="text-purple-600">{formatCurrency(grandTotal)}</span></div>
+                                        <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200"><span>Grand Total</span><span style={{ color: '#1e40af' }}>{formatCurrency(grandTotal)}</span></div>
                                     </div>
                                     <div><label className="form-label">Payment Method</label>
                                         <div className="grid grid-cols-4 gap-2">{['cash', 'upi', 'card', 'credit'].map((method) => (
-                                            <button key={method} className={`py-2 px-3 rounded-lg border text-sm font-medium capitalize ${paymentMethod === method ? 'border-purple-500 bg-purple-50 text-purple-600' : 'border-gray-200 text-gray-600'}`} onClick={() => setPaymentMethod(method)}>{method}</button>
+                                            <button key={method} className={`py-2 px-3 rounded-lg border text-sm font-medium capitalize ${paymentMethod === method ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600'}`} onClick={() => setPaymentMethod(method)}>{method}</button>
                                         ))}</div>
                                     </div>
                                 </div>

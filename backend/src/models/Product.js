@@ -41,6 +41,10 @@ const productSchema = new mongoose.Schema({
         type: String,
         default: 'pcs'
     },
+    size: {
+        type: String,
+        trim: true
+    },
     hsn: String,
     gstRate: {
         type: Number,

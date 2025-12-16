@@ -1,9 +1,15 @@
-import { useState } from 'react';
-import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
+import { salesEntriesAPI, customersAPI } from '../services/api';
 
 const SalesEntryPage = () => {
     const [showNewEntry, setShowNewEntry] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [sales, setSales] = useState([]);
+    const [customers, setCustomers] = useState([]);
+    const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
     const [filters, setFilters] = useState({
         invNo: '',
         customer: '',
@@ -11,7 +17,11 @@ const SalesEntryPage = () => {
         toDate: ''
     });
 
-    // New Sales Entry State
+    // New/Edit Sales Entry State
+    const [isEditing, setIsEditing] = useState(false);
+    const [selectedEntry, setSelectedEntry] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showViewModal, setShowViewModal] = useState(false);
     const [newSale, setNewSale] = useState({
         customer: '',
         date: new Date().toISOString().split('T')[0],
@@ -22,48 +32,75 @@ const SalesEntryPage = () => {
         { id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }
     ]);
 
-    // Sample data for demonstration
-    const [sales] = useState([
-        { id: 1, date: '2024-12-01', invNo: 'SINV001', customerName: 'Raj Textiles', qty: 80, amount: 12000 },
-        { id: 2, date: '2024-12-02', invNo: 'SINV002', customerName: 'Kumar Stores', qty: 45, amount: 7500 },
-        { id: 3, date: '2024-12-03', invNo: 'SINV003', customerName: 'Fashion Hub', qty: 60, amount: 9500 },
-    ]);
+    useEffect(() => {
+        fetchSales();
+        fetchCustomers();
+    }, [pagination.page, pagination.limit]);
 
-    // Filter sales based on search criteria
-    const filteredSales = sales.filter(sale => {
-        // Filter by invoice number
-        if (filters.invNo && !sale.invNo.toLowerCase().includes(filters.invNo.toLowerCase())) {
-            return false;
+    const fetchSales = async () => {
+        setIsLoading(true);
+        try {
+            const params = {
+                page: pagination.page,
+                limit: pagination.limit
+            };
+            if (filters.invNo) params.search = filters.invNo;
+            if (filters.customer) params.search = filters.customer;
+            if (filters.fromDate) params.fromDate = filters.fromDate;
+            if (filters.toDate) params.toDate = filters.toDate;
+
+            const response = await salesEntriesAPI.getAll(params);
+            setSales(response.data.data || []);
+            setPagination(prev => ({
+                ...prev,
+                total: response.data.pagination?.total || 0,
+                pages: response.data.pagination?.pages || 0
+            }));
+        } catch (error) {
+            console.error('Error fetching sales:', error);
+        } finally {
+            setIsLoading(false);
         }
-        // Filter by customer name
-        if (filters.customer && !sale.customerName.toLowerCase().includes(filters.customer.toLowerCase())) {
-            return false;
+    };
+
+    const fetchCustomers = async () => {
+        try {
+            const response = await customersAPI.getAll({ limit: 100 });
+            setCustomers(response.data.data || []);
+        } catch (error) {
+            console.error('Error fetching customers:', error);
         }
-        // Filter by date range
-        if (filters.fromDate && new Date(sale.date) < new Date(filters.fromDate)) {
-            return false;
-        }
-        if (filters.toDate && new Date(sale.date) > new Date(filters.toDate)) {
-            return false;
-        }
-        return true;
-    });
+    };
 
     const handleSearch = () => {
-        // Filters are applied reactively via filteredSales
-        console.log('Searching with filters:', filters);
+        setPagination(prev => ({ ...prev, page: 1 }));
+        fetchSales();
     };
 
     const handleClearFilters = () => {
         setFilters({ invNo: '', customer: '', fromDate: '', toDate: '' });
+        setTimeout(() => fetchSales(), 100);
     };
 
     const handleNewSale = () => {
+        resetForm();
         setShowNewEntry(true);
     };
 
     const handleBack = () => {
         setShowNewEntry(false);
+        resetForm();
+    };
+
+    const resetForm = () => {
+        setNewSale({
+            customer: '',
+            date: new Date().toISOString().split('T')[0],
+            invNo: ''
+        });
+        setItems([{ id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
+        setIsEditing(false);
+        setSelectedEntry(null);
     };
 
     const handleAddItem = () => {
@@ -77,6 +114,12 @@ const SalesEntryPage = () => {
             sgst: '',
             igst: ''
         }]);
+    };
+
+    const handleRemoveItem = (id) => {
+        if (items.length > 1) {
+            setItems(items.filter(item => item.id !== id));
+        }
     };
 
     const handleItemChange = (id, field, value) => {
@@ -93,8 +136,91 @@ const SalesEntryPage = () => {
         return amount + cgst + sgst + igst;
     };
 
-    const handleSave = () => {
-        console.log('Saving sale:', newSale, items);
+    const handleSave = async () => {
+        if (!newSale.customer) {
+            alert('Please enter customer name');
+            return;
+        }
+
+        const validItems = items.filter(item => item.particular && item.quantity && item.rate);
+        if (validItems.length === 0) {
+            alert('Please add at least one item with particulars, quantity and rate');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const entryData = {
+                customer: { name: newSale.customer },
+                date: newSale.date,
+                invoiceNumber: newSale.invNo || undefined,
+                items: validItems.map(item => ({
+                    particular: item.particular,
+                    size: item.size,
+                    quantity: parseFloat(item.quantity) || 0,
+                    rate: parseFloat(item.rate) || 0,
+                    cgst: parseFloat(item.cgst) || 0,
+                    sgst: parseFloat(item.sgst) || 0,
+                    igst: parseFloat(item.igst) || 0
+                }))
+            };
+
+            if (isEditing && selectedEntry) {
+                await salesEntriesAPI.update(selectedEntry._id, entryData);
+            } else {
+                await salesEntriesAPI.create(entryData);
+            }
+
+            setShowNewEntry(false);
+            resetForm();
+            fetchSales();
+        } catch (error) {
+            alert('Error saving sales entry: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleView = (entry) => {
+        setSelectedEntry(entry);
+        setShowViewModal(true);
+    };
+
+    const handleEdit = (entry) => {
+        setNewSale({
+            customer: entry.customer?.name || '',
+            date: entry.date ? new Date(entry.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            invNo: entry.invoiceNumber || ''
+        });
+        setItems(entry.items?.map((item, index) => ({
+            id: index + 1,
+            particular: item.particular || '',
+            size: item.size || '',
+            quantity: item.quantity?.toString() || '',
+            rate: item.rate?.toString() || '',
+            cgst: item.cgst?.toString() || '',
+            sgst: item.sgst?.toString() || '',
+            igst: item.igst?.toString() || ''
+        })) || [{ id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
+        setSelectedEntry(entry);
+        setIsEditing(true);
+        setShowNewEntry(true);
+    };
+
+    const handleDeleteClick = (entry) => {
+        setSelectedEntry(entry);
+        setShowDeleteConfirm(true);
+    };
+
+    const handleDelete = async () => {
+        try {
+            await salesEntriesAPI.delete(selectedEntry._id);
+            setShowDeleteConfirm(false);
+            setSelectedEntry(null);
+            fetchSales();
+        } catch (error) {
+            alert('Error deleting sales entry: ' + (error.response?.data?.message || error.message));
+        }
     };
 
     // Show New Sales Entry Form
@@ -110,7 +236,9 @@ const SalesEntryPage = () => {
                         >
                             <ArrowLeft size={20} className="text-gray-700" />
                         </button>
-                        <h1 className="text-2xl font-bold text-gray-900">Sales</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            {isEditing ? 'Edit Sales Entry' : 'New Sales Entry'}
+                        </h1>
                     </div>
                     <button className="btn btn-secondary">
                         <FileText size={18} />
@@ -122,14 +250,20 @@ const SalesEntryPage = () => {
                 <div className="card">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
-                            <label className="form-label">Customer</label>
+                            <label className="form-label">Customer *</label>
                             <input
                                 type="text"
-                                className="form-input"
-                                placeholder="Search Customer Here"
+                                className="form-input border-2 border-cyan-500 focus:border-cyan-600 focus:ring-cyan-500"
+                                placeholder="Enter Customer Name"
                                 value={newSale.customer}
                                 onChange={(e) => setNewSale({ ...newSale, customer: e.target.value })}
+                                list="customer-list"
                             />
+                            <datalist id="customer-list">
+                                {customers.map(c => (
+                                    <option key={c._id} value={c.companyName} />
+                                ))}
+                            </datalist>
                         </div>
                         <div>
                             <label className="form-label">Date</label>
@@ -141,13 +275,14 @@ const SalesEntryPage = () => {
                             />
                         </div>
                         <div>
-                            <label className="form-label">Inv No</label>
+                            <label className="form-label">Inv No (Auto-generated if empty)</label>
                             <input
                                 type="text"
                                 className="form-input"
-                                placeholder="Invoice Number"
+                                placeholder="Leave empty for auto"
                                 value={newSale.invNo}
                                 onChange={(e) => setNewSale({ ...newSale, invNo: e.target.value })}
+                                disabled={isEditing}
                             />
                         </div>
                     </div>
@@ -155,23 +290,23 @@ const SalesEntryPage = () => {
 
                 {/* New Sales Entry Table */}
                 <div className="card">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">New Sales Entry</h2>
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">Sales Items</h2>
 
                     <div className="overflow-x-auto">
                         <table className="w-full border-collapse">
                             <thead>
-                                <tr className="bg-cyan-600 text-white">
-                                    <th className="p-3 text-left text-sm font-bold">S No</th>
-                                    <th className="p-3 text-left text-sm font-bold">Particulars</th>
-                                    <th className="p-3 text-left text-sm font-bold">Size</th>
-                                    <th className="p-3 text-left text-sm font-bold">Quantity</th>
-                                    <th className="p-3 text-left text-sm font-bold">Rate</th>
-                                    <th className="p-3 text-left text-sm font-bold">Amount</th>
-                                    <th className="p-3 text-left text-sm font-bold">CGST</th>
-                                    <th className="p-3 text-left text-sm font-bold">SGST</th>
-                                    <th className="p-3 text-left text-sm font-bold">IGST</th>
-                                    <th className="p-3 text-left text-sm font-bold">Total</th>
-                                    <th className="p-3 text-left text-sm font-bold"></th>
+                                <tr className="bg-gray-100 border-b-2 border-gray-300">
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">S No</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Particulars *</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Size</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Quantity *</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Rate *</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Amount</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">CGST %</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">SGST %</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">IGST %</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Total</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -182,7 +317,7 @@ const SalesEntryPage = () => {
                                             <input
                                                 type="text"
                                                 className="form-input w-full"
-                                                placeholder="Search Items Here"
+                                                placeholder="Item name"
                                                 value={item.particular}
                                                 onChange={(e) => handleItemChange(item.id, 'particular', e.target.value)}
                                             />
@@ -198,6 +333,7 @@ const SalesEntryPage = () => {
                                                 <option value="M">M</option>
                                                 <option value="L">L</option>
                                                 <option value="XL">XL</option>
+                                                <option value="XXL">XXL</option>
                                             </select>
                                         </td>
                                         <td className="p-3">
@@ -252,14 +388,24 @@ const SalesEntryPage = () => {
                                             ₹{calculateItemTotal(item).toFixed(2)}
                                         </td>
                                         <td className="p-3">
-                                            {index === items.length - 1 && (
-                                                <button
-                                                    onClick={handleAddItem}
-                                                    className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                                                >
-                                                    <Plus size={16} />
-                                                </button>
-                                            )}
+                                            <div className="flex gap-1">
+                                                {index === items.length - 1 && (
+                                                    <button
+                                                        onClick={handleAddItem}
+                                                        className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                )}
+                                                {items.length > 1 && (
+                                                    <button
+                                                        onClick={() => handleRemoveItem(item.id)}
+                                                        className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-md transition-colors"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -267,14 +413,30 @@ const SalesEntryPage = () => {
                         </table>
                     </div>
 
+                    {/* Grand Total */}
+                    <div className="mt-4 flex justify-end">
+                        <div className="bg-gray-100 px-6 py-3 rounded-lg">
+                            <span className="text-lg font-bold text-gray-900">
+                                Grand Total: ₹{items.reduce((sum, item) => sum + calculateItemTotal(item), 0).toFixed(2)}
+                            </span>
+                        </div>
+                    </div>
+
                     {/* Save Button */}
-                    <div className="mt-6 flex justify-end">
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                            onClick={handleBack}
+                            className="btn btn-secondary px-6"
+                        >
+                            Cancel
+                        </button>
                         <button
                             onClick={handleSave}
+                            disabled={isSubmitting}
                             className="btn btn-primary px-8"
                         >
                             <Save size={18} />
-                            SAVE
+                            {isSubmitting ? 'Saving...' : 'SAVE'}
                         </button>
                     </div>
                 </div>
@@ -342,6 +504,7 @@ const SalesEntryPage = () => {
                         <button
                             className="btn btn-search flex items-center gap-2 flex-1"
                             onClick={handleSearch}
+                            disabled={isLoading}
                         >
                             <Search size={18} />
                             SEARCH
@@ -373,35 +536,44 @@ const SalesEntryPage = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredSales.length > 0 ? (
-                                filteredSales.map((sale, index) => (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan="7" className="py-8 text-center">
+                                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                    </td>
+                                </tr>
+                            ) : sales.length > 0 ? (
+                                sales.map((sale, index) => (
                                     <tr
-                                        key={sale.id}
+                                        key={sale._id}
                                         className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
                                     >
-                                        <td className="p-4 text-sm font-medium text-gray-900">{index + 1}</td>
+                                        <td className="p-4 text-sm font-medium text-gray-900">{(pagination.page - 1) * pagination.limit + index + 1}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{formatDate(sale.date)}</td>
-                                        <td className="p-4 text-sm font-medium text-purple-600 font-semibold">{sale.invNo}</td>
-                                        <td className="p-4 text-sm font-medium text-gray-900">{sale.customerName}</td>
-                                        <td className="p-4 text-sm font-medium text-gray-900">{sale.qty}</td>
-                                        <td className="p-4 text-sm font-bold text-green-600">₹{sale.amount.toLocaleString()}</td>
+                                        <td className="p-4 text-sm font-medium font-semibold" style={{ color: '#1e40af' }}>{sale.invoiceNumber}</td>
+                                        <td className="p-4 text-sm font-medium text-gray-900">{sale.customer?.name || '-'}</td>
+                                        <td className="p-4 text-sm font-medium text-gray-900">{sale.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0}</td>
+                                        <td className="p-4 text-sm font-bold text-green-600">₹{(sale.grandTotal || 0).toLocaleString()}</td>
                                         <td className="p-4">
                                             <div className="flex gap-2">
                                                 <button
                                                     className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
                                                     title="View"
+                                                    onClick={() => handleView(sale)}
                                                 >
                                                     <Eye size={18} />
                                                 </button>
                                                 <button
                                                     className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
                                                     title="Edit"
+                                                    onClick={() => handleEdit(sale)}
                                                 >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button
                                                     className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
                                                     title="Delete"
+                                                    onClick={() => handleDeleteClick(sale)}
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
@@ -419,7 +591,108 @@ const SalesEntryPage = () => {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {pagination.pages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+                        <div className="text-sm text-gray-600">
+                            Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                                disabled={pagination.page <= 1}
+                                className="px-3 py-1 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                                disabled={pagination.page >= pagination.pages}
+                                className="px-3 py-1 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* View Modal */}
+            {showViewModal && selectedEntry && (
+                <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="px-6 py-4 rounded-t-lg flex justify-between items-center" style={{ backgroundColor: '#1e3a2f' }}>
+                            <h3 className="text-lg font-semibold text-white">Sales Entry Details</h3>
+                            <button onClick={() => setShowViewModal(false)} className="text-white hover:text-gray-200">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[70vh]">
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div><span className="text-gray-500">Invoice No:</span> <span className="font-semibold">{selectedEntry.invoiceNumber}</span></div>
+                                <div><span className="text-gray-500">Date:</span> <span className="font-semibold">{formatDate(selectedEntry.date)}</span></div>
+                                <div><span className="text-gray-500">Customer:</span> <span className="font-semibold">{selectedEntry.customer?.name}</span></div>
+                                <div><span className="text-gray-500">Total:</span> <span className="font-semibold text-green-600">₹{selectedEntry.grandTotal?.toLocaleString()}</span></div>
+                            </div>
+                            <h4 className="font-semibold mb-2">Items</h4>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="p-2 text-left">Particular</th>
+                                        <th className="p-2 text-left">Size</th>
+                                        <th className="p-2 text-right">Qty</th>
+                                        <th className="p-2 text-right">Rate</th>
+                                        <th className="p-2 text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedEntry.items?.map((item, i) => (
+                                        <tr key={i} className="border-b">
+                                            <td className="p-2">{item.particular}</td>
+                                            <td className="p-2">{item.size || '-'}</td>
+                                            <td className="p-2 text-right">{item.quantity}</td>
+                                            <td className="p-2 text-right">₹{item.rate}</td>
+                                            <td className="p-2 text-right">₹{item.total?.toFixed(2)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && selectedEntry && (
+                <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Trash2 size={32} className="text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Sales Entry</h3>
+                            <p className="text-gray-600 mb-6">
+                                Are you sure you want to delete invoice <strong>{selectedEntry.invoiceNumber}</strong>? This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -85,7 +85,7 @@ const StockReportsPage = () => {
                                 <option value="XXL">XXL</option>
                             </select>
                         </div>
-                        <button onClick={handleSearch} disabled={isLoading} className="flex items-center gap-1.5 px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
+                        <button onClick={handleSearch} disabled={isLoading} className="btn-search">
                             <Package size={14} />
                             {isLoading ? 'LOADING...' : 'SEARCH'}
                         </button>
@@ -116,16 +116,22 @@ const StockReportsPage = () => {
                         </thead>
                         <tbody>
                             {reportData.length > 0 ? (
-                                reportData.map((row) => (
-                                    <tr key={row.sno} className="border-b border-gray-200 hover:bg-gray-50 print:hover:bg-transparent">
-                                        <td className="py-3 px-4 text-gray-900 print:text-black">{row.sno}</td>
-                                        <td className="py-3 px-4 text-gray-900 print:text-black">{row.item}</td>
-                                        <td className="py-3 px-4 text-gray-900 print:text-black">{row.size}</td>
-                                        <td className="py-3 px-4 text-right text-gray-900 print:text-black">{row.qty}</td>
-                                        <td className="py-3 px-4 text-right text-gray-900 print:text-black">{row.rate}</td>
-                                        <td className="py-3 px-4 text-right text-gray-900 print:text-black">{row.total}</td>
+                                <>
+                                    {reportData.map((row) => (
+                                        <tr key={row.sno} className="border-b border-gray-200 hover:bg-gray-50 print:hover:bg-transparent">
+                                            <td className="py-3 px-4 text-gray-900 print:text-black">{row.sno}</td>
+                                            <td className="py-3 px-4 text-gray-900 print:text-black">{row.item}</td>
+                                            <td className="py-3 px-4 text-gray-900 print:text-black">{row.size}</td>
+                                            <td className="py-3 px-4 text-right text-gray-900 print:text-black">{row.qty}</td>
+                                            <td className="py-3 px-4 text-right text-gray-900 print:text-black">{row.rate}</td>
+                                            <td className="py-3 px-4 text-right text-gray-900 print:text-black">{row.total}</td>
+                                        </tr>
+                                    ))}
+                                    <tr className="bg-gray-100 border-t-2 border-gray-300">
+                                        <td colSpan="5" className="py-4 px-4 text-right font-bold text-gray-900 print:text-black">Grand Total:</td>
+                                        <td className="py-4 px-4 text-right font-bold text-blue-600 print:text-black text-lg">₹{reportData.reduce((sum, row) => sum + (row.total || 0), 0).toLocaleString('en-IN')}</td>
                                     </tr>
-                                ))
+                                </>
                             ) : (
                                 <tr>
                                     <td colSpan="6" className="py-8 text-center text-gray-500">
@@ -145,7 +151,7 @@ const StockReportsPage = () => {
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
                             <h3 className="text-lg font-semibold text-gray-900">Invoice View - Stock Report</h3>
                             <div className="flex items-center gap-2">
-                                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors">
+                                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors">
                                     <Printer size={16} />
                                     Print
                                 </button>
@@ -179,6 +185,10 @@ const StockReportsPage = () => {
                                                 <td className="py-2 px-3 text-right text-gray-900 text-sm">{row.total}</td>
                                             </tr>
                                         ))}
+                                        <tr className="bg-gray-100 border-t-2 border-gray-300">
+                                            <td colSpan="5" className="py-3 px-3 text-right font-bold text-gray-900 text-sm">Grand Total:</td>
+                                            <td className="py-3 px-3 text-right font-bold text-blue-600 text-sm">₹{reportData.reduce((sum, row) => sum + (row.total || 0), 0).toLocaleString('en-IN')}</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>

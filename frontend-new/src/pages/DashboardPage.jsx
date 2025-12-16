@@ -74,7 +74,7 @@ const DashboardPage = () => {
             value: formatCurrency(stats?.totalRevenue || 0),
             change: stats?.revenueGrowth || 0,
             icon: IndianRupee,
-            color: 'purple'
+            color: 'sage'
         },
         {
             title: 'Total Orders',
@@ -100,7 +100,7 @@ const DashboardPage = () => {
     ];
 
     const colorClasses = {
-        purple: 'bg-purple-100 text-purple-600',
+        sage: 'bg-green-100 text-green-700',
         blue: 'bg-blue-100 text-blue-600',
         green: 'bg-green-100 text-green-600',
         orange: 'bg-orange-100 text-orange-600'
@@ -109,7 +109,7 @@ const DashboardPage = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
             </div>
         );
     }
@@ -151,8 +151,8 @@ const DashboardPage = () => {
                         <AreaChart data={revenueData}>
                             <defs>
                                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -162,7 +162,7 @@ const DashboardPage = () => {
                             <Area
                                 type="monotone"
                                 dataKey="revenue"
-                                stroke="#8b5cf6"
+                                stroke="#3b82f6"
                                 strokeWidth={2}
                                 fill="url(#colorRevenue)"
                             />
@@ -200,7 +200,7 @@ const DashboardPage = () => {
             <div className="card p-0">
                 <div className="flex items-center justify-between p-6 pb-4">
                     <h3 className="text-lg font-bold text-gray-900">Recent Bills</h3>
-                    <a href="/billing" className="text-sm font-semibold text-purple-600 hover:text-purple-700">View All</a>
+                    <a href="/billing" className="text-sm font-semibold hover:underline" style={{ color: '#3b82f6' }}>View All</a>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse">

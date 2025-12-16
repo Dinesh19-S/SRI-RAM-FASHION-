@@ -99,7 +99,7 @@ const PurchaseReportsPage = () => {
                             <label className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
                             <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="form-input w-32 text-sm py-1.5" />
                         </div>
-                        <button onClick={handleSearch} disabled={isLoading} className="flex items-center gap-1.5 px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
+                        <button onClick={handleSearch} disabled={isLoading} className="btn-search">
                             <Search size={14} />
                             {isLoading ? 'LOADING...' : 'SEARCH'}
                         </button>
@@ -129,23 +129,31 @@ const PurchaseReportsPage = () => {
                                 <th className="text-left py-4 px-4 font-bold text-gray-900 print:text-black">Item</th>
                                 <th className="text-right py-4 px-4 font-bold text-gray-900 print:text-black">Rate</th>
                                 <th className="text-right py-4 px-4 font-bold text-gray-900 print:text-black">Qty</th>
+                                <th className="text-right py-4 px-4 font-bold text-gray-900 print:text-black">Total</th>
                             </tr>
                         </thead>
                         <tbody>
                             {reportData.length > 0 ? (
-                                reportData.map((row) => (
-                                    <tr key={row.sno} className="border-b border-gray-200 hover:bg-gray-50 print:hover:bg-transparent">
-                                        <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{row.sno}</td>
-                                        <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{formatDate(row.date)}</td>
-                                        <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{row.invNo}</td>
-                                        <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{row.item}</td>
-                                        <td className="py-4 px-4 text-right font-semibold text-gray-900 print:text-black">₹{row.rate}</td>
-                                        <td className="py-4 px-4 text-right font-semibold text-gray-900 print:text-black">{row.qty}</td>
+                                <>
+                                    {reportData.map((row) => (
+                                        <tr key={row.sno} className="border-b border-gray-200 hover:bg-gray-50 print:hover:bg-transparent">
+                                            <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{row.sno}</td>
+                                            <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{formatDate(row.date)}</td>
+                                            <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{row.invNo}</td>
+                                            <td className="py-4 px-4 font-medium text-gray-900 print:text-black">{row.item}</td>
+                                            <td className="py-4 px-4 text-right font-semibold text-gray-900 print:text-black">₹{row.rate}</td>
+                                            <td className="py-4 px-4 text-right font-semibold text-gray-900 print:text-black">{row.qty}</td>
+                                            <td className="py-4 px-4 text-right font-semibold text-gray-900 print:text-black">₹{row.rate * row.qty}</td>
+                                        </tr>
+                                    ))}
+                                    <tr className="bg-gray-100 border-t-2 border-gray-300">
+                                        <td colSpan="6" className="py-4 px-4 text-right font-bold text-gray-900 print:text-black">Grand Total:</td>
+                                        <td className="py-4 px-4 text-right font-bold text-blue-600 print:text-black text-lg">₹{reportData.reduce((sum, row) => sum + (row.rate * row.qty), 0).toLocaleString('en-IN')}</td>
                                     </tr>
-                                ))
+                                </>
                             ) : (
                                 <tr>
-                                    <td colSpan="6" className="py-8 text-center text-gray-600 font-medium">
+                                    <td colSpan="7" className="py-8 text-center text-gray-600 font-medium">
                                         {isLoading ? 'Loading...' : 'No data available. Click SEARCH to load purchase data.'}
                                     </td>
                                 </tr>
@@ -162,7 +170,7 @@ const PurchaseReportsPage = () => {
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
                             <h3 className="text-lg font-semibold text-gray-900">Invoice View - Purchase Report</h3>
                             <div className="flex items-center gap-2">
-                                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors">
+                                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors">
                                     <Printer size={16} />
                                     Print
                                 </button>
@@ -183,6 +191,7 @@ const PurchaseReportsPage = () => {
                                             <th className="text-left py-3 px-3 font-bold text-gray-900 text-sm">Item</th>
                                             <th className="text-right py-3 px-3 font-bold text-gray-900 text-sm">Rate</th>
                                             <th className="text-right py-3 px-3 font-bold text-gray-900 text-sm">Qty</th>
+                                            <th className="text-right py-3 px-3 font-bold text-gray-900 text-sm">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -194,8 +203,13 @@ const PurchaseReportsPage = () => {
                                                 <td className="py-2 px-3 text-gray-900 text-sm">{row.item}</td>
                                                 <td className="py-2 px-3 text-right text-gray-900 text-sm">₹{row.rate}</td>
                                                 <td className="py-2 px-3 text-right text-gray-900 text-sm">{row.qty}</td>
+                                                <td className="py-2 px-3 text-right text-gray-900 text-sm">₹{row.rate * row.qty}</td>
                                             </tr>
                                         ))}
+                                        <tr className="bg-gray-100 border-t-2 border-gray-300">
+                                            <td colSpan="6" className="py-3 px-3 text-right font-bold text-gray-900 text-sm">Grand Total:</td>
+                                            <td className="py-3 px-3 text-right font-bold text-blue-600 text-sm">₹{reportData.reduce((sum, row) => sum + (row.rate * row.qty), 0).toLocaleString('en-IN')}</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>

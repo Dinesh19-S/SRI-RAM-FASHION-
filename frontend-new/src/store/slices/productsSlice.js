@@ -74,6 +74,18 @@ export const updateProductStock = createAsyncThunk(
     }
 );
 
+export const createCategory = createAsyncThunk(
+    'products/createCategory',
+    async (data, { rejectWithValue }) => {
+        try {
+            const response = await categoriesAPI.create(data);
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to create category');
+        }
+    }
+);
+
 // Initial state
 const initialState = {
     items: [],
@@ -133,6 +145,10 @@ const productsSlice = createSlice({
                 if (index !== -1) {
                     state.items[index] = action.payload;
                 }
+            })
+            // Create Category
+            .addCase(createCategory.fulfilled, (state, action) => {
+                state.categories.push(action.payload);
             });
     },
 });

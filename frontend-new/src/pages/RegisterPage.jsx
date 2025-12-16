@@ -105,11 +105,11 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 p-4">
+        <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)' }}>
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                    <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1e3a5f' }}>
                         <span className="text-2xl font-bold text-white">SRF</span>
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900">Sri Ram Fashions</h1>
@@ -277,7 +277,7 @@ const RegisterPage = () => {
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-600">
                             Already have an account?{' '}
-                            <Link to="/login" className="text-purple-600 hover:text-purple-700 font-medium">
+                            <Link to="/login" style={{ color: '#3b82f6' }} className="font-medium hover:opacity-80">
                                 Sign In
                             </Link>
                         </p>
