@@ -56,6 +56,38 @@ body {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* Responsive page container */
+.page-container {
+  padding: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .page-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-container {
+    padding: 1.5rem;
+  }
+}
+
+/* Responsive form container */
+.form-container {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .form-container {
+    padding: 2rem;
+  }
+}
+
 /* Custom component classes */
 .btn {
   display: flex;
@@ -121,6 +153,9 @@ body {
 
 /* Modern Search Button */
 .btn-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
   color: white;
   font-weight: 600;
@@ -356,10 +391,12 @@ body {
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 9999;
-  padding: 1rem;
+  padding: 2rem 1rem;
+  padding-top: max(2rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
   overflow-y: auto;
 }
 
@@ -384,6 +421,7 @@ body {
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
+  max-height: 60vh;
 }
 
 .modal-footer {

@@ -105,14 +105,15 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)' }}>
+        <div className="min-h-screen flex flex-col items-center py-8 px-4 overflow-y-auto" style={{ background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)' }}>
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1e3a5f' }}>
-                        <span className="text-2xl font-bold text-white">SRF</span>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Sri Ram Fashions</h1>
+                    <img
+                        src="/assets/logo.png"
+                        alt="Sri Ram Fashions"
+                        className="w-32 h-32 mx-auto mb-4 object-contain"
+                    />
                     <p className="text-gray-500 mt-1">Create your account</p>
                 </div>
 
@@ -137,7 +138,6 @@ const RegisterPage = () => {
                                     type="text"
                                     name="name"
                                     className={`form-input pl-10 ${validationErrors.name ? 'border-red-500' : ''}`}
-                                    placeholder="John Doe"
                                     value={formData.name}
                                     onChange={handleChange}
                                 />
@@ -156,7 +156,6 @@ const RegisterPage = () => {
                                     type="email"
                                     name="email"
                                     className={`form-input pl-10 ${validationErrors.email ? 'border-red-500' : ''}`}
-                                    placeholder="john@example.com"
                                     value={formData.email}
                                     onChange={handleChange}
                                 />
@@ -175,7 +174,6 @@ const RegisterPage = () => {
                                     type="tel"
                                     name="phone"
                                     className={`form-input pl-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
-                                    placeholder="+91 98765 43210"
                                     value={formData.phone}
                                     onChange={handleChange}
                                 />
@@ -194,7 +192,6 @@ const RegisterPage = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     name="password"
                                     className={`form-input pl-10 pr-10 ${validationErrors.password ? 'border-red-500' : ''}`}
-                                    placeholder="••••••••"
                                     value={formData.password}
                                     onChange={handleChange}
                                 />

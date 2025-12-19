@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, DollarSign, Plus, Search, Edit, Trash2, X, Save, Calendar, FileText } from 'lucide-react';
+import { ArrowLeft, DollarSign, Plus, Search, Edit, Trash2, X, Save, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { paymentsAPI, customersAPI } from '../services/api';
 
@@ -247,27 +247,21 @@ const SalesPaymentsPage = () => {
                     </div>
                     <div className="flex-shrink-0">
                         <label className="block text-xs font-medium text-gray-600 mb-1">From Date</label>
-                        <div className="relative">
-                            <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="date"
-                                value={fromDate}
-                                onChange={(e) => setFromDate(e.target.value)}
-                                className="form-input pl-9 w-36 text-sm py-1.5"
-                            />
-                        </div>
+                        <input
+                            type="date"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                            className="form-input w-36 text-sm py-1.5"
+                        />
                     </div>
                     <div className="flex-shrink-0">
                         <label className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
-                        <div className="relative">
-                            <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="date"
-                                value={toDate}
-                                onChange={(e) => setToDate(e.target.value)}
-                                className="form-input pl-9 w-36 text-sm py-1.5"
-                            />
-                        </div>
+                        <input
+                            type="date"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                            className="form-input w-36 text-sm py-1.5"
+                        />
                     </div>
                     <button
                         onClick={handleSearch}
@@ -440,16 +434,13 @@ const SalesPaymentsPage = () => {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Date :</label>
-                                <div className="relative">
-                                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="date"
-                                        name="date"
-                                        value={formData.date}
-                                        onChange={handleInputChange}
-                                        className="form-input w-full pl-10"
-                                    />
-                                </div>
+                                <input
+                                    type="date"
+                                    name="date"
+                                    value={formData.date}
+                                    onChange={handleInputChange}
+                                    className="form-input w-full"
+                                />
                             </div>
 
                             <div>

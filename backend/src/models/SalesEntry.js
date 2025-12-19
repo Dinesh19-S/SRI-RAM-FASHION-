@@ -57,7 +57,6 @@ salesEntrySchema.pre('save', async function (next) {
 });
 
 // Index for efficient queries
-salesEntrySchema.index({ invoiceNumber: 1 });
 salesEntrySchema.index({ date: -1 });
 salesEntrySchema.index({ 'customer.name': 1 });
 

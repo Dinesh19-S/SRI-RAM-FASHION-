@@ -247,11 +247,10 @@ const BillingPage = () => {
 
             <div className="card py-4">
                 <div className="flex items-center gap-3">
-                    <div className="relative" style={{ flex: '1 1 auto', minWidth: '200px' }}>
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
                         <input
                             type="text"
-                            className="form-input pl-9 py-2 text-sm w-full"
+                            className="form-input py-2 text-sm w-full"
                             placeholder="Search by Bill No, Customer, or Date..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}

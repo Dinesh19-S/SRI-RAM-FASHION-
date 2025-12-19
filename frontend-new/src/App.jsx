@@ -19,7 +19,6 @@ import AuditorPurchasePage from './pages/AuditorPurchasePage';
 import AuditorSalesPage from './pages/AuditorSalesPage';
 import CustomerEntryPage from './pages/CustomerEntryPage';
 import ItemsPage from './pages/ItemsPage';
-import HSNPage from './pages/HSNPage';
 import SupplierEntryPage from './pages/SupplierEntryPage';
 
 // Protected Route wrapper
@@ -80,7 +79,6 @@ function App() {
             <Route path="auditor/sales" element={<AuditorSalesPage />} />
             <Route path="master/customers" element={<CustomerEntryPage />} />
             <Route path="master/items" element={<ItemsPage />} />
-            <Route path="master/hsn" element={<HSNPage />} />
             <Route path="master/suppliers" element={<SupplierEntryPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

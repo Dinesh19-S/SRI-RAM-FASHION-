@@ -71,7 +71,6 @@ const navigationSections = [
             { name: 'Supplier Entry', href: '/master/suppliers', icon: Truck },
             { name: 'Customer Entry', href: '/master/customers', icon: Users },
             { name: 'Items', href: '/master/items', icon: Package },
-            { name: 'HSN', href: '/master/hsn', icon: Hash },
         ]
     },
     {
@@ -109,7 +108,6 @@ const MainLayout = () => {
         { label: 'Customer Entry', path: '/master/customers', keywords: ['customer', 'entry', 'master', 'company'] },
         { label: 'Items', path: '/master/items', keywords: ['items', 'hsn', 'product', 'master'] },
         { label: 'Supplier Entry', path: '/master/suppliers', keywords: ['supplier', 'vendor', 'entry', 'master'] },
-        { label: 'HSN', path: '/master/hsn', keywords: ['hsn', 'code', 'gst', 'tax'] },
         { label: 'Settings', path: '/settings', keywords: ['settings', 'config', 'preferences'] },
     ];
 
@@ -151,7 +149,7 @@ const MainLayout = () => {
     };
 
     return (
-        <div className="flex h-screen overflow-hidden" style={{ backgroundColor: '#f9f7f4' }}>
+        <div className="flex min-h-screen" style={{ backgroundColor: '#f9f7f4' }}>
             {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div
@@ -161,11 +159,13 @@ const MainLayout = () => {
             )}
 
             {/* Sidebar */}
-            <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ backgroundColor: '#1e3a5f' }}>
+            <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ backgroundColor: '#1e3a5f' }}>
                 <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: '#2d4a6a' }}>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg" style={{ backgroundColor: '#d4a853' }}>
-                        <Store size={26} />
-                    </div>
+                    <img
+                        src="/assets/logo.png"
+                        alt="Sri Ram Fashions"
+                        className="w-14 h-14 object-contain rounded-lg bg-white/10 p-1"
+                    />
                     <div>
                         <div className="text-lg font-bold uppercase tracking-wide" style={{ color: '#d4a853', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>Sri Ram Fashions</div>
                         <div className="text-xs font-medium" style={{ color: '#60a5fa' }}>Business Management</div>
@@ -200,7 +200,7 @@ const MainLayout = () => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
                 {/* Header */}
                 <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6">
                     <div className="flex items-center gap-4">
@@ -295,7 +295,7 @@ const MainLayout = () => {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+                <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
                     <Outlet />
                 </main>
             </div >

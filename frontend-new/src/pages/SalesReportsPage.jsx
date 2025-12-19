@@ -80,9 +80,9 @@ const SalesReportsPage = () => {
             </div>
 
             {/* Filters and Actions */}
-            <div className="card py-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div className="flex flex-wrap items-end gap-3">
+            <div className="card py-4 overflow-x-auto">
+                <div className="flex items-end gap-3 min-w-max">
+                    <div className="flex items-end gap-3">
                         <div className="flex-shrink-0">
                             <label className="block text-xs font-medium text-gray-600 mb-1">Inv No</label>
                             <input type="text" placeholder="Enter invoice number" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} className="form-input w-36 text-sm py-1.5" />
@@ -105,7 +105,9 @@ const SalesReportsPage = () => {
                         </button>
                         <button onClick={() => { setCustomerSearch(''); setFromDate(''); setToDate(''); }} className="px-3 py-1.5 text-gray-500 hover:text-gray-700 font-medium text-sm">Clear</button>
                     </div>
-                    <ReportActions onExcel={handleExport} onPrint={handlePrint} onEmail={handleEmail} showInvoice={true} onInvoice={() => setShowInvoiceModal(true)} />
+                    <div className="flex items-center gap-2">
+                        <ReportActions onExcel={handleExport} onPrint={handlePrint} onEmail={handleEmail} showInvoice={true} onInvoice={() => setShowInvoiceModal(true)} />
+                    </div>
                 </div>
             </div>
 

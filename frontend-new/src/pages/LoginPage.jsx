@@ -52,14 +52,15 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)' }}>
+        <div className="min-h-screen flex flex-col items-center justify-center py-8 px-4 overflow-y-auto" style={{ background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)' }}>
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg" style={{ backgroundColor: '#1e3a5f', boxShadow: '0 4px 14px rgba(30, 58, 47, 0.3)' }}>
-                        <span className="text-2xl font-bold text-white">SRF</span>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Sri Ram Fashions</h1>
+                    <img
+                        src="/assets/logo.png"
+                        alt="Sri Ram Fashions"
+                        className="w-32 h-32 mx-auto mb-4 object-contain"
+                    />
                     <p className="text-gray-500 mt-1">Business Management System</p>
                 </div>
 
@@ -81,7 +82,6 @@ const LoginPage = () => {
                                 <input
                                     type="email"
                                     className="form-input pl-10"
-                                    placeholder="admin@sriramfashions.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
@@ -96,7 +96,6 @@ const LoginPage = () => {
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     className="form-input pl-10 pr-10"
-                                    placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required

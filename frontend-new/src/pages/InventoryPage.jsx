@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchProducts, fetchCategories, updateProductStock, createCategory } from '../store/slices/productsSlice';
-import { Package, Plus, Search, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Box, TrendingUp, X, FolderPlus } from 'lucide-react';
+import { fetchProducts, fetchCategories, updateProductStock, createCategory, deleteProduct } from '../store/slices/productsSlice';
+import { Package, Plus, Search, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Box, TrendingUp, X, FolderPlus, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const InventoryPage = () => {
@@ -17,6 +17,9 @@ const InventoryPage = () => {
     const [stockQuantity, setStockQuantity] = useState(1);
     const [stockReason, setStockReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [productToDelete, setProductToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // New category form state
     const [newCategory, setNewCategory] = useState({
@@ -59,6 +62,25 @@ const InventoryPage = () => {
             alert('Failed to add category: ' + (error || 'Unknown error'));
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteClick = (product) => {
+        setProductToDelete(product);
+        setShowDeleteConfirm(true);
+    };
+
+    const handleDeleteProduct = async () => {
+        if (!productToDelete) return;
+        setIsDeleting(true);
+        try {
+            await dispatch(deleteProduct(productToDelete._id)).unwrap();
+            setShowDeleteConfirm(false);
+            setProductToDelete(null);
+        } catch (error) {
+            alert('Failed to delete product: ' + (error || 'Unknown error'));
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -146,6 +168,13 @@ const InventoryPage = () => {
                                             >
                                                 <ArrowDownCircle size={18} />
                                             </button>
+                                            <button
+                                                className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                onClick={() => handleDeleteClick(p)}
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -209,6 +238,38 @@ const InventoryPage = () => {
                                 <Plus size={18} />
                                 {isSubmitting ? 'Adding...' : 'Add Category'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && productToDelete && (
+                <div className="modal-overlay" onClick={() => { setShowDeleteConfirm(false); setProductToDelete(null); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Trash2 size={32} className="text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Product</h3>
+                            <p className="text-gray-600 mb-6">
+                                Are you sure you want to delete <strong>{productToDelete.name}</strong>? This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => { setShowDeleteConfirm(false); setProductToDelete(null); }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn bg-red-600 text-white hover:bg-red-700"
+                                    onClick={handleDeleteProduct}
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
