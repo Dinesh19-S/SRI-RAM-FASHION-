@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API Base URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Create axios instance
 const api = axios.create({
@@ -44,6 +44,7 @@ export const authAPI = {
     sendOTP: (phone) => api.post('/auth/send-otp', { phone }),
     loginPhone: (phone, otp) => api.post('/auth/login-phone', { phone, otp }),
     getProfile: () => api.get('/auth/profile'),
+    googleLogin: (credential) => api.post('/auth/google', { credential }),
 };
 
 // Products API

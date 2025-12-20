@@ -97,7 +97,7 @@ router.get('/:id', async (req, res) => {
 // Create bill
 router.post('/', async (req, res) => {
     try {
-        const { customer, items, discount = 0, paymentMethod, notes } = req.body;
+        const { customer, items, discount = 0, paymentMethod, notes, transport, fromDate, toDate, totalPacks, numOfBundles } = req.body;
 
         // Calculate totals
         let subtotal = 0;
@@ -160,6 +160,11 @@ router.post('/', async (req, res) => {
         const bill = new Bill({
             billNumber: generateBillNumber(),
             customer,
+            transport,
+            fromText: fromDate || '',
+            toText: toDate || '',
+            totalPacks: totalPacks || 0,
+            numOfBundles: numOfBundles || 1,
             items: processedItems,
             subtotal,
             discountAmount,

@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema({
         default: 'staff'
     },
     avatar: String,
+    googleId: {
+        type: String,
+        sparse: true
+    },
     isActive: {
         type: Boolean,
         default: true

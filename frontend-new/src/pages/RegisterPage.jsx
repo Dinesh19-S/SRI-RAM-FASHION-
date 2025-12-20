@@ -133,11 +133,11 @@ const RegisterPage = () => {
                         <div>
                             <label className="form-label">Full Name</label>
                             <div className="relative">
-                                <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                {!formData.name && <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
                                 <input
                                     type="text"
                                     name="name"
-                                    className={`form-input pl-10 ${validationErrors.name ? 'border-red-500' : ''}`}
+                                    className={`form-input ${!formData.name ? 'pl-10' : 'pl-4'} ${validationErrors.name ? 'border-red-500' : ''}`}
                                     value={formData.name}
                                     onChange={handleChange}
                                 />
@@ -151,11 +151,11 @@ const RegisterPage = () => {
                         <div>
                             <label className="form-label">Email</label>
                             <div className="relative">
-                                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                {!formData.email && <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
                                 <input
                                     type="email"
                                     name="email"
-                                    className={`form-input pl-10 ${validationErrors.email ? 'border-red-500' : ''}`}
+                                    className={`form-input ${!formData.email ? 'pl-10' : 'pl-4'} ${validationErrors.email ? 'border-red-500' : ''}`}
                                     value={formData.email}
                                     onChange={handleChange}
                                 />
@@ -169,11 +169,11 @@ const RegisterPage = () => {
                         <div>
                             <label className="form-label">Phone Number</label>
                             <div className="relative">
-                                <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                {!formData.phone && <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
                                 <input
                                     type="tel"
                                     name="phone"
-                                    className={`form-input pl-10 ${validationErrors.phone ? 'border-red-500' : ''}`}
+                                    className={`form-input ${!formData.phone ? 'pl-10' : 'pl-4'} ${validationErrors.phone ? 'border-red-500' : ''}`}
                                     value={formData.phone}
                                     onChange={handleChange}
                                 />
@@ -187,11 +187,11 @@ const RegisterPage = () => {
                         <div>
                             <label className="form-label">Password</label>
                             <div className="relative">
-                                <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                {!formData.password && <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     name="password"
-                                    className={`form-input pl-10 pr-10 ${validationErrors.password ? 'border-red-500' : ''}`}
+                                    className={`form-input ${!formData.password ? 'pl-10' : 'pl-4'} pr-10 ${validationErrors.password ? 'border-red-500' : ''}`}
                                     value={formData.password}
                                     onChange={handleChange}
                                 />
@@ -231,12 +231,11 @@ const RegisterPage = () => {
                         <div>
                             <label className="form-label">Confirm Password</label>
                             <div className="relative">
-                                <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                {!formData.confirmPassword && <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
                                 <input
                                     type={showConfirmPassword ? 'text' : 'password'}
                                     name="confirmPassword"
-                                    className={`form-input pl-10 pr-10 ${validationErrors.confirmPassword ? 'border-red-500' : ''}`}
-                                    placeholder="••••••••"
+                                    className={`form-input ${!formData.confirmPassword ? 'pl-10' : 'pl-4'} pr-10 ${validationErrors.confirmPassword ? 'border-red-500' : ''}`}
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
                                 />

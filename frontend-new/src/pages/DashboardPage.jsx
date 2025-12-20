@@ -224,7 +224,7 @@ const DashboardPage = () => {
                                 recentBills.map((bill) => (
                                     <tr key={bill._id} className="border-b border-gray-200 hover:bg-gray-50">
                                         <td className="p-4 text-sm font-semibold text-gray-900">{bill.billNumber}</td>
-                                        <td className="p-4 text-sm font-medium text-gray-900">{formatDate(bill.createdAt)}</td>
+                                        <td className="p-4 text-sm font-medium text-gray-900">{formatDate(bill.date || bill.createdAt)}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{bill.customer?.name || '-'}</td>
                                         <td className="p-4 text-sm font-bold text-gray-900">{formatCurrency(bill.grandTotal)}</td>
                                         <td className="p-4">

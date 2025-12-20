@@ -31,6 +31,8 @@ const BillingPage = () => {
         stateCode: '33'
     });
     const [transport, setTransport] = useState('');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const [billItems, setBillItems] = useState([]);
     const [discount, setDiscount] = useState(0);
     const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -143,6 +145,8 @@ const BillingPage = () => {
         const billData = {
             customer,
             transport,
+            fromDate,
+            toDate,
             totalPacks,
             numOfBundles: 1,
             items: billItems.map(item => ({
@@ -171,15 +175,26 @@ const BillingPage = () => {
             paymentMethod
         };
 
-        await dispatch(createBill(billData));
-        setShowBillModal(false);
-        resetForm();
-        dispatch(fetchBills());
+        try {
+            const result = await dispatch(createBill(billData));
+            if (createBill.fulfilled.match(result)) {
+                setShowBillModal(false);
+                resetForm();
+                dispatch(fetchBills());
+            } else {
+                alert('Failed to create bill: ' + (result.payload || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error creating bill:', error);
+            alert('Failed to create bill: ' + (error.message || 'Unknown error'));
+        }
     };
 
     const resetForm = () => {
         setCustomer({ name: '', phone: '', address: '', gstin: '', state: 'Tamilnadu', stateCode: '33' });
         setTransport('');
+        setFromDate('');
+        setToDate('');
         setBillItems([]);
         setDiscount(0);
     };
@@ -363,24 +378,21 @@ const BillingPage = () => {
                                     {/* Customer Search */}
                                     <div className="relative">
                                         <label className="text-xs text-gray-500 mb-1 block">Search Customer</label>
-                                        <div className="relative">
-                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                className="form-input pl-9"
-                                                placeholder="Search by company name, phone, or GSTIN..."
-                                                value={customerSearch}
-                                                onChange={(e) => {
-                                                    setCustomerSearch(e.target.value);
-                                                    setShowCustomerDropdown(true);
-                                                }}
-                                                onFocus={() => setShowCustomerDropdown(true)}
-                                            />
-                                            {isSearchingCustomers && (
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                    <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
-                                                </div>
-                                            )}
-                                        </div>
+                                        <input
+                                            className="form-input"
+                                            placeholder="Search by company name, phone, or GSTIN..."
+                                            value={customerSearch}
+                                            onChange={(e) => {
+                                                setCustomerSearch(e.target.value);
+                                                setShowCustomerDropdown(true);
+                                            }}
+                                            onFocus={() => setShowCustomerDropdown(true)}
+                                        />
+                                        {isSearchingCustomers && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
+                                            </div>
+                                        )}
                                         {showCustomerDropdown && customerSuggestions.length > 0 && (
                                             <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                                 {customerSuggestions.map((cust) => (
@@ -420,6 +432,16 @@ const BillingPage = () => {
                                         <div>
                                             <label className="text-xs text-gray-500 mb-1 block">Transport</label>
                                             <input className="form-input" placeholder="Enter transport" value={transport} onChange={(e) => setTransport(e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">From</label>
+                                            <input className="form-input" placeholder="From (e.g., place or date)" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">To</label>
+                                            <input className="form-input" placeholder="To (e.g., place or date)" value={toDate} onChange={(e) => setToDate(e.target.value)} />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
@@ -506,40 +528,43 @@ const BillingPage = () => {
                         <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowBillModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleCreateBill} disabled={isLoading}>{isLoading ? 'Creating...' : 'Create Bill'}</button></div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Delete Bill Confirmation Modal */}
-            {showDeleteConfirm && selectedBill && (
-                <div className="modal-overlay" onClick={() => { setShowDeleteConfirm(false); setSelectedBill(null); }}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="text-center">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Trash2 size={32} className="text-red-600" />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Bill</h3>
-                            <p className="text-gray-600 mb-6">
-                                Are you sure you want to delete bill <strong>{selectedBill.billNumber}</strong>? This action cannot be undone.
-                            </p>
-                            <div className="flex gap-3 justify-center">
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => { setShowDeleteConfirm(false); setSelectedBill(null); }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="btn bg-red-600 text-white hover:bg-red-700"
-                                    onClick={handleDeleteBill}
-                                    disabled={isDeleting}
-                                >
-                                    {isDeleting ? 'Deleting...' : 'Delete'}
-                                </button>
+            {
+                showDeleteConfirm && selectedBill && (
+                    <div className="modal-overlay" onClick={() => { setShowDeleteConfirm(false); setSelectedBill(null); }}>
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Trash2 size={32} className="text-red-600" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Bill</h3>
+                                <p className="text-gray-600 mb-6">
+                                    Are you sure you want to delete bill <strong>{selectedBill.billNumber}</strong>? This action cannot be undone.
+                                </p>
+                                <div className="flex gap-3 justify-center">
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => { setShowDeleteConfirm(false); setSelectedBill(null); }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="btn bg-red-600 text-white hover:bg-red-700"
+                                        onClick={handleDeleteBill}
+                                        disabled={isDeleting}
+                                    >
+                                        {isDeleting ? 'Deleting...' : 'Delete'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

@@ -63,8 +63,8 @@ const billSchema = new mongoose.Schema({
         stateCode: { type: String, default: '33' }
     },
     transport: String,
-    fromDate: Date,
-    toDate: Date,
+    fromText: String,
+    toText: String,
     totalPacks: {
         type: Number,
         default: 0
