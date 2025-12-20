@@ -3,9 +3,9 @@
     "version": "1.0.0",
     "description": "Sri Ram Fashion App - Backend API",
     "scripts": {
-        "start": "cd backend && npm start",
-        "build": "cd backend && npm install",
-        "install-backend": "cd backend && npm install"
+        "start": "node backend/src/index.js",
+        "build": "npm install --prefix backend",
+        "postinstall": "npm install --prefix backend"
     },
     "engines": {
         "node": ">=18.0.0"
