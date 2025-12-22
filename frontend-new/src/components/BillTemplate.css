@@ -88,7 +88,7 @@
 
 .invoice-value {
     flex: 1;
-    text-align: right;
+    text-align: left;
     font-weight: 600;
 }
 
@@ -116,7 +116,6 @@
 .buyer-left {
     flex: 2;
     padding: 2mm 3mm;
-    border-right: 1px solid #000;
 }
 
 .buyer-right {
@@ -223,7 +222,7 @@
 
 .items-table .amount-col {
     width: 20mm;
-    text-align: right;
+    text-align: center;
     padding-right: 2mm;
 }
 

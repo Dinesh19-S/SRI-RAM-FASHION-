@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchBills, createBill, deleteBill } from '../store/slices/billsSlice';
 import { fetchProducts } from '../store/slices/productsSlice';
 import { fetchSettings } from '../store/slices/settingsSlice';
-import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users } from 'lucide-react';
+import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users, Receipt } from 'lucide-react';
 import BillTemplate from '../components/BillTemplate';
 import { downloadBillPDF } from '../utils/pdfGenerator';
 import { customersAPI } from '../services/api';
@@ -14,12 +14,14 @@ const BillingPage = () => {
     const { items: products } = useSelector((state) => state.products);
     const settings = useSelector((state) => state.settings.data);
     const billTemplateRef = useRef(null);
+    const emptyInvoiceRef = useRef(null);
 
     const [showBillModal, setShowBillModal] = useState(false);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [selectedBill, setSelectedBill] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showEmptyInvoiceModal, setShowEmptyInvoiceModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [customer, setCustomer] = useState({
@@ -241,7 +243,7 @@ const BillingPage = () => {
         }
     };
 
-    const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+    const formatCurrency = (amount) => `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
 
     const filteredBills = bills.filter(bill => {
         const searchLower = searchQuery.toLowerCase();
@@ -257,7 +259,10 @@ const BillingPage = () => {
         <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
-                <button className="btn btn-primary" onClick={() => setShowBillModal(true)}><Plus size={18} />New Bill</button>
+                <div className="flex gap-2">
+                    <button className="btn btn-primary" onClick={() => setShowBillModal(true)}><Plus size={18} />New Bill</button>
+                    <button className="btn btn-secondary" onClick={() => setShowEmptyInvoiceModal(true)}><Receipt size={18} />Invoice</button>
+                </div>
             </div>
 
             <div className="card py-4">
@@ -482,7 +487,27 @@ const BillingPage = () => {
                                                         </div>
                                                         <p className="font-semibold">{formatCurrency((item.ratePerPack || item.price) * (item.noOfPacks || item.quantity))}</p>
                                                     </div>
-                                                    <div className="grid grid-cols-4 gap-2 text-xs">
+                                                    <div className="grid grid-cols-5 gap-2 text-xs">
+                                                        <div>
+                                                            <label className="text-gray-500">Size</label>
+                                                            <select className="form-input text-xs p-1" value={item.sizesOrPieces || ''} onChange={(e) => updateItemField(item.productId, 'sizesOrPieces', e.target.value)}>
+                                                                <option value="">Select</option>
+                                                                <option value="S">S</option>
+                                                                <option value="M">M</option>
+                                                                <option value="L">L</option>
+                                                                <option value="XL">XL</option>
+                                                                <option value="XXL">XXL</option>
+                                                                <option value="XXXL">XXXL</option>
+                                                                <option value="28">28</option>
+                                                                <option value="30">30</option>
+                                                                <option value="32">32</option>
+                                                                <option value="34">34</option>
+                                                                <option value="36">36</option>
+                                                                <option value="38">38</option>
+                                                                <option value="40">40</option>
+                                                                <option value="Free Size">Free Size</option>
+                                                            </select>
+                                                        </div>
                                                         <div>
                                                             <label className="text-gray-500">Rate/Pc</label>
                                                             <input type="number" className="form-input text-xs p-1" value={item.ratePerPiece || ''} onChange={(e) => updateItemField(item.productId, 'ratePerPiece', Number(e.target.value))} />
@@ -562,8 +587,67 @@ const BillingPage = () => {
                             </div>
                         </div>
                     </div>
-                )
-            }
+                )}
+
+            {showEmptyInvoiceModal && (
+                <div className="modal-overlay" onClick={() => setShowEmptyInvoiceModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-[230mm] max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="text-lg font-semibold text-gray-900">Empty Invoice Template</h3>
+                            <div className="flex gap-2">
+                                <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={async () => {
+                                        const element = emptyInvoiceRef.current;
+                                        if (element) {
+                                            await downloadBillPDF(element, 'Empty_Invoice');
+                                        }
+                                    }}
+                                >
+                                    <Download size={16} />Download PDF
+                                </button>
+                                <button className="btn btn-ghost btn-icon" onClick={() => setShowEmptyInvoiceModal(false)}><X size={20} /></button>
+                            </div>
+                        </div>
+                        <div className="p-4 overflow-auto max-h-[80vh]" style={{ backgroundColor: '#f0f0f0' }}>
+                            <div ref={emptyInvoiceRef}>
+                                <BillTemplate
+                                    bill={{
+                                        billNumber: '',
+                                        date: new Date(),
+                                        customer: {
+                                            name: '',
+                                            phone: '',
+                                            address: '',
+                                            gstin: '',
+                                            state: 'Tamilnadu',
+                                            stateCode: '33'
+                                        },
+                                        transport: '',
+                                        fromText: 'TIRUPPUR',
+                                        toText: '',
+                                        fromDate: '',
+                                        toDate: '',
+                                        items: [],
+                                        subtotal: 0,
+                                        discount: 0,
+                                        discountAmount: 0,
+                                        taxableAmount: 0,
+                                        cgst: 0,
+                                        sgst: 0,
+                                        totalTax: 0,
+                                        roundOff: 0,
+                                        grandTotal: 0,
+                                        totalPacks: 0,
+                                        numOfBundles: 0
+                                    }}
+                                    settings={settings}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

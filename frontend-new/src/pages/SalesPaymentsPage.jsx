@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, DollarSign, Plus, Search, Edit, Trash2, X, Save, FileText } from 'lucide-react';
+import { ArrowLeft, IndianRupee, Plus, Search, Edit, Trash2, X, Save, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { paymentsAPI, customersAPI } from '../services/api';
 
@@ -208,7 +208,7 @@ const SalesPaymentsPage = () => {
                     </button>
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <DollarSign className="text-green-600" size={20} />
+                            <IndianRupee className="text-green-600" size={20} />
                         </div>
                         <h1 className="text-2xl font-bold text-gray-900">Sales Payments</h1>
                     </div>

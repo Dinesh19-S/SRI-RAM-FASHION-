@@ -161,6 +161,7 @@ const ItemsPage = () => {
                 category: formData.category,
                 size: formData.size,
                 costPrice: Number(formData.costPrice) || 0,
+                mrp: Number(formData.sellingPrice),  // MRP is required by backend
                 sellingPrice: Number(formData.sellingPrice),
                 stock: Number(formData.stock),
                 lowStockThreshold: Number(formData.lowStockThreshold) || 5,

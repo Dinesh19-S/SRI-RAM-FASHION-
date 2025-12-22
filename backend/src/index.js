@@ -51,21 +51,20 @@ app.use(express.urlencoded({ extended: true }));
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://dineshknight19_db_user:dinesh1910@cluster0.hepq0h5.mongodb.net/sri-ram-fashions"
 
-// Function to create default admin user
 const createDefaultAdmin = async () => {
     try {
-        const adminExists = await User.findOne({ email: 'admin@sriramfashions.com' });
+        const adminExists = await User.findOne({ email: 'sriramfashionstrp@gmail.com' });
         if (!adminExists) {
             const hashedPassword = await bcrypt.hash('password123', 10);
             await User.create({
                 name: 'Admin User',
-                email: 'admin@sriramfashions.com',
+                email: 'sriramfashionstrp@gmail.com',
                 password: hashedPassword,
-                phone: '9876543210',
+                phone: '9080573831',
                 role: 'admin',
                 isActive: true
             });
-            console.log('✅ Default admin user created (admin@sriramfashions.com / password123)');
+            console.log('✅ Default admin user created (sriramfashionstrp@gmail.com / password123)');
         }
     } catch (error) {
         console.error('Error creating default admin:', error);
@@ -129,7 +128,7 @@ app.use((req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 API URL: http://localhost:${PORT}/api`);

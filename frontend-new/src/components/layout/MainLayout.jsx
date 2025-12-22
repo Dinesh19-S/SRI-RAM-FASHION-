@@ -17,7 +17,7 @@ import {
     User,
     Store,
     Calculator,
-    DollarSign,
+    IndianRupee,
     FileText,
     ShoppingCart,
     TrendingUp,
@@ -38,14 +38,14 @@ const navigationSections = [
         title: 'Purchase',
         items: [
             { name: 'Purchase Entry', href: '/purchase/entry', icon: Calculator },
-            { name: 'Purchase Payments', href: '/purchase/payments', icon: DollarSign },
+            { name: 'Purchase Payments', href: '/purchase/payments', icon: IndianRupee },
         ]
     },
     {
         title: 'Sales',
         items: [
             { name: 'Sales Entry', href: '/sales/entry', icon: ShoppingCart },
-            { name: 'Sales Payments', href: '/sales/payments', icon: DollarSign },
+            { name: 'Sales Payments', href: '/sales/payments', icon: IndianRupee },
         ]
     },
     {
