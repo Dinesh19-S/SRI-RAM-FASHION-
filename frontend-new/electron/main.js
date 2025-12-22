@@ -22,13 +22,27 @@ function createWindow() {
     });
 
     // Load the app
-    const startUrl = process.env.ELECTRON_START_URL || url.format({
-        pathname: path.join(__dirname, '../dist/index.html'),
-        protocol: 'file:',
-        slashes: true
-    });
+    let startUrl;
 
+    if (process.env.ELECTRON_START_URL) {
+        // Development mode
+        startUrl = process.env.ELECTRON_START_URL;
+    } else {
+        // Production mode - packaged app
+        startUrl = url.format({
+            pathname: path.join(__dirname, '..', 'dist', 'index.html'),
+            protocol: 'file:',
+            slashes: true
+        });
+    }
+
+    console.log('Loading URL:', startUrl);
     mainWindow.loadURL(startUrl);
+
+    // Handle load errors
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+        console.error('Failed to load:', errorDescription);
+    });
 
     // Show window when ready
     mainWindow.once('ready-to-show', () => {

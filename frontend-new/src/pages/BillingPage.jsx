@@ -261,7 +261,13 @@ const BillingPage = () => {
                 <h1 className="text-2xl font-bold text-gray-900">Billing</h1>
                 <div className="flex gap-2">
                     <button className="btn btn-primary" onClick={() => setShowBillModal(true)}><Plus size={18} />New Bill</button>
-                    <button className="btn btn-secondary" onClick={() => setShowEmptyInvoiceModal(true)}><Receipt size={18} />Invoice</button>
+                    <button
+                        className="w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
+                        onClick={() => setShowEmptyInvoiceModal(true)}
+                        title="Empty Invoice Template"
+                    >
+                        <FileText size={20} className="text-gray-600" />
+                    </button>
                 </div>
             </div>
 
