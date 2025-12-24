@@ -4,7 +4,7 @@
     "description": "Sri Ram Fashion App - Backend API",
     "scripts": {
         "start": "node backend/src/index.js",
-        "build": "npm install --prefix backend",
+        "build": "echo 'Backend ready' && npm install --prefix backend",
         "postinstall": "npm install --prefix backend"
     },
     "engines": {
