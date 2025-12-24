@@ -1,11 +1,9 @@
 {
   "name": "sri-ram-fashions",
-  "productName": "Sri Ram Fashions",
   "version": "1.0.0",
   "private": true,
-  "description": "Sri Ram Fashions Business Management Application",
+  "description": "Sri Ram Fashions Business Management Web Application",
   "author": "Sri Ram Fashions",
-  "main": "electron/main.js",
   "homepage": "./",
   "scripts": {
     "dev": "vite",
@@ -13,39 +11,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist",
-    "electron:dev": "set ELECTRON_START_URL=http://localhost:5173 && electron .",
-    "electron:build": "npm run build && electron-builder --win",
-    "electron:package": "npm run build && electron-builder --win --dir"
-  },
-  "build": {
-    "appId": "com.sriramfashions.app",
-    "productName": "Sri Ram Fashions",
-    "directories": {
-      "buildResources": "electron",
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Sri Ram Fashions"
-    }
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.2",
@@ -69,8 +35,6 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
-    "electron": "^33.4.11",
-    "electron-builder": "^25.1.8",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

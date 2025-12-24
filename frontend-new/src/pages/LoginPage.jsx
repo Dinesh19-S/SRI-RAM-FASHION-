@@ -58,7 +58,7 @@ const LoginPage = () => {
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <img
-                        src="/assets/logo.png"
+                        src="./assets/logo.png"
                         alt="Sri Ram Fashions"
                         className="w-32 h-32 mx-auto mb-4 object-contain"
                     />

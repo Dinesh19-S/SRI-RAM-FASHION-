@@ -106,12 +106,6 @@ const InventoryPage = () => {
         <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
-                <button
-                    className="btn btn-new-entry flex items-center gap-2"
-                    onClick={() => setShowCategoryModal(true)}
-                >
-                    <FolderPlus size={18} />Add Category
-                </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

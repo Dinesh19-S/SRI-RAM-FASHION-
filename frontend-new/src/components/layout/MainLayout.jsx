@@ -29,9 +29,11 @@ import {
 
 const navigationSections = [
     {
-        title: 'Main Menu',
+        title: 'HOME',
         items: [
             { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+            { name: 'Billing', href: '/billing', icon: Receipt },
+            { name: 'Inventory', href: '/inventory', icon: Package },
         ]
     },
     {
@@ -46,13 +48,6 @@ const navigationSections = [
         items: [
             { name: 'Sales Entry', href: '/sales/entry', icon: ShoppingCart },
             { name: 'Sales Payments', href: '/sales/payments', icon: IndianRupee },
-        ]
-    },
-    {
-        title: 'Main Menu',
-        items: [
-            { name: 'Billing', href: '/billing', icon: Receipt },
-            { name: 'Inventory', href: '/inventory', icon: Package },
         ]
     },
     {
@@ -74,7 +69,7 @@ const navigationSections = [
         ]
     },
     {
-        title: 'Main Menu',
+        title: 'Settings',
         items: [
             { name: 'Settings', href: '/settings', icon: Settings },
         ]
@@ -162,7 +157,7 @@ const MainLayout = () => {
             <aside className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ backgroundColor: '#1e3a5f' }}>
                 <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: '#2d4a6a' }}>
                     <img
-                        src="/assets/logo.png"
+                        src="./assets/logo.png"
                         alt="Sri Ram Fashions"
                         className="w-14 h-14 object-contain rounded-lg bg-white/10 p-1"
                     />

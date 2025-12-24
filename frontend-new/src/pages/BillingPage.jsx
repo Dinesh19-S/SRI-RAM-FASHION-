@@ -247,7 +247,8 @@ const BillingPage = () => {
 
     const filteredBills = bills.filter(bill => {
         const searchLower = searchQuery.toLowerCase();
-        const billDate = new Date(bill.date || bill.createdAt).toLocaleDateString('en-IN');
+        const billDateObj = new Date(bill.date || bill.createdAt);
+        const billDate = `${billDateObj.getDate().toString().padStart(2, '0')}/${(billDateObj.getMonth() + 1).toString().padStart(2, '0')}/${billDateObj.getFullYear()}`;
         const matchesSearch =
             bill.billNumber?.toLowerCase().includes(searchLower) ||
             bill.customer?.name?.toLowerCase().includes(searchLower) ||
@@ -307,7 +308,7 @@ const BillingPage = () => {
                             {filteredBills.map((bill) => (
                                 <tr key={bill._id}>
                                     <td className="font-medium" style={{ color: '#1e40af' }}>{bill.billNumber}</td>
-                                    <td>{new Date(bill.date || bill.createdAt).toLocaleDateString('en-IN')}</td>
+                                    <td>{(() => { const d = new Date(bill.date || bill.createdAt); return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`; })()}</td>
                                     <td><div><p className="font-medium">{bill.customer?.name}</p><p className="text-xs text-gray-500">{bill.customer?.phone}</p></div></td>
                                     <td className="font-semibold">{formatCurrency(bill.grandTotal)}</td>
                                     <td className="capitalize">{bill.paymentMethod}</td>
