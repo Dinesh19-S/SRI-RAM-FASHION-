@@ -339,10 +339,11 @@ body {
   width: 100%;
   text-align: left;
   border-collapse: collapse;
+  table-layout: auto;
 }
 
 .table th {
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 700;
   color: #1f2937;
@@ -350,10 +351,11 @@ body {
   letter-spacing: 0.05em;
   background: #f9fafb;
   border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
 }
 
 .table td {
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 0.75rem;
   font-size: 0.875rem;
   color: #1f2937;
   border-bottom: 1px solid #e5e7eb;

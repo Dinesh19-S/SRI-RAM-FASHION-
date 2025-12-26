@@ -156,6 +156,82 @@ router.post('/send-otp', async (req, res) => {
     }
 });
 
+// In-memory storage for password reset codes (in production, use Redis or database)
+const resetCodes = new Map();
+
+// Forgot Password - Request reset code
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        const user = await User.findOne({ email, isActive: true });
+        if (!user) {
+            // Don't reveal if email exists for security
+            return res.json({ success: true, message: 'If the email exists, a reset code has been sent' });
+        }
+
+        // Generate 6-digit reset code
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store with 10-minute expiry
+        resetCodes.set(email, {
+            code: resetCode,
+            expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+        });
+
+        // In production, send email. For now, log to console (mock email)
+        console.log(`\n========================================`);
+        console.log(`Password Reset Code for ${email}: ${resetCode}`);
+        console.log(`This code expires in 10 minutes.`);
+        console.log(`========================================\n`);
+
+        res.json({ success: true, message: 'Reset code sent to your email' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Reset Password - Verify code and set new password
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { email, code, newPassword } = req.body;
+
+        // Check if reset code exists and is valid
+        const storedData = resetCodes.get(email);
+        if (!storedData) {
+            return res.status(400).json({ success: false, message: 'No reset code found. Please request a new one.' });
+        }
+
+        if (Date.now() > storedData.expiresAt) {
+            resetCodes.delete(email);
+            return res.status(400).json({ success: false, message: 'Reset code has expired. Please request a new one.' });
+        }
+
+        if (storedData.code !== code) {
+            return res.status(400).json({ success: false, message: 'Invalid reset code' });
+        }
+
+        // Find user and update password
+        const user = await User.findOne({ email, isActive: true });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        // Hash new password and save
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+
+        // Clear the reset code
+        resetCodes.delete(email);
+
+        console.log(`Password successfully reset for ${email}`);
+
+        res.json({ success: true, message: 'Password reset successfully. You can now login with your new password.' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Register
 router.post('/register', async (req, res) => {
     try {

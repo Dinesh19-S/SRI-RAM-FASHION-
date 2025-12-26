@@ -86,6 +86,30 @@ export const googleLogin = createAsyncThunk(
     }
 );
 
+export const forgotPassword = createAsyncThunk(
+    'auth/forgotPassword',
+    async (email, { rejectWithValue }) => {
+        try {
+            const response = await authAPI.forgotPassword(email);
+            return response.data.message;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to send reset code');
+        }
+    }
+);
+
+export const resetPassword = createAsyncThunk(
+    'auth/resetPassword',
+    async ({ email, code, newPassword }, { rejectWithValue }) => {
+        try {
+            const response = await authAPI.resetPassword(email, code, newPassword);
+            return response.data.message;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || 'Password reset failed');
+        }
+    }
+);
+
 // Initial state
 const initialState = {
     user: JSON.parse(localStorage.getItem('user')) || null,

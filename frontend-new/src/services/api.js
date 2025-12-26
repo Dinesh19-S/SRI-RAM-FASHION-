@@ -49,6 +49,8 @@ export const authAPI = {
     loginPhone: (phone, otp) => api.post('/auth/login-phone', { phone, otp }),
     getProfile: () => api.get('/auth/profile'),
     googleLogin: (credential) => api.post('/auth/google', { credential }),
+    forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+    resetPassword: (email, code, newPassword) => api.post('/auth/reset-password', { email, code, newPassword }),
 };
 
 // Products API

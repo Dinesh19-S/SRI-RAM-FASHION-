@@ -84,35 +84,33 @@ const BillingPage = () => {
     };
 
     const addItemToBill = (product) => {
-        const existing = billItems.find(item => item.productId === product._id);
-        if (existing) {
-            setBillItems(billItems.map(item => item.productId === product._id ? { ...item, quantity: item.quantity + 1, noOfPacks: (item.noOfPacks || item.quantity) + 1 } : item));
-        } else {
-            setBillItems([...billItems, {
-                productId: product._id,
-                name: product.name,
-                productName: product.name,
-                price: product.sellingPrice,
-                quantity: 1,
-                noOfPacks: 1,
-                pcsInPack: 1,
-                ratePerPiece: product.sellingPrice,
-                ratePerPack: product.sellingPrice,
-                hsnCode: product.hsn || '',
-                gstRate: product.gstRate || 5,
-                sizesOrPieces: ''
-            }]);
-        }
+        // Always add as a new line item to allow same product with different sizes/rates
+        const uniqueId = `${product._id}_${Date.now()}`;
+        setBillItems([...billItems, {
+            productId: product._id,
+            uniqueId: uniqueId,
+            name: product.name,
+            productName: product.name,
+            price: product.sellingPrice,
+            quantity: 1,
+            noOfPacks: 1,
+            pcsInPack: 1,
+            ratePerPiece: product.sellingPrice,
+            ratePerPack: product.sellingPrice,
+            hsnCode: product.hsn || '',
+            gstRate: product.gstRate || 5,
+            sizesOrPieces: ''
+        }]);
     };
 
-    const updateItemQuantity = (productId, quantity) => {
-        if (quantity <= 0) setBillItems(billItems.filter(item => item.productId !== productId));
-        else setBillItems(billItems.map(item => item.productId === productId ? { ...item, quantity, noOfPacks: quantity } : item));
+    const updateItemQuantity = (uniqueId, quantity) => {
+        if (quantity <= 0) setBillItems(billItems.filter(item => item.uniqueId !== uniqueId));
+        else setBillItems(billItems.map(item => item.uniqueId === uniqueId ? { ...item, quantity, noOfPacks: quantity } : item));
     };
 
-    const updateItemField = (productId, field, value) => {
+    const updateItemField = (uniqueId, field, value) => {
         setBillItems(billItems.map(item => {
-            if (item.productId !== productId) return item;
+            if (item.uniqueId !== uniqueId) return item;
             const updated = { ...item, [field]: value };
             // Recalculate if rate fields change
             if (field === 'ratePerPiece' || field === 'pcsInPack') {
@@ -283,16 +281,6 @@ const BillingPage = () => {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <select
-                        style={{ width: '110px', flexShrink: 0 }}
-                        className="form-input text-xs py-2 px-2"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                        <option value="all">All Status</option>
-                        <option value="paid">Paid</option>
-                        <option value="pending">Pending</option>
-                    </select>
                 </div>
             </div>
 
@@ -303,7 +291,7 @@ const BillingPage = () => {
                     <div className="text-center py-12 text-gray-500"><FileText size={48} className="mx-auto mb-2 opacity-50" /><p>No bills found</p></div>
                 ) : (
                     <table className="table">
-                        <thead><tr className="bg-gray-50"><th>Bill No</th><th>Date</th><th>Customer</th><th>Amount</th><th>Payment</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
+                        <thead><tr className="bg-gray-50"><th>Bill No</th><th>Date</th><th>Customer</th><th>Amount</th><th className="text-right">Actions</th></tr></thead>
                         <tbody>
                             {filteredBills.map((bill) => (
                                 <tr key={bill._id}>
@@ -311,8 +299,6 @@ const BillingPage = () => {
                                     <td>{(() => { const d = new Date(bill.date || bill.createdAt); return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`; })()}</td>
                                     <td><div><p className="font-medium">{bill.customer?.name}</p><p className="text-xs text-gray-500">{bill.customer?.phone}</p></div></td>
                                     <td className="font-semibold">{formatCurrency(bill.grandTotal)}</td>
-                                    <td className="capitalize">{bill.paymentMethod}</td>
-                                    <td><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${bill.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{bill.paymentStatus}</span></td>
                                     <td>
                                         <div className="flex justify-end gap-2">
                                             <button
@@ -486,7 +472,7 @@ const BillingPage = () => {
                                     {billItems.length === 0 ? <div className="text-center py-8 text-gray-500"><FileText size={48} className="mx-auto mb-2 opacity-50" /><p>No items added</p></div> : (
                                         <div className="space-y-2 max-h-52 overflow-y-auto">
                                             {billItems.map((item) => (
-                                                <div key={item.productId} className="p-3 bg-gray-50 rounded-lg">
+                                                <div key={item.uniqueId} className="p-3 bg-gray-50 rounded-lg">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <div>
                                                             <p className="font-medium text-gray-900">{item.name}</p>
@@ -497,7 +483,7 @@ const BillingPage = () => {
                                                     <div className="grid grid-cols-5 gap-2 text-xs">
                                                         <div>
                                                             <label className="text-gray-500">Size</label>
-                                                            <select className="form-input text-xs p-1" value={item.sizesOrPieces || ''} onChange={(e) => updateItemField(item.productId, 'sizesOrPieces', e.target.value)}>
+                                                            <select className="form-input text-xs p-1" value={item.sizesOrPieces || ''} onChange={(e) => updateItemField(item.uniqueId, 'sizesOrPieces', e.target.value)}>
                                                                 <option value="">Select</option>
                                                                 <option value="S">S</option>
                                                                 <option value="M">M</option>
@@ -517,22 +503,22 @@ const BillingPage = () => {
                                                         </div>
                                                         <div>
                                                             <label className="text-gray-500">Rate/Pc</label>
-                                                            <input type="number" className="form-input text-xs p-1" value={item.ratePerPiece || ''} onChange={(e) => updateItemField(item.productId, 'ratePerPiece', Number(e.target.value))} />
+                                                            <input type="number" className="form-input text-xs p-1" value={item.ratePerPiece || ''} onChange={(e) => updateItemField(item.uniqueId, 'ratePerPiece', Number(e.target.value))} />
                                                         </div>
                                                         <div>
                                                             <label className="text-gray-500">Pcs/Pack</label>
-                                                            <input type="number" className="form-input text-xs p-1" value={item.pcsInPack || ''} onChange={(e) => updateItemField(item.productId, 'pcsInPack', Number(e.target.value))} />
+                                                            <input type="number" className="form-input text-xs p-1" value={item.pcsInPack || ''} onChange={(e) => updateItemField(item.uniqueId, 'pcsInPack', Number(e.target.value))} />
                                                         </div>
                                                         <div>
                                                             <label className="text-gray-500">Rate/Pack</label>
-                                                            <input type="number" className="form-input text-xs p-1" value={item.ratePerPack || ''} onChange={(e) => updateItemField(item.productId, 'ratePerPack', Number(e.target.value))} />
+                                                            <input type="number" className="form-input text-xs p-1" value={item.ratePerPack || ''} onChange={(e) => updateItemField(item.uniqueId, 'ratePerPack', Number(e.target.value))} />
                                                         </div>
                                                         <div>
                                                             <label className="text-gray-500">No. Packs</label>
                                                             <div className="flex items-center gap-1">
-                                                                <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.productId, (item.noOfPacks || item.quantity) - 1)}>-</button>
+                                                                <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.uniqueId, (item.noOfPacks || item.quantity) - 1)}>-</button>
                                                                 <span className="w-6 text-center text-sm">{item.noOfPacks || item.quantity}</span>
-                                                                <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.productId, (item.noOfPacks || item.quantity) + 1)}>+</button>
+                                                                <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.uniqueId, (item.noOfPacks || item.quantity) + 1)}>+</button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -548,11 +534,6 @@ const BillingPage = () => {
                                         <div className="flex justify-between text-gray-600"><span>SGST @ {sgstRate}%</span><span>{formatCurrency(sgstAmount)}</span></div>
                                         <div className="flex justify-between text-gray-600"><span>Total Packs</span><span>{totalPacks}</span></div>
                                         <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200"><span>Grand Total</span><span style={{ color: '#1e40af' }}>{formatCurrency(grandTotal)}</span></div>
-                                    </div>
-                                    <div><label className="form-label">Payment Method</label>
-                                        <div className="grid grid-cols-4 gap-2">{['cash', 'upi', 'card', 'credit'].map((method) => (
-                                            <button key={method} className={`py-2 px-3 rounded-lg border text-sm font-medium capitalize ${paymentMethod === method ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600'}`} onClick={() => setPaymentMethod(method)}>{method}</button>
-                                        ))}</div>
                                     </div>
                                 </div>
                             </div>

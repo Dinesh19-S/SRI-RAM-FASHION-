@@ -180,7 +180,7 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         ))}
                         {emptyRows.map((_, index) => (
                             <tr key={`empty-${index}`}>
-                                <td className="sno-col">{(bill.items?.length || 0) + index + 1}</td>
+                                <td className="sno-col"></td>
                                 <td className="product-col"></td>
                                 <td className="hsn-col"></td>
                                 <td className="sizes-col"></td>
