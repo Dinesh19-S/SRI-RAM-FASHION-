@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { login, sendOTP, loginWithPhone, clearError, googleLogin, forgotPassword, resetPassword } from '../store/slices/authSlice';
 import { Mail, Lock, Phone, Eye, EyeOff, ArrowRight, X, CheckCircle } from 'lucide-react';
+import logoImage from '../assets/logo.jpg';
 
 const LoginPage = () => {
     const dispatch = useDispatch();
@@ -126,9 +127,9 @@ const LoginPage = () => {
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <img
-                        src="./assets/logo.png"
+                        src={logoImage}
                         alt="Sri Ram Fashions"
-                        className="w-32 h-32 mx-auto mb-4 object-contain"
+                        className="w-40 h-40 mx-auto mb-4 rounded-2xl object-cover shadow-lg"
                     />
                     <p className="text-gray-500 mt-1">Business Management System</p>
                 </div>

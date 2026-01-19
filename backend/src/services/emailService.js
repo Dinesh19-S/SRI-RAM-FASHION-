@@ -1,0 +1,302 @@
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Create transporter with Gmail SMTP (or other SMTP)
+const createTransporter = () => {
+    // Check if email is configured
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        console.warn('⚠️ Email service not configured - EMAIL_USER and EMAIL_PASS required');
+        return null;
+    }
+
+    return nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.EMAIL_PORT || '587'),
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+};
+
+let transporter = createTransporter();
+
+// Refresh transporter if env changes
+export const refreshTransporter = () => {
+    transporter = createTransporter();
+};
+
+// Check if email service is configured
+export const isEmailConfigured = () => {
+    return !!transporter;
+};
+
+// Send email utility
+const sendEmail = async (to, subject, html, attachments = []) => {
+    if (!transporter) {
+        console.log('📧 Email would be sent to:', to);
+        console.log('📧 Subject:', subject);
+        return { success: false, message: 'Email service not configured' };
+    }
+
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || `Sri Ram Fashions <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            html,
+            attachments,
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('✅ Email sent:', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('❌ Email error:', error);
+        return { success: false, message: error.message };
+    }
+};
+
+// Send bill notification to admin/staff
+export const sendBillNotification = async (bill, recipientEmails) => {
+    const subject = `New Bill Created - ${bill.billNumber}`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+        .footer { background: #1f2937; color: #9ca3af; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; font-size: 12px; }
+        .bill-details { background: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+        .detail-label { color: #6b7280; }
+        .detail-value { font-weight: bold; }
+        .total { font-size: 1.5em; color: #059669; }
+        .btn { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">🧾 New Bill Created</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Sri Ram Fashions</p>
+        </div>
+        <div class="content">
+          <p>A new bill has been generated in the system:</p>
+          
+          <div class="bill-details">
+            <div class="detail-row">
+              <span class="detail-label">Bill Number</span>
+              <span class="detail-value">${bill.billNumber}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Customer</span>
+              <span class="detail-value">${bill.customer?.name || bill.customer?.companyName || 'Walk-in Customer'}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Date</span>
+              <span class="detail-value">${new Date(bill.date || bill.createdAt).toLocaleDateString('en-IN')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Items</span>
+              <span class="detail-value">${bill.items?.length || 0} items</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Grand Total</span>
+              <span class="detail-value total">₹${(bill.grandTotal || 0).toLocaleString('en-IN')}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Payment Status</span>
+              <span class="detail-value">${bill.paymentStatus || 'Pending'}</span>
+            </div>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px;">
+            This notification was auto-generated by Sri Ram Fashions Business Management System.
+          </p>
+        </div>
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+    const emails = Array.isArray(recipientEmails) ? recipientEmails : [recipientEmails];
+    const results = await Promise.all(emails.map(email => sendEmail(email, subject, html)));
+    return results;
+};
+
+// Send low stock alert
+export const sendLowStockAlert = async (products, recipientEmails) => {
+    const subject = `⚠️ Low Stock Alert - ${products.length} Items Need Attention`;
+
+    const productRows = products.map(p => `
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${p.name}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${p.stock}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${p.lowStockThreshold}</td>
+    </tr>
+  `).join('');
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+        .footer { background: #1f2937; color: #9ca3af; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; margin: 15px 0; }
+        th { background: #374151; color: white; padding: 12px; text-align: left; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">⚠️ Low Stock Alert</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">${products.length} items need restocking</p>
+        </div>
+        <div class="content">
+          <p>The following products are running low on stock:</p>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th style="text-align: center;">Current Stock</th>
+                <th style="text-align: center;">Minimum</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${productRows}
+            </tbody>
+          </table>
+          
+          <p style="color: #6b7280; font-size: 14px;">
+            Please restock these items to avoid stockouts.
+          </p>
+        </div>
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+    const emails = Array.isArray(recipientEmails) ? recipientEmails : [recipientEmails];
+    const results = await Promise.all(emails.map(email => sendEmail(email, subject, html)));
+    return results;
+};
+
+// Send daily summary
+export const sendDailySummary = async (summary, recipientEmails) => {
+    const subject = `📊 Daily Business Summary - ${new Date().toLocaleDateString('en-IN')}`;
+
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+        .footer { background: #1f2937; color: #9ca3af; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; font-size: 12px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+        .stat-card { background: white; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 2em; font-weight: bold; color: #059669; }
+        .stat-label { color: #6b7280; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">📊 Daily Summary</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">${new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        </div>
+        <div class="content">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value">₹${(summary.totalRevenue || 0).toLocaleString('en-IN')}</div>
+              <div class="stat-label">Today's Revenue</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${summary.totalOrders || 0}</div>
+              <div class="stat-label">Orders</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${summary.newCustomers || 0}</div>
+              <div class="stat-label">New Customers</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${summary.lowStockItems || 0}</div>
+              <div class="stat-label">Low Stock Items</div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+    const emails = Array.isArray(recipientEmails) ? recipientEmails : [recipientEmails];
+    const results = await Promise.all(emails.map(email => sendEmail(email, subject, html)));
+    return results;
+};
+
+// Generic notification email
+export const sendNotification = async (to, subject, message) => {
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 20px; border: 1px solid #e5e7eb; }
+        .footer { background: #1f2937; color: #9ca3af; padding: 15px; text-align: center; border-radius: 0 0 8px 8px; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">🔔 Notification</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Sri Ram Fashions</p>
+        </div>
+        <div class="content">
+          <p>${message}</p>
+        </div>
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+    return sendEmail(to, subject, html);
+};
+
+export default {
+    sendBillNotification,
+    sendLowStockAlert,
+    sendDailySummary,
+    sendNotification,
+    isEmailConfigured,
+};

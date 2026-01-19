@@ -19,6 +19,7 @@ import {
     ResponsiveContainer
 } from 'recharts';
 import { formatDate } from '../utils/dateUtils';
+import AIInsightsPanel from '../components/AIInsightsPanel';
 
 const DashboardPage = () => {
     const [stats, setStats] = useState(null);
@@ -194,6 +195,11 @@ const DashboardPage = () => {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* AI Insights Panel */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AIInsightsPanel />
             </div>
 
             {/* Recent Bills */}

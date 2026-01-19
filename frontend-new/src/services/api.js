@@ -32,7 +32,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
+        // Only redirect on 401 for non-auth endpoints
+        // Auth endpoints (login, register, etc.) should handle their own errors
+        const isAuthEndpoint = error.config?.url?.includes('/auth/');
+        if (error.response?.status === 401 && !isAuthEndpoint) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login';
@@ -174,6 +177,15 @@ export const purchaseEntriesAPI = {
     create: (data) => api.post('/purchase-entries', data),
     update: (id, data) => api.put(`/purchase-entries/${id}`, data),
     delete: (id) => api.delete(`/purchase-entries/${id}`),
+};
+
+// AI API
+export const aiAPI = {
+    chat: (message) => api.post('/ai/chat', { message }),
+    getInsights: () => api.get('/ai/insights'),
+    getInventoryPredictions: () => api.get('/ai/inventory-predictions'),
+    smartSearch: (query) => api.post('/ai/search', { query }),
+    healthCheck: () => api.get('/ai/health'),
 };
 
 export default api;

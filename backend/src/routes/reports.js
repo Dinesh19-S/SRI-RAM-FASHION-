@@ -2,6 +2,7 @@ import express from 'express';
 import Bill from '../models/Bill.js';
 import Product from '../models/Product.js';
 import StockMovement from '../models/StockMovement.js';
+import PurchaseEntry from '../models/PurchaseEntry.js';
 
 const router = express.Router();
 
@@ -219,16 +220,42 @@ router.get('/sales-report', async (req, res) => {
     }
 });
 
-// Purchase report (using bills with negative quantities or separate purchase model)
+// Purchase report (linked to PurchaseEntry)
 router.get('/purchase-report', async (req, res) => {
     try {
         const { fromDate, toDate, supplier } = req.query;
 
-        // For now, returning empty as we don't have purchase model
-        // TODO: Create Purchase model and implement this
-        const mockData = [];
+        const query = {};
+        if (fromDate && toDate) {
+            query.date = { $gte: new Date(fromDate), $lte: new Date(toDate) };
+        }
+        if (supplier) {
+            query['supplier.name'] = { $regex: supplier, $options: 'i' };
+        }
 
-        res.json({ success: true, data: mockData });
+        const entries = await PurchaseEntry.find(query)
+            .sort({ date: 1 })
+            .lean();
+
+        // Flatten items for report
+        const reportData = [];
+        let sno = 1;
+
+        entries.forEach(entry => {
+            entry.items.forEach(item => {
+                reportData.push({
+                    sno: sno++,
+                    date: entry.date.toISOString().split('T')[0],
+                    invNo: entry.invoiceNumber,
+                    item: item.particular,
+                    rate: item.rate,
+                    qty: item.quantity,
+                    total: item.total || (item.rate * item.quantity)
+                });
+            });
+        });
+
+        res.json({ success: true, data: reportData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -299,11 +326,26 @@ router.get('/auditor-purchase', async (req, res) => {
     try {
         const { fromDate, toDate } = req.query;
 
-        // For now, returning empty as we don't have purchase model
-        // TODO: Create Purchase model and implement this
-        const mockData = [];
+        const query = {};
+        if (fromDate && toDate) {
+            query.date = { $gte: new Date(fromDate), $lte: new Date(toDate) };
+        }
 
-        res.json({ success: true, data: mockData });
+        const entries = await PurchaseEntry.find(query).sort({ date: 1 }).lean();
+
+        const reportData = entries.map(entry => ({
+            companyName: entry.supplier.name,
+            gstin: entry.supplier.gstin || 'N/A',
+            date: entry.date.toISOString().split('T')[0],
+            invNo: entry.invoiceNumber,
+            taxableAmount: entry.subtotal,
+            cgst: entry.totalCgst,
+            sgst: entry.totalSgst,
+            igst: entry.totalIgst || 0,
+            total: entry.grandTotal
+        }));
+
+        res.json({ success: true, data: reportData });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

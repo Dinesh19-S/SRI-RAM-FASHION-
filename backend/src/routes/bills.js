@@ -2,6 +2,7 @@ import express from 'express';
 import Bill from '../models/Bill.js';
 import Product from '../models/Product.js';
 import StockMovement from '../models/StockMovement.js';
+import { sendBillNotification } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -186,6 +187,14 @@ router.post('/', async (req, res) => {
             { reason: 'Sold - Bill pending' },
             { reason: `Sold - Bill #${bill.billNumber}` }
         );
+
+        // Send email notification if configured
+        if (process.env.ADMIN_EMAIL) {
+            const emailList = process.env.ADMIN_EMAIL.split(',').map(e => e.trim());
+            sendBillNotification(bill, emailList).catch(err => {
+                console.error('Failed to send bill notification:', err);
+            });
+        }
 
         res.status(201).json({ success: true, data: bill });
     } catch (error) {

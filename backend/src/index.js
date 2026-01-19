@@ -23,6 +23,7 @@ import supplierRoutes from './routes/suppliers.js';
 import paymentRoutes from './routes/payments.js';
 import salesEntriesRoutes from './routes/salesEntries.js';
 import purchaseEntriesRoutes from './routes/purchaseEntries.js';
+import aiRoutes from './routes/ai.js';
 
 const app = express();
 
@@ -106,6 +107,7 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/sales-entries', salesEntriesRoutes);
 app.use('/api/purchase-entries', purchaseEntriesRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
