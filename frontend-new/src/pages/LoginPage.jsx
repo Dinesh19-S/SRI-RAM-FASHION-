@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { login, sendOTP, loginWithPhone, clearError, googleLogin, forgotPassword, resetPassword } from '../store/slices/authSlice';
-import { Mail, Lock, Phone, Eye, EyeOff, ArrowRight, X, CheckCircle } from 'lucide-react';
-import logoImage from '../assets/logo.jpg';
+import { Mail, Lock, Phone, Eye, EyeOff, X, CheckCircle, ArrowRight } from 'lucide-react';
 
 const LoginPage = () => {
     const dispatch = useDispatch();
@@ -25,7 +24,7 @@ const LoginPage = () => {
     const [resetCode, setResetCode] = useState(['', '', '', '', '', '']);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [forgotStep, setForgotStep] = useState('email'); // 'email', 'code', 'success'
+    const [forgotStep, setForgotStep] = useState('email');
     const [forgotError, setForgotError] = useState('');
     const [forgotLoading, setForgotLoading] = useState(false);
 
@@ -122,216 +121,174 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center py-8 px-4 overflow-y-auto" style={{ background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)' }}>
-            <div className="w-full max-w-md">
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <img
-                        src={logoImage}
-                        alt="Sri Ram Fashions"
-                        className="w-40 h-40 mx-auto mb-4 rounded-2xl object-cover shadow-lg"
-                    />
-                    <p className="text-gray-500 mt-1">Business Management System</p>
+        <div className="min-h-screen w-full flex items-center justify-center p-4 relative font-sans">
+            {/* Background Image */}
+            {/* Background Image */}
+            <div
+                className="absolute inset-0 z-0 bg-cover bg-center"
+                style={{
+                    backgroundImage: 'url("https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop")',
+                }}
+            ></div>
+
+            {/* Dark Overlay */}
+            {/* Dark Overlay */}
+            <div className="absolute inset-0 z-[1] bg-black/70"></div>
+
+            {/* Login Card */}
+            <div className="relative z-[2] bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl border border-gray-100 text-center">
+                <div className="mb-8">
+                    <h2 className="font-serif text-3xl text-black mb-2 font-bold tracking-tight">SRI RAM FASHIONS</h2>
+                    <p className="text-sm text-gray-700 font-bold">Welcome back! Please sign in.</p>
                 </div>
 
-                {/* Login Card */}
-                <div className="card animate-fade-in">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-6">Welcome back</h2>
+                {error && (
+                    <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm flex items-center gap-2 text-left font-medium">
+                        <CheckCircle size={18} className="text-red-600 rotate-45" />
+                        {error}
+                    </div>
+                )}
 
-                    {error && (
-                        <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
-                            {error}
-                        </div>
-                    )}
+                <form onSubmit={handleLogin} className="text-left space-y-4">
+                    <div>
+                        <input
+                            type="email"
+                            placeholder="Email Address"
+                            className="w-full p-4 bg-white border border-gray-300 rounded-lg outline-none focus:border-black transition-colors font-sans text-sm text-black placeholder:text-gray-600 font-medium"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
 
-                    <form onSubmit={handleLogin} className="space-y-4">
-                        <div>
-                            <label className="form-label">Email</label>
-                            <div className="relative">
-                                {!email && <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
-                                <input
-                                    type="email"
-                                    className={`form-input ${!email ? 'pl-10' : 'pl-4'}`}
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="form-label">Password</label>
-                            <div className="relative">
-                                {!password && <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    className={`form-input ${!password ? 'pl-10' : 'pl-4'} pr-10`}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-sm">
-                            <label className="flex items-center gap-2 text-gray-600 cursor-pointer">
-                                <input type="checkbox" className="rounded border-gray-300" />
-                                Remember me
-                            </label>
+                    <div>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="Password"
+                                className="w-full p-4 bg-white border border-gray-300 rounded-lg outline-none focus:border-black transition-colors font-sans text-sm text-black placeholder:text-gray-600 pr-10 font-medium"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
                             <button
                                 type="button"
-                                className="hover:underline"
-                                style={{ color: '#3b82f6' }}
-                                onClick={() => {
-                                    setShowForgotModal(true);
-                                    dispatch(clearError());
-                                }}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors"
+                                onClick={() => setShowPassword(!showPassword)}
                             >
-                                Forgot password?
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
                         </div>
-
-                        <button
-                            type="submit"
-                            className="btn btn-primary w-full justify-center"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <>Sign In <ArrowRight size={18} /></>
-                            )}
-                        </button>
-                    </form>
-
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-200"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-3 bg-white text-gray-500">or continue with</span>
+                        <div className="flex justify-end mt-2">
+                            <button
+                                type="button"
+                                className="text-xs font-bold text-gray-600 hover:text-black transition-colors"
+                                onClick={() => setShowForgotModal(true)}
+                            >
+                                Forgot Password?
+                            </button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="flex justify-center">
-                            <GoogleLogin
-                                onSuccess={async (credentialResponse) => {
-                                    const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
-                                    if (googleLogin.fulfilled.match(result)) {
-                                        navigate('/');
-                                    }
-                                }}
-                                onError={() => {
-                                    console.error('Google Login Failed');
-                                }}
-                                theme="outline"
-                                size="large"
-                                text="signin_with"
-                                shape="rectangular"
-                            />
-                        </div>
-                        <button
-                            className="btn btn-secondary justify-center"
-                            onClick={() => {
-                                setShowOTPModal(true);
-                                dispatch(clearError());
+                    <button
+                        type="submit"
+                        className="w-full p-4 bg-black text-white rounded-lg font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 text-sm"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'Signing In...' : <><span className="text-base">Sign In</span> <ArrowRight size={18} /></>}
+                    </button>
+                </form>
+
+                <div className="flex items-center my-6">
+                    <div className="flex-1 border-t border-gray-300"></div>
+                    <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
+                    <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+
+                {/* Social Buttons */}
+                <div className="space-y-3">
+                    <div className="flex justify-center w-full">
+                        <GoogleLogin
+                            onSuccess={async (credentialResponse) => {
+                                const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
+                                if (googleLogin.fulfilled.match(result)) {
+                                    navigate('/');
+                                }
                             }}
-                        >
-                            <Phone size={18} />
-                            Phone OTP
-                        </button>
+                            onError={() => console.error('Google Login Failed')}
+                            theme="outline"
+                            size="large"
+                            width="340"
+                            shape="rectangular"
+                            text="continue_with"
+                            logo_alignment="center"
+                        />
                     </div>
+                </div>
 
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600">
-                            Don't have an account?{' '}
-                            <a href="/register" className="font-medium hover:underline" style={{ color: '#3b82f6' }}>
-                                Sign Up
-                            </a>
-                        </p>
-                    </div>
+                <div className="mt-8 text-center text-sm text-gray-700 font-medium">
+                    Don't have an account? <Link to="/register" className="font-bold text-blue-700 hover:text-blue-900 hover:underline ml-1">Sign Up</Link>
                 </div>
             </div>
 
             {/* OTP Modal */}
             {showOTPModal && (
-                <div className="modal-overlay" onClick={() => setShowOTPModal(false)}>
-                    <div className="modal max-w-sm" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {otpStep === 'phone' ? 'Enter Phone Number' : 'Verify OTP'}
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowOTPModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-900">
+                                {otpStep === 'phone' ? 'Phone Login' : 'Verify Code'}
                             </h3>
-                            <button className="btn btn-ghost btn-icon" onClick={() => setShowOTPModal(false)}>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={() => setShowOTPModal(false)}>
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="modal-body">
+                        <div className="p-6">
                             {otpStep === 'phone' ? (
                                 <div className="space-y-4">
-                                    <p className="text-gray-500 text-sm">
-                                        Enter your phone number to receive a one-time password.
-                                    </p>
+                                    <p className="text-gray-500 text-sm">Enter your mobile number to receive an OTP.</p>
                                     <div className="relative">
-                                        {!phone && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium transition-opacity">+91</span>}
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">+91</span>
                                         <input
                                             type="tel"
-                                            className={`form-input ${!phone ? 'pl-12' : 'pl-4'}`}
+                                            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg outline-none focus:border-black transition-colors font-sans"
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                            placeholder="Mobile Number"
                                         />
                                     </div>
                                     <button
-                                        className="btn btn-primary w-full justify-center"
+                                        className="w-full p-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-70"
                                         onClick={handleSendOTP}
                                         disabled={isLoading || phone.length !== 10}
                                     >
                                         {isLoading ? 'Sending...' : 'Send OTP'}
-                                        <ArrowRight size={18} />
                                     </button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <p className="text-gray-500 text-sm">
-                                        We've sent a 6-digit code to <strong>+91 {phone}</strong>
-                                    </p>
+                                    <p className="text-gray-500 text-sm">Enter the 6-digit code sent to <strong>+91 {phone}</strong></p>
                                     <div className="flex justify-center gap-2">
                                         {otp.map((digit, index) => (
                                             <input
                                                 key={index}
-                                                id={`otp-${index}`}
+                                                id={`otp-${index + 1}`}
                                                 type="text"
-                                                inputMode="numeric"
                                                 maxLength={1}
+                                                className="w-12 h-12 text-center border border-gray-200 rounded-lg text-xl font-bold focus:border-black outline-none transition-colors"
                                                 value={digit}
                                                 onChange={(e) => handleOTPChange(index, e.target.value)}
-                                                className="w-12 h-14 text-center text-xl font-semibold form-input"
                                             />
                                         ))}
                                     </div>
                                     <button
-                                        className="btn btn-primary w-full justify-center"
+                                        className="w-full p-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-70"
                                         onClick={handleVerifyOTP}
                                         disabled={isLoading || otp.join('').length !== 6}
                                     >
                                         {isLoading ? 'Verifying...' : 'Verify & Login'}
                                     </button>
-                                    <div className="text-center">
-                                        <button
-                                            className="text-sm hover:underline"
-                                            style={{ color: '#3b82f6' }}
-                                            onClick={() => setOtpStep('phone')}
-                                        >
-                                            Change Phone Number
-                                        </button>
-                                    </div>
+                                    <button className="w-full text-sm text-blue-600 hover:underline" onClick={() => setOtpStep('phone')}>Change Phone Number</button>
                                 </div>
                             )}
                         </div>
@@ -341,141 +298,83 @@ const LoginPage = () => {
 
             {/* Forgot Password Modal */}
             {showForgotModal && (
-                <div className="modal-overlay" onClick={closeForgotModal}>
-                    <div className="modal max-w-sm" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                                {forgotStep === 'email' && 'Reset Password'}
-                                {forgotStep === 'code' && 'Enter Reset Code'}
-                                {forgotStep === 'success' && 'Password Reset'}
-                            </h3>
-                            <button className="btn btn-ghost btn-icon" onClick={closeForgotModal}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={closeForgotModal}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-900">Reset Password</h3>
+                            <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={closeForgotModal}>
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className="modal-body">
-                            {forgotError && (
-                                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
-                                    {forgotError}
-                                </div>
-                            )}
+                        <div className="p-6">
+                            {forgotError && <div className="bg-red-50 text-red-600 px-3 py-2 rounded-lg mb-4 text-xs">{forgotError}</div>}
 
                             {forgotStep === 'email' && (
                                 <div className="space-y-4">
-                                    <p className="text-gray-500 text-sm">
-                                        Enter your email address and we'll send you a code to reset your password.
-                                    </p>
-                                    <div>
-                                        <label className="form-label">Email</label>
-                                        <div className="relative">
-                                            {!forgotEmail && <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
-                                            <input
-                                                type="email"
-                                                className={`form-input ${!forgotEmail ? 'pl-10' : 'pl-4'}`}
-                                                value={forgotEmail}
-                                                onChange={(e) => setForgotEmail(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                    <p className="text-gray-500 text-sm">Enter your email to receive a reset code.</p>
+                                    <input
+                                        type="email"
+                                        className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-black transition-colors"
+                                        placeholder="Email Address"
+                                        value={forgotEmail}
+                                        onChange={(e) => setForgotEmail(e.target.value)}
+                                    />
                                     <button
-                                        className="btn btn-primary w-full justify-center"
+                                        className="w-full p-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-70"
                                         onClick={handleForgotSubmit}
                                         disabled={forgotLoading || !forgotEmail}
                                     >
                                         {forgotLoading ? 'Sending...' : 'Send Reset Code'}
-                                        <ArrowRight size={18} />
                                     </button>
                                 </div>
                             )}
 
                             {forgotStep === 'code' && (
                                 <div className="space-y-4">
-                                    <p className="text-gray-500 text-sm">
-                                        We've sent a 6-digit code to <strong>{forgotEmail}</strong>. Check your backend console for the code.
-                                    </p>
-                                    <div>
-                                        <label className="form-label">Reset Code</label>
-                                        <div className="flex justify-center gap-2">
-                                            {resetCode.map((digit, index) => (
-                                                <input
-                                                    key={index}
-                                                    id={`reset-code-${index}`}
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    maxLength={1}
-                                                    value={digit}
-                                                    onChange={(e) => handleResetCodeChange(index, e.target.value)}
-                                                    className="w-10 h-12 text-center text-lg font-semibold form-input"
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="form-label">New Password</label>
-                                        <div className="relative">
-                                            {!newPassword && <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
+                                    <p className="text-gray-500 text-sm">Enter code sent to <strong>{forgotEmail}</strong></p>
+                                    <div className="flex justify-center gap-2">
+                                        {resetCode.map((digit, index) => (
                                             <input
-                                                type="password"
-                                                className={`form-input ${!newPassword ? 'pl-10' : 'pl-4'}`}
-                                                value={newPassword}
-                                                onChange={(e) => setNewPassword(e.target.value)}
+                                                key={index}
+                                                id={`reset-code-${index + 1}`}
+                                                type="text"
+                                                maxLength={1}
+                                                className="w-10 h-10 text-center border border-gray-200 rounded-lg text-lg font-bold focus:border-black outline-none transition-colors"
+                                                value={digit}
+                                                onChange={(e) => handleResetCodeChange(index, e.target.value)}
                                             />
-                                        </div>
+                                        ))}
                                     </div>
-                                    <div>
-                                        <label className="form-label">Confirm Password</label>
-                                        <div className="relative">
-                                            {!confirmPassword && <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 transition-opacity" />}
-                                            <input
-                                                type="password"
-                                                className={`form-input ${!confirmPassword ? 'pl-10' : 'pl-4'}`}
-                                                value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
+                                    <input type="password" placeholder="New Password" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-black" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+                                    <input type="password" placeholder="Confirm Password" className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:border-black" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                                     <button
-                                        className="btn btn-primary w-full justify-center"
+                                        className="w-full p-3 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-70"
                                         onClick={handleResetPassword}
                                         disabled={forgotLoading || resetCode.join('').length !== 6 || !newPassword}
                                     >
                                         {forgotLoading ? 'Resetting...' : 'Reset Password'}
                                     </button>
-                                    <div className="text-center">
-                                        <button
-                                            className="text-sm hover:underline"
-                                            style={{ color: '#3b82f6' }}
-                                            onClick={() => setForgotStep('email')}
-                                        >
-                                            Change Email
-                                        </button>
-                                    </div>
                                 </div>
                             )}
 
                             {forgotStep === 'success' && (
                                 <div className="text-center space-y-4">
-                                    <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center">
-                                        <CheckCircle size={32} className="text-green-600" />
-                                    </div>
-                                    <div>
-                                        <h4 className="text-lg font-semibold text-gray-900">Password Reset Successful!</h4>
-                                        <p className="text-gray-500 text-sm mt-2">
-                                            Your password has been reset. You can now login with your new password.
-                                        </p>
-                                    </div>
-                                    <button
-                                        className="btn btn-primary w-full justify-center"
-                                        onClick={closeForgotModal}
-                                    >
-                                        Back to Login
-                                    </button>
+                                    <CheckCircle size={40} className="text-green-500 mx-auto" />
+                                    <p className="text-gray-900 font-medium">Password Reset Successful!</p>
+                                    <button className="w-full p-3 bg-black text-white rounded-lg font-semibold" onClick={closeForgotModal}>Back to Login</button>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Injected Styles */}
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&family=Playfair+Display:wght@700&display=swap');
+                .font-sans { font-family: 'Montserrat', sans-serif; }
+                .font-serif { font-family: 'Playfair Display', serif; }
+            `}</style>
         </div>
     );
 };

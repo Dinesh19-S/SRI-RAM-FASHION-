@@ -24,7 +24,7 @@ import {
     Users,
     Truck
 } from 'lucide-react';
-import AIChatWidget from '../AIChatWidget';
+
 import logoImage from '../../assets/logo.jpg';
 
 const navigationSections = [
@@ -171,10 +171,7 @@ const MainLayout = () => {
     };
 
     return (
-        <div
-            className="flex min-h-screen"
-            style={{ background: 'linear-gradient(180deg, #0B1023 0%, #0E153A 100%)' }}
-        >
+        <div className="flex min-h-screen bg-gray-50">
             {/* Mobile Sidebar Overlay */}
             <AnimatePresence>
                 {sidebarOpen && (
@@ -182,8 +179,7 @@ const MainLayout = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-40 lg:hidden"
-                        style={{ background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
+                        className="fixed inset-0 z-40 lg:hidden bg-black/20 backdrop-blur-sm"
                         onClick={() => setSidebarOpen(false)}
                     />
                 )}
@@ -191,49 +187,30 @@ const MainLayout = () => {
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-                style={{
-                    background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(11, 16, 35, 0.98) 100%)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    borderRight: '1px solid rgba(255, 255, 255, 0.08)'
-                }}
+                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
                 {/* Logo */}
-                <div
-                    className="flex items-center gap-3 px-5 py-5 border-b"
-                    style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
-                >
+                <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
                     <img
                         src={logoImage}
                         alt="Sri Ram Fashions"
-                        className="w-12 h-12 rounded-xl object-cover"
-                        style={{
-                            boxShadow: '0 4px 15px rgba(30, 79, 255, 0.35)'
-                        }}
+                        className="w-10 h-10 rounded-lg object-cover shadow-sm"
                     />
                     <div>
-                        <div
-                            className="text-sm font-bold"
-                            style={{ color: '#ffffff' }}
-                        >
+                        <div className="text-sm font-bold text-gray-900">
                             Sri Ram Fashions
                         </div>
-                        <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Purchase & Sales</div>
+                        <div className="text-xs text-gray-500">Purchase & Sales</div>
                     </div>
                 </div>
 
                 {/* Navigation */}
-                <nav
-                    className="flex flex-col py-4 px-3 space-y-1 overflow-y-auto"
-                    style={{ height: 'calc(100vh - 140px)' }}
-                >
+                <nav className="flex flex-col py-4 px-3 space-y-1 overflow-y-auto h-[calc(100vh-140px)]">
                     {navigationSections.map((section, sectionIndex) => (
-                        <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-2' : ''}>
+                        <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-4' : ''}>
                             <button
                                 onClick={() => toggleSection(section.title)}
-                                className="flex items-center justify-between w-full text-xs font-semibold uppercase tracking-wider mb-2 px-3 py-1 rounded-lg transition-all duration-200 hover:bg-white/5"
-                                style={{ color: 'rgba(255, 255, 255, 0.4)' }}
+                                className="flex items-center justify-between w-full text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-3 py-1 hover:text-gray-600 transition-colors"
                             >
                                 {section.title}
                                 <ChevronRight
@@ -249,37 +226,28 @@ const MainLayout = () => {
                                         animate={{ height: 'auto', opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
                                         transition={{ duration: 0.2 }}
-                                        className="overflow-hidden"
+                                        className="overflow-hidden space-y-0.5"
                                     >
                                         {section.items.map((item) => (
                                             <NavLink
                                                 key={item.name}
                                                 to={item.href}
                                                 end={item.href === '/dashboard'}
-                                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 mb-1"
-                                                style={({ isActive }) => ({
-                                                    background: isActive
-                                                        ? 'linear-gradient(135deg, rgba(30, 79, 255, 0.2) 0%, rgba(59, 130, 246, 0.15) 100%)'
-                                                        : 'transparent',
-                                                    color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.6)',
-                                                    boxShadow: isActive ? '0 0 20px rgba(30, 79, 255, 0.15)' : 'none',
-                                                    border: isActive ? '1px solid rgba(30, 79, 255, 0.3)' : '1px solid transparent'
-                                                })}
+                                                className={({ isActive }) => `
+                                                    flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group
+                                                    ${isActive
+                                                        ? 'bg-blue-50 text-blue-600'
+                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                                                `}
                                                 onClick={() => setSidebarOpen(false)}
                                             >
                                                 {({ isActive }) => (
                                                     <>
-                                                        <div
-                                                            className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                                            style={{
-                                                                background: isActive
-                                                                    ? 'linear-gradient(135deg, #1E4FFF 0%, #3B82F6 100%)'
-                                                                    : 'rgba(255, 255, 255, 0.05)',
-                                                                boxShadow: isActive ? '0 4px 10px rgba(30, 79, 255, 0.3)' : 'none'
-                                                            }}
-                                                        >
-                                                            <item.icon size={16} style={{ color: isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)' }} />
-                                                        </div>
+                                                        <item.icon
+                                                            size={18}
+                                                            className={`transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`}
+                                                            strokeWidth={2}
+                                                        />
                                                         <span className="text-sm font-medium">{item.name}</span>
                                                     </>
                                                 )}
@@ -293,65 +261,36 @@ const MainLayout = () => {
                 </nav>
 
                 {/* Logout */}
-                <div
-                    className="absolute bottom-0 left-0 right-0 px-3 py-4 border-t"
-                    style={{ borderColor: 'rgba(255, 255, 255, 0.08)', background: 'rgba(15, 23, 42, 0.95)' }}
-                >
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-4 border-t border-gray-100 bg-white">
+                    <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200"
-                        style={{
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.2)',
-                            color: '#EF4444'
-                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
                     >
                         <LogOut size={18} />
                         <span className="text-sm font-medium">Logout</span>
-                    </motion.button>
+                    </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
+            <div className="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all duration-300">
                 {/* Header */}
-                <header
-                    className="h-16 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30"
-                    style={{
-                        background: 'rgba(11, 16, 35, 0.85)',
-                        backdropFilter: 'blur(20px)',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
-                    }}
-                >
-                    <div className="flex items-center gap-4">
+                <header className="h-16 flex items-center justify-between px-4 lg:px-8 py-3 bg-white border-b border-gray-200 sticky top-0 z-30">
+                    <div className="flex items-center gap-4 flex-1">
                         <button
-                            className="lg:hidden p-2 rounded-xl"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                color: 'rgba(255, 255, 255, 0.7)'
-                            }}
+                            className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                         >
                             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
                         </button>
 
-                        <div className="hidden md:block relative" ref={searchRef}>
-                            <div
-                                className="flex items-center gap-2 rounded-xl px-4 py-2.5 w-72"
-                                style={{
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid rgba(255, 255, 255, 0.08)'
-                                }}
-                            >
-                                <Search size={18} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+                        <div className="hidden md:block relative w-full max-w-md" ref={searchRef}>
+                            <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                                <Search size={18} className="text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search..."
-                                    className="bg-transparent border-none outline-none text-sm w-full"
-                                    style={{ color: '#ffffff' }}
+                                    placeholder="Search bills, products, pages..."
+                                    className="bg-transparent border-none outline-none text-sm w-full text-gray-900 placeholder:text-gray-400"
                                     value={searchQuery}
                                     onChange={(e) => {
                                         setSearchQuery(e.target.value);
@@ -365,26 +304,19 @@ const MainLayout = () => {
                             <AnimatePresence>
                                 {showSearchDropdown && filteredSuggestions.length > 0 && (
                                     <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
+                                        initial={{ opacity: 0, y: 4 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="absolute top-full left-0 right-0 mt-2 rounded-xl py-2 z-50 max-h-64 overflow-y-auto"
-                                        style={{
-                                            background: 'rgba(15, 23, 42, 0.95)',
-                                            backdropFilter: 'blur(20px)',
-                                            border: '1px solid rgba(255, 255, 255, 0.08)',
-                                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
-                                        }}
+                                        exit={{ opacity: 0, y: 4 }}
+                                        className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto"
                                     >
                                         {filteredSuggestions.map((suggestion, index) => (
                                             <div
                                                 key={suggestion.path}
-                                                className="px-4 py-2.5 cursor-pointer flex items-center gap-3 transition-all duration-200"
-                                                style={{ color: index === 0 ? '#3B82F6' : 'rgba(255, 255, 255, 0.7)' }}
+                                                className={`px-4 py-2.5 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${index === 0 ? 'bg-blue-50/50' : ''}`}
                                                 onClick={() => handleSearchSelect(suggestion.path)}
                                             >
-                                                <Search size={16} style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
-                                                <span>{suggestion.label}</span>
+                                                <Search size={16} className={index === 0 ? 'text-blue-500' : 'text-gray-400'} />
+                                                <span className={index === 0 ? 'text-blue-700 font-medium' : 'text-gray-700'}>{suggestion.label}</span>
                                             </div>
                                         ))}
                                     </motion.div>
@@ -393,78 +325,60 @@ const MainLayout = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button
-                            className="relative p-2.5 rounded-xl"
-                            style={{
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)'
-                            }}
-                        >
-                            <Bell size={18} style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                    <div className="flex items-center gap-4">
+                        <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
+                            <Bell size={20} />
+                            <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                         </button>
 
                         <div className="relative">
                             <div
-                                className="flex items-center gap-3 cursor-pointer p-2 rounded-xl"
-                                style={{
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid rgba(255, 255, 255, 0.08)'
-                                }}
+                                className="flex items-center gap-3 cursor-pointer pl-2"
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                             >
-                                <div
-                                    className="w-8 h-8 rounded-lg flex items-center justify-center font-semibold text-sm"
-                                    style={{
-                                        background: 'linear-gradient(135deg, #1E4FFF 0%, #3B82F6 100%)',
-                                        color: '#ffffff'
-                                    }}
-                                >
+                                <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
                                     {user?.name?.charAt(0) || 'A'}
                                 </div>
                                 <div className="hidden md:block">
-                                    <div className="text-sm font-medium" style={{ color: '#ffffff' }}>
-                                        {user?.name || 'Admin'}
+                                    <div className="text-sm font-semibold text-gray-900 leading-tight">
+                                        {user?.name || 'Admin User'}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        {user?.role || 'admin'}
                                     </div>
                                 </div>
                                 <ChevronDown
                                     size={16}
-                                    style={{ color: 'rgba(255, 255, 255, 0.5)' }}
-                                    className={`transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
+                                    className={`text-gray-400 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
                                 />
                             </div>
 
                             <AnimatePresence>
                                 {userMenuOpen && (
                                     <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
+                                        initial={{ opacity: 0, y: 8 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="absolute right-0 mt-2 w-48 rounded-xl py-2 z-50"
-                                        style={{
-                                            background: 'rgba(15, 23, 42, 0.95)',
-                                            backdropFilter: 'blur(20px)',
-                                            border: '1px solid rgba(255, 255, 255, 0.08)',
-                                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
-                                        }}
+                                        exit={{ opacity: 0, y: 8 }}
+                                        className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50 origin-top-right"
                                     >
-                                        <div
-                                            className="px-4 py-2.5 flex items-center gap-3 cursor-pointer"
-                                            style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                        <div className="px-4 py-3 border-b border-gray-100 md:hidden">
+                                            <p className="text-sm font-semibold text-gray-900">{user?.name || 'Admin User'}</p>
+                                            <p className="text-xs text-gray-500">{user?.email || 'admin@example.com'}</p>
+                                        </div>
+                                        <button
+                                            className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                             onClick={() => navigate('/dashboard/settings')}
                                         >
-                                            <User size={18} />
+                                            <User size={16} className="text-gray-400" />
                                             <span>Profile</span>
-                                        </div>
-                                        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 12px' }} />
-                                        <div
-                                            className="px-4 py-2.5 flex items-center gap-3 cursor-pointer"
-                                            style={{ color: '#EF4444' }}
+                                        </button>
+                                        <button
+                                            className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                                             onClick={handleLogout}
                                         >
-                                            <LogOut size={18} />
+                                            <LogOut size={16} className="text-red-500" />
                                             <span>Logout</span>
-                                        </div>
+                                        </button>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -472,26 +386,11 @@ const MainLayout = () => {
                     </div>
                 </header>
 
-                {/* Page Content with Slide Animation */}
-                <main className="flex-1 overflow-y-auto">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={location.pathname}
-                            initial="initial"
-                            animate="in"
-                            exit="out"
-                            variants={pageVariants}
-                            transition={pageTransition}
-                            className="h-full"
-                        >
-                            <Outlet />
-                        </motion.div>
-                    </AnimatePresence>
+                {/* Page Content */}
+                <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+                    <Outlet />
                 </main>
             </div>
-
-            {/* AI Chat Widget */}
-            <AIChatWidget />
         </div>
     );
 };
