@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Scale, Search } from 'lucide-react';
+import { Scale, Search, X, Printer, FileSpreadsheet, Mail } from 'lucide-react';
 import DateRangeFilter from '../components/reports/DateRangeFilter';
-import ReportActions from '../components/reports/ReportActions';
 import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcel } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
@@ -110,24 +109,71 @@ const AuditorPurchasePage = () => {
             </div>
 
             {/* Filters and Actions */}
-            <div className="card py-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                {/* Filters and Actions */}
+                <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                     <div className="flex flex-wrap items-end gap-3">
-                        <div className="flex-shrink-0">
-                            <label className="block text-xs font-medium text-gray-600 mb-1">From Date</label>
-                            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="form-input w-32 text-sm py-1.5" />
+
+                        {/* From Date */}
+                        <div className="flex-shrink-0 w-36">
+                            <label className="form-label">From Date</label>
+                            <input
+                                type="date"
+                                className="form-input"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                            />
                         </div>
-                        <div className="flex-shrink-0">
-                            <label className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
-                            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="form-input w-32 text-sm py-1.5" />
+
+                        {/* To Date */}
+                        <div className="flex-shrink-0 w-36">
+                            <label className="form-label">To Date</label>
+                            <input
+                                type="date"
+                                className="form-input"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                            />
                         </div>
-                        <button onClick={handleSearch} disabled={isLoading} className="btn-search">
-                            <Search size={14} />
-                            {isLoading ? 'LOADING...' : 'SEARCH'}
+
+                        {/* Search */}
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleSearch}
+                            disabled={isLoading}
+                        >
+                            <Search size={16} />
+                            Search
                         </button>
-                        <button onClick={() => { setFromDate(''); setToDate(''); }} className="px-3 py-1.5 text-gray-500 hover:text-gray-700 font-medium text-sm">Clear</button>
+
+                        {/* Clear */}
+                        <button
+                            className="px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow"
+                            onClick={() => { setFromDate(''); setToDate(''); }}
+                        >
+                            <X size={16} />
+                            Clear
+                        </button>
+
+                        {/* Divider */}
+                        <div className="h-8 w-px bg-gray-300 mx-1 hidden md:block"></div>
+
+                        {/* Actions */}
+                        <button className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handleExport}>
+                            <FileSpreadsheet size={16} />
+                            Excel
+                        </button>
+
+                        <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handlePrint}>
+                            <Printer size={16} />
+                            Print
+                        </button>
+
+                        <button className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handleEmail}>
+                            <Mail size={16} />
+                            Mail
+                        </button>
                     </div>
-                    <ReportActions onExcel={handleExport} onPrint={handlePrint} onEmail={handleEmail} showInvoice={true} onInvoice={() => alert('Invoice view')} />
                 </div>
             </div>
 

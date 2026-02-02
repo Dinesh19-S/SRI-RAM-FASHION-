@@ -5,7 +5,7 @@ const ReportActions = ({ onExcel, onPrint, onEmail, showInvoice = false, onInvoi
         <div className="flex items-center gap-3 print:hidden">
             <button
                 onClick={onExcel}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow"
             >
                 <FileSpreadsheet size={18} />
                 EXCEL
@@ -13,7 +13,7 @@ const ReportActions = ({ onExcel, onPrint, onEmail, showInvoice = false, onInvoi
 
             <button
                 onClick={onPrint}
-                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow"
             >
                 <Printer size={18} />
                 PRINT
@@ -21,7 +21,7 @@ const ReportActions = ({ onExcel, onPrint, onEmail, showInvoice = false, onInvoi
 
             <button
                 onClick={onEmail}
-                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow"
             >
                 <Mail size={18} />
                 MAIL TO
@@ -30,7 +30,7 @@ const ReportActions = ({ onExcel, onPrint, onEmail, showInvoice = false, onInvoi
             {showInvoice && (
                 <button
                     onClick={onInvoice}
-                    className="px-3 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition-colors"
+                    className="p-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 hover:text-gray-900 rounded-lg transition-colors shadow-sm"
                     title="View Invoice"
                 >
                     <FileText size={18} />

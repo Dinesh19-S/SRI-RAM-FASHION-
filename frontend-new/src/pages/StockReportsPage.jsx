@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, X, Printer } from 'lucide-react';
-import ReportActions from '../components/reports/ReportActions';
+import { Package, X, Printer, Search, FileSpreadsheet, Mail } from 'lucide-react';
 import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcel } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
@@ -67,31 +66,74 @@ const StockReportsPage = () => {
             </div>
 
             {/* Filters and Actions */}
-            <div className="card py-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div className="flex flex-wrap items-end gap-3">
-                        <div className="flex-shrink-0">
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
-                            <input type="text" placeholder="Enter product name" value={nameSearch} onChange={(e) => setNameSearch(e.target.value)} className="form-input w-40 text-sm py-1.5" />
-                        </div>
-                        <div className="flex-shrink-0">
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Size</label>
-                            <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)} className="form-input w-28 text-sm py-1.5">
-                                <option value="">All Sizes</option>
-                                <option value="S">S</option>
-                                <option value="M">M</option>
-                                <option value="L">L</option>
-                                <option value="XL">XL</option>
-                                <option value="XXL">XXL</option>
-                            </select>
-                        </div>
-                        <button onClick={handleSearch} disabled={isLoading} className="btn-search">
-                            <Package size={14} />
-                            {isLoading ? 'LOADING...' : 'SEARCH'}
-                        </button>
-                        <button onClick={() => { setNameSearch(''); setSizeFilter(''); }} className="px-3 py-1.5 text-gray-500 hover:text-gray-700 font-medium text-sm">Clear</button>
+            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex flex-wrap items-end gap-3">
+                    {/* Name */}
+                    <div className="flex-shrink-0 w-64">
+                        <label className="form-label">Name</label>
+                        <input
+                            type="text"
+                            placeholder="Enter product name"
+                            className="form-input"
+                            value={nameSearch}
+                            onChange={(e) => setNameSearch(e.target.value)}
+                        />
                     </div>
-                    <ReportActions onExcel={handleExport} onPrint={handlePrint} onEmail={handleEmail} showInvoice={true} onInvoice={() => setShowInvoiceModal(true)} />
+
+                    {/* Size */}
+                    <div className="flex-shrink-0 w-32">
+                        <label className="form-label">Size</label>
+                        <select
+                            className="form-input"
+                            value={sizeFilter}
+                            onChange={(e) => setSizeFilter(e.target.value)}
+                        >
+                            <option value="">All Sizes</option>
+                            <option value="S">S</option>
+                            <option value="M">M</option>
+                            <option value="L">L</option>
+                            <option value="XL">XL</option>
+                            <option value="XXL">XXL</option>
+                        </select>
+                    </div>
+
+                    {/* Search */}
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleSearch}
+                        disabled={isLoading}
+                    >
+                        <Search size={16} />
+                        Search
+                    </button>
+
+                    {/* Clear */}
+                    <button
+                        className="px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow"
+                        onClick={() => { setNameSearch(''); setSizeFilter(''); }}
+                    >
+                        <X size={16} />
+                        Clear
+                    </button>
+
+                    {/* Divider */}
+                    <div className="h-8 w-px bg-gray-300 mx-1 hidden md:block"></div>
+
+                    {/* Actions */}
+                    <button className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handleExport}>
+                        <FileSpreadsheet size={16} />
+                        Excel
+                    </button>
+
+                    <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handlePrint}>
+                        <Printer size={16} />
+                        Print
+                    </button>
+
+                    <button className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handleEmail}>
+                        <Mail size={16} />
+                        Mail
+                    </button>
                 </div>
             </div>
 

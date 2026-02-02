@@ -64,198 +64,222 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
     const totalAmt = Math.round(rawTotal);
     const totalPacks = bill.totalPacks || bill.items?.reduce((sum, item) => sum + (item.noOfPacks || item.quantity || 0), 0) || 0;
 
-    // Generate 20 rows for the table (fill empty if less items)
-    const itemRowCount = 20;
-    const emptyRowsCount = Math.max(0, itemRowCount - (bill.items?.length || 0));
-    const emptyRows = Array(emptyRowsCount).fill(null);
-
     return (
-        <div className={`bill-template ${forPrint ? 'for-print' : ''}`} id="bill-template">
-            {/* HEADER ROW 1 - Company Name and GSTIN */}
-            <div className="bill-header">
-                <div className="company-name">{settings?.company?.name || 'SRI RAM FASHIONS'}</div>
-                <div className="gstin">GSTIN: {settings?.company?.gstin || '33AZRPM4425F2ZA'}</div>
-            </div>
+        <div className={`bill-template-modern ${forPrint ? 'for-print' : ''}`} id="bill-template">
+            <div className="modern-bill-container">
+                {/* Left Form Section */}
+                <div className="bill-form-section">
+                    <div className="form-header">
+                        <h2 className="form-title">Create Your First Invoice</h2>
+                    </div>
+                    
+                    <div className="form-content">
+                        {/* Customer Section */}
+                        <div className="form-group-label">Customer Details</div>
+                        <div className="form-row-2col">
+                            <div className="form-field">
+                                <label className="form-field-label">Customer Name</label>
+                                <div className="form-display">{bill.customer?.name || 'Enter Name'}</div>
+                            </div>
+                            <div className="form-field">
+                                <label className="form-field-label">Customer Phone Number</label>
+                                <div className="form-display">{bill.customer?.phone || 'Enter Number'}</div>
+                            </div>
+                        </div>
+                        <div className="form-note">Enter your number for getting the invoice on your phone</div>
 
-            {/* HEADER ROWS 2-5 - Company Info and Invoice Details */}
-            <div className="bill-info-section">
-                <div className="address-section">
-                    <div className="address-line">OFF : {settings?.company?.address1 || '61C9, Anupparpalayam Puthur, Tirupur. 641652'}</div>
-                    <div className="address-line">OFF : {settings?.company?.address2 || '81 K, Madurai Road, SankerNager, Tirunelveli Dt. 627357'}</div>
-                    <div className="address-line">State: {settings?.company?.state || 'Tamil Nadu'} (Code {settings?.company?.stateCode || '33'})</div>
-                    <div className="address-line">Email: {settings?.company?.email || 'sriramfashionstrp@gmail.com'}</div>
-                    <div className="address-line">Mob: {settings?.company?.phone || '9080573831'}</div>
-                </div>
-                <div className="invoice-section">
-                    <div className="invoice-row">
-                        <span className="invoice-label">Invoice Number</span>
-                        <span className="invoice-colon">:</span>
-                        <span className="invoice-value">{bill.billNumber}</span>
-                    </div>
-                    <div className="invoice-row">
-                        <span className="invoice-label">Invoice Date</span>
-                        <span className="invoice-colon">:</span>
-                        <span className="invoice-value">{formatDate(bill.date || bill.createdAt)}</span>
-                    </div>
-                    <div className="invoice-row">
-                        <span className="invoice-label">From</span>
-                        <span className="invoice-colon">:</span>
-                        <span className="invoice-value">{bill.fromText || bill.fromDate || ''}</span>
-                    </div>
-                    <div className="invoice-row">
-                        <span className="invoice-label">To</span>
-                        <span className="invoice-colon">:</span>
-                        <span className="invoice-value">{bill.toText || bill.toDate || ''}</span>
-                    </div>
-                </div>
-            </div>
+                        {/* Items Table */}
+                        <div className="form-items-section">
+                            <table className="items-form-table">
+                                <thead>
+                                    <tr>
+                                        <th className="col-num">#</th>
+                                        <th className="col-item">ITEM</th>
+                                        <th className="col-qty">QTY</th>
+                                        <th className="col-price">PRICE</th>
+                                        <th className="col-discount">DISCOUNT(%)</th>
+                                        <th className="col-tax">TAX</th>
+                                        <th className="col-total">TOTAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {bill.items && bill.items.length > 0 ? (
+                                        bill.items.map((item, index) => (
+                                            <tr key={index}>
+                                                <td className="col-num">{index + 1}</td>
+                                                <td className="col-item">{item.productName || item.name || 'Sample Item'}</td>
+                                                <td className="col-qty">{item.noOfPacks || item.quantity || 0}</td>
+                                                <td className="col-price">{item.ratePerPack || item.price || 0}</td>
+                                                <td className="col-discount">0</td>
+                                                <td className="col-tax">NONE</td>
+                                                <td className="col-total">{item.total || (item.price * (item.noOfPacks || item.quantity)) || 0}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td className="col-num">1</td>
+                                            <td className="col-item">Sample Item</td>
+                                            <td className="col-qty">10</td>
+                                            <td className="col-price">100</td>
+                                            <td className="col-discount"></td>
+                                            <td className="col-tax">NONE</td>
+                                            <td className="col-total">1000</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
 
-            {/* TAX INVOICE - Full Width Header */}
-            <div className="tax-invoice-header">
-                TAX INVOICE
-            </div>
+                        {/* Add Row Button */}
+                        <div className="form-add-row">+ Add Row</div>
 
-            {/* BUYER SECTION with Consigner Copy and MOB */}
-            <div className="buyer-section">
-                <div className="buyer-left">
-                    <div className="consigner-label">Consigner Copy</div>
-                    <div className="buyer-row">
-                        <span className="buyer-label">BUYER:</span>
-                        <span className="buyer-value">{bill.customer?.name || ''}</span>
-                    </div>
-                    <div className="buyer-row">
-                        <span className="buyer-label">STATE:</span>
-                        <span className="buyer-value">{bill.customer?.state || 'Tamilnadu'}</span>
-                    </div>
-                    <div className="buyer-row">
-                        <span className="buyer-label">TRANSPORT:</span>
-                        <span className="buyer-value">{bill.transport || ''}</span>
+                        {/* Received and Balance */}
+                        <div className="form-received-section">
+                            <div className="form-received-row">
+                                <label>Received</label>
+                                <input type="checkbox" />
+                                <span>Fully Received</span>
+                                <span className="received-value">0</span>
+                            </div>
+                            <div className="received-balance">Balance: {productAmt}</div>
+                        </div>
+
+                        {/* Total Amount */}
+                        <div className="form-total-section">
+                            <div className="form-total-amount">
+                                <span className="total-label">Total Amount (₹)</span>
+                                <span className="total-value">{productAmt}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div className="buyer-right">
-                    <div className="buyer-row mob-row">
-                        <span className="buyer-label">MOB:</span>
-                        <span className="buyer-value">{bill.customer?.phone || ''}</span>
-                    </div>
-                    <div className="buyer-row">
-                        <span className="buyer-label">GSTIN:</span>
-                        <span className="buyer-value">{bill.customer?.gstin || ''}</span>
-                    </div>
-                    <div className="buyer-row">
-                        <span className="buyer-label">CODE:</span>
-                        <span className="buyer-value">{bill.customer?.stateCode || '33'}</span>
-                    </div>
-                </div>
-            </div>
 
-            {/* ITEM TABLE - 20 Rows */}
-            <div className="items-table-container">
-                <table className="items-table">
-                    <thead>
-                        <tr>
-                            <th className="sno-col">S.No</th>
-                            <th className="product-col">Product</th>
-                            <th className="hsn-col">HSN<br />Code</th>
-                            <th className="sizes-col">Sizes/<br />Pieces</th>
-                            <th className="rate-piece-col">Rate Per<br />Piece</th>
-                            <th className="pcs-pack-col">Pcs in<br />Pack</th>
-                            <th className="rate-pack-col">Rate Per<br />Pack</th>
-                            <th className="packs-col">No Of<br />Packs</th>
-                            <th className="amount-col">Amount<br />Rs.</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {bill.items?.map((item, index) => (
-                            <tr key={index}>
-                                <td className="sno-col">{index + 1}</td>
-                                <td className="product-col">{item.productName || item.name || ''}</td>
-                                <td className="hsn-col">{item.hsnCode || item.hsn || ''}</td>
-                                <td className="sizes-col">{item.sizesOrPieces || ''}</td>
-                                <td className="rate-piece-col">{item.ratePerPiece || item.price || ''}</td>
-                                <td className="pcs-pack-col">{item.pcsInPack || ''}</td>
-                                <td className="rate-pack-col">{item.ratePerPack || ''}</td>
-                                <td className="packs-col">{item.noOfPacks || item.quantity || ''}</td>
-                                <td className="amount-col">{item.total || (item.price * item.quantity) || ''}</td>
+                {/* Right Invoice Preview Section */}
+                <div className="bill-preview-section">
+                    {/* Invoice Header */}
+                    <div className="invoice-header">
+                        <h3 className="invoice-title">Tax Invoice</h3>
+                    </div>
+
+                    {/* Company Details with Logo */}
+                    <div className="invoice-company-section">
+                        <div className="company-logo-area">
+                            {/* Logo placeholder */}
+                            <div className="logo-placeholder">🏢</div>
+                        </div>
+                        <div className="company-info">
+                            <h2 className="company-name">{settings?.company?.name || 'Company Name'}</h2>
+                            <div className="company-address">{settings?.company?.address1 || 'Address Line 1'}</div>
+                            <div className="company-address">{settings?.company?.address2 || 'Address Line 2'}</div>
+                            <div className="company-contact">Phone: {settings?.company?.phone || '9080573831'}</div>
+                            <div className="company-contact">Email: {settings?.company?.email || 'email@company.com'}</div>
+                            <div className="company-gstin">GSTIN: {settings?.company?.gstin || '33AZRPM4425F2ZA'}</div>
+                            <div className="company-state">State: {settings?.company?.state || 'Tamil Nadu'}</div>
+                        </div>
+                    </div>
+
+                    {/* Invoice Details */}
+                    <div className="invoice-details-section">
+                        <div className="details-header">Invoice Details:</div>
+                        <div className="details-row">
+                            <span className="details-label">No.</span>
+                            <span className="details-colon">:</span>
+                            <span className="details-value">{bill.billNumber || '1'}</span>
+                        </div>
+                        <div className="details-row">
+                            <span className="details-label">Date:</span>
+                            <span className="details-colon">:</span>
+                            <span className="details-value">{formatDate(bill.date || bill.createdAt)}</span>
+                        </div>
+                    </div>
+
+                    {/* Items Table */}
+                    <table className="invoice-items-table">
+                        <thead>
+                            <tr>
+                                <th className="inv-col-num">#</th>
+                                <th className="inv-col-name">Item name</th>
+                                <th className="inv-col-hsn">HSN/ SAC</th>
+                                <th className="inv-col-qty">Quantity</th>
+                                <th className="inv-col-price">Price/ Unit(₹)</th>
+                                <th className="inv-col-amount">Amount(₹)</th>
                             </tr>
-                        ))}
-                        {emptyRows.map((_, index) => (
-                            <tr key={`empty-${index}`}>
-                                <td className="sno-col"></td>
-                                <td className="product-col"></td>
-                                <td className="hsn-col"></td>
-                                <td className="sizes-col"></td>
-                                <td className="rate-piece-col"></td>
-                                <td className="pcs-pack-col"></td>
-                                <td className="rate-pack-col"></td>
-                                <td className="packs-col"></td>
-                                <td className="amount-col"></td>
+                        </thead>
+                        <tbody>
+                            {bill.items && bill.items.length > 0 ? (
+                                bill.items.map((item, index) => (
+                                    <tr key={index}>
+                                        <td className="inv-col-num">{index + 1}</td>
+                                        <td className="inv-col-name">{item.productName || item.name || ''}</td>
+                                        <td className="inv-col-hsn">{item.hsnCode || item.hsn || ''}</td>
+                                        <td className="inv-col-qty">{item.noOfPacks || item.quantity || 0}</td>
+                                        <td className="inv-col-price">₹ {item.ratePerPack || item.price || 0}</td>
+                                        <td className="inv-col-amount">₹ {item.total || (item.price * (item.noOfPacks || item.quantity)) || 0}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td className="inv-col-num">1</td>
+                                    <td className="inv-col-name">Sample Item</td>
+                                    <td className="inv-col-hsn"></td>
+                                    <td className="inv-col-qty">10</td>
+                                    <td className="inv-col-price">₹ 100.00</td>
+                                    <td className="inv-col-amount">₹ 1,000.00</td>
+                                </tr>
+                            )}
+                            <tr className="total-row">
+                                <td colSpan="4" className="total-label-cell">Total</td>
+                                <td colSpan="2" className="total-amount-cell">₹ {productAmt.toFixed(2)}</td>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </tbody>
+                    </table>
 
-            {/* TOTALS SECTION */}
-            <div className="bill-footer-section">
-                <div className="footer-left">
-                    <div className="totals-row">
-                        <span className="total-label">Total Packs</span>
-                        <span className="total-colon">:</span>
-                        <span className="total-value">{totalPacks}</span>
+                    {/* Calculations Section */}
+                    <div className="invoice-calculations">
+                        <div className="calc-row">
+                            <span className="calc-label">Sub Total</span>
+                            <span className="calc-colon">:</span>
+                            <span className="calc-value">₹ {productAmt.toFixed(2)}</span>
+                        </div>
+                        <div className="calc-row">
+                            <span className="calc-label">Total</span>
+                            <span className="calc-colon">:</span>
+                            <span className="calc-value">₹ {productAmt.toFixed(2)}</span>
+                        </div>
+                        <div className="calc-row amount-in-words">
+                            <span className="calc-label">Invoice Amount in Words:</span>
+                            <span className="calc-value">{numberToWords(Math.round(productAmt))} Rupees only</span>
+                        </div>
                     </div>
-                    <div className="totals-row">
-                        <span className="total-label">Bill Amount</span>
-                        <span className="total-colon">:</span>
-                        <span className="total-value">{totalAmt}</span>
-                    </div>
-                    <div className="totals-row">
-                        <span className="total-label">In words</span>
-                        <span className="total-colon">:</span>
-                        <span className="total-value words">Rupees {numberToWords(totalAmt)} Only</span>
-                    </div>
-                </div>
-                <div className="footer-center">
-                    <div className="bundles-row">
-                        <span>NUM OF BUNDLES :</span>
-                        <span>{bill.numOfBundles || 1}</span>
-                    </div>
-                    <div className="gst-box">
-                        <span className="gst-label">TOTAL GST</span>
-                        <span className="gst-value">{totalGst.toFixed(0)}</span>
-                    </div>
-                </div>
-                <div className="footer-right">
-                    <div className="summary-row"><span>Product Amt</span><span>{productAmt}</span></div>
-                    <div className="summary-row"><span>Discount</span><span>{discount}</span></div>
-                    <div className="summary-row"><span>Taxable Amt</span><span>{taxableAmt}</span></div>
-                    <div className="summary-row gst-rate"><span>CGST @ {cgstRate}%</span><span>{cgstAmt.toFixed(2)}</span></div>
-                    <div className="summary-row gst-rate"><span>SGST @ {sgstRate}%</span><span>{sgstAmt.toFixed(2)}</span></div>
-                    <div className="summary-row"><span>Round Off</span><span>{roundOff.toFixed(2)}</span></div>
-                    <div className="summary-row total-final"><span>Total Amt</span><span>{totalAmt}</span></div>
-                </div>
-            </div>
 
-            {/* FOOTER - Terms, Bank Details, Signature */}
-            <div className="terms-bank-section">
-                <div className="terms-section">
-                    <div className="terms-title">Terms And Conditions</div>
-                    <div className="terms-text">
-                        <div>Subject to Tirupur Jurisdiction.</div>
-                        <div>Payment by Cheque/DD only, payable at Tirupur.</div>
-                        <div>{settings?.billTerms || ''}</div>
+                    {/* Received and Balance */}
+                    <div className="invoice-received-section">
+                        <div className="received-row">
+                            <span className="received-label">Received</span>
+                            <span className="received-colon">:</span>
+                            <span className="received-value">₹ 0.00</span>
+                        </div>
+                        <div className="received-row">
+                            <span className="received-label">Balance</span>
+                            <span className="received-colon">:</span>
+                            <span className="received-value">₹ {productAmt.toFixed(2)}</span>
+                        </div>
                     </div>
-                    <div className="bank-details">
-                        <div className="bank-title">Bank Details:</div>
-                        <div>South Indian Bank, Account: {settings?.bank?.accountNumber || '0338073000002328'}</div>
-                        <div>Branch: {settings?.bank?.branchName || 'Tirupur'}, IFSC: {settings?.bank?.ifscCode || 'SIBL0000338'}</div>
+
+                    {/* Terms and Conditions */}
+                    <div className="invoice-terms-section">
+                        <div className="terms-title">Terms & Conditions:</div>
+                        <div className="terms-text">Thanks for doing business with us!</div>
                     </div>
-                </div>
-                <div className="signature-section">
-                    <div className="certified-text">
-                        <div>Certified that above particulars are true and correct</div>
-                        <div className="company-signature">For SRI RAM FASHIONS</div>
+
+                    {/* Signature Section */}
+                    <div className="invoice-signature-section">
+                        <div className="signature-box">
+                            <div className="signature-label">For {settings?.company?.name || 'Company Name'}:</div>
+                            <div className="signature-space"></div>
+                            <div className="signature-text">Authorized Signatory</div>
+                        </div>
                     </div>
-                    <div className="signature-space"></div>
                 </div>
             </div>
         </div>

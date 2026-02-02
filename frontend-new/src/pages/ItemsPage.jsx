@@ -233,43 +233,44 @@ const ItemsPage = () => {
             </div>
 
             {/* Search Section */}
-            <div className="card py-4">
+            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex-shrink-0">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+                    <div className="flex-shrink-0 w-48">
+                        <label className="form-label">Name</label>
                         <input
                             type="text"
                             placeholder="Enter item name"
                             value={searchName}
                             onChange={(e) => setSearchName(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            className="form-input w-40 text-sm py-1.5"
+                            className="form-input"
                         />
                     </div>
-                    <div className="flex-shrink-0">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">HSN Code</label>
+                    <div className="flex-shrink-0 w-32">
+                        <label className="form-label">HSN Code</label>
                         <input
                             type="text"
                             placeholder="Enter HSN code"
                             value={searchHSN}
                             onChange={(e) => setSearchHSN(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            className="form-input w-32 text-sm py-1.5"
+                            className="form-input"
                         />
                     </div>
+
                     <button
                         onClick={handleSearch}
                         disabled={isLoading}
-                        className="flex items-center gap-1.5 px-4 py-1.5 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-                        style={{ backgroundColor: '#3b82f6' }}
+                        className="btn btn-primary"
                     >
-                        <Search size={14} />
-                        SEARCH
+                        <Search size={16} />
+                        Search
                     </button>
                     <button
                         onClick={() => { setSearchName(''); setSearchHSN(''); fetchItems(); }}
-                        className="px-3 py-1.5 text-gray-500 hover:text-gray-700 font-medium text-sm"
+                        className="btn btn-ghost"
                     >
+                        <X size={16} />
                         Clear
                     </button>
                 </div>

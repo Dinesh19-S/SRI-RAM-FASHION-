@@ -2,9 +2,17 @@ import { useState, useEffect } from 'react';
 import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { salesEntriesAPI, customersAPI } from '../services/api';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchSettings } from '../store/slices/settingsSlice';
+import BillTemplate from '../components/BillTemplate';
+import { downloadBillPDF } from '../utils/pdfGenerator';
 
 const SalesEntryPage = () => {
+    const dispatch = useDispatch();
+    const settings = useSelector((state) => state.settings.data);
     const [showNewEntry, setShowNewEntry] = useState(false);
+    const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+    const [previewBill, setPreviewBill] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [sales, setSales] = useState([]);
@@ -35,7 +43,8 @@ const SalesEntryPage = () => {
     useEffect(() => {
         fetchSales();
         fetchCustomers();
-    }, [pagination.page, pagination.limit]);
+        dispatch(fetchSettings());
+    }, [pagination.page, pagination.limit, dispatch]);
 
     const fetchSales = async () => {
         setIsLoading(true);
@@ -223,6 +232,61 @@ const SalesEntryPage = () => {
         }
     };
 
+    const handleInvoicePreview = () => {
+        if (!newSale.customer) {
+            alert('Please select a customer first');
+            return;
+        }
+
+        // Find customer details
+        const customerDetails = customers.find(c => c.companyName === newSale.customer) || { name: newSale.customer };
+
+        // Calculate totals
+        const validItems = items.filter(item => item.particular && item.quantity && item.rate);
+
+        // Calculate subtotal
+        const subtotal = validItems.reduce((sum, item) => sum + calculateItemTotal(item), 0);
+
+        // Count total packs/quantity for the invoice
+        const totalPacks = validItems.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0)
+
+        const billData = {
+            billNumber: newSale.invNo || 'DRAFT',
+            date: newSale.date,
+            customer: {
+                name: customerDetails.companyName || newSale.customer,
+                phone: customerDetails.mobile || '',
+                address: customerDetails.address || '',
+                gstin: customerDetails.gstin || '',
+                state: customerDetails.state || '',
+            },
+            items: validItems.map(item => ({
+                productName: item.particular,
+                quantity: parseFloat(item.quantity) || 0,
+                price: parseFloat(item.rate) || 0,
+                total: calculateItemTotal(item),
+                hsn: '', // Add HSN if available in item
+                noOfPacks: parseFloat(item.quantity) || 0,
+                ratePerPack: parseFloat(item.rate) || 0
+            })),
+            subtotal: subtotal,
+            discountAmount: 0,
+            grandTotal: subtotal,
+            totalPacks: totalPacks
+        };
+
+        setPreviewBill(billData);
+        setShowInvoicePreview(true);
+    };
+
+    const handleDownloadPDF = async () => {
+        if (!previewBill) return;
+        const element = document.getElementById('bill-template-preview');
+        if (element) {
+            await downloadBillPDF(element, previewBill.billNumber || 'Invoice');
+        }
+    };
+
     // Show New Sales Entry Form
     if (showNewEntry) {
         return (
@@ -240,7 +304,10 @@ const SalesEntryPage = () => {
                             {isEditing ? 'Edit Sales Entry' : 'New Sales Entry'}
                         </h1>
                     </div>
-                    <button className="btn btn-secondary">
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleInvoicePreview}
+                    >
                         <FileText size={18} />
                         INVOICE
                     </button>
@@ -460,9 +527,9 @@ const SalesEntryPage = () => {
             </div>
 
             {/* Search Filters Card */}
-            <div className="card">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                    <div>
+            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-shrink-0 w-32">
                         <label className="form-label">Inv No</label>
                         <input
                             type="text"
@@ -472,7 +539,7 @@ const SalesEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, invNo: e.target.value })}
                         />
                     </div>
-                    <div>
+                    <div className="flex-shrink-0 w-48">
                         <label className="form-label">Customer</label>
                         <input
                             type="text"
@@ -482,7 +549,7 @@ const SalesEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, customer: e.target.value })}
                         />
                     </div>
-                    <div>
+                    <div className="flex-shrink-0 w-36">
                         <label className="form-label">From Date</label>
                         <input
                             type="date"
@@ -491,7 +558,7 @@ const SalesEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
                         />
                     </div>
-                    <div>
+                    <div className="flex-shrink-0 w-36">
                         <label className="form-label">To Date</label>
                         <input
                             type="date"
@@ -500,23 +567,22 @@ const SalesEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
                         />
                     </div>
-                    <div className="flex gap-2">
-                        <button
-                            className="btn btn-search flex items-center gap-2 flex-1"
-                            onClick={handleSearch}
-                            disabled={isLoading}
-                        >
-                            <Search size={18} />
-                            SEARCH
-                        </button>
-                        <button
-                            className="btn btn-secondary"
-                            onClick={handleClearFilters}
-                            title="Clear filters"
-                        >
-                            Clear
-                        </button>
-                    </div>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleSearch}
+                        disabled={isLoading}
+                    >
+                        <Search size={16} />
+                        Search
+                    </button>
+                    <button
+                        className="btn btn-ghost"
+                        onClick={handleClearFilters}
+                        title="Clear filters"
+                    >
+                        <X size={16} />
+                        Clear
+                    </button>
                 </div>
             </div>
 
@@ -688,6 +754,30 @@ const SalesEntryPage = () => {
                                 >
                                     Delete
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Invoice Preview Modal */}
+            {showInvoicePreview && previewBill && (
+                <div className="modal-overlay" onClick={() => setShowInvoicePreview(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-[230mm] max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="text-lg font-semibold text-gray-900">Invoice Preview</h3>
+                            <div className="flex gap-2">
+                                <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
+                                    <FileText size={16} /> Download PDF
+                                </button>
+                                <button className="btn btn-ghost btn-icon" onClick={() => setShowInvoicePreview(false)}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-4 overflow-auto max-h-[80vh] bg-gray-100">
+                            <div id="bill-template-preview">
+                                <BillTemplate bill={previewBill} settings={settings} />
                             </div>
                         </div>
                     </div>

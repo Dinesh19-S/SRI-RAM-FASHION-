@@ -464,9 +464,9 @@ const PurchaseEntryPage = () => {
             </div>
 
             {/* Search Filters Card */}
-            <div className="card">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                    <div>
+            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-shrink-0 w-32">
                         <label className="form-label">Inv No</label>
                         <input
                             type="text"
@@ -476,7 +476,7 @@ const PurchaseEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, invNo: e.target.value })}
                         />
                     </div>
-                    <div>
+                    <div className="flex-shrink-0 w-48">
                         <label className="form-label">Company</label>
                         <input
                             type="text"
@@ -486,7 +486,7 @@ const PurchaseEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, company: e.target.value })}
                         />
                     </div>
-                    <div>
+                    <div className="flex-shrink-0 w-36">
                         <label className="form-label">From Date</label>
                         <input
                             type="date"
@@ -495,7 +495,7 @@ const PurchaseEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
                         />
                     </div>
-                    <div>
+                    <div className="flex-shrink-0 w-36">
                         <label className="form-label">To Date</label>
                         <input
                             type="date"
@@ -504,23 +504,22 @@ const PurchaseEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, toDate: e.target.value })}
                         />
                     </div>
-                    <div className="flex gap-2">
-                        <button
-                            className="btn btn-search flex items-center gap-2 flex-1"
-                            onClick={handleSearch}
-                            disabled={isLoading}
-                        >
-                            <Search size={18} />
-                            SEARCH
-                        </button>
-                        <button
-                            className="btn btn-secondary"
-                            onClick={handleClearFilters}
-                            title="Clear filters"
-                        >
-                            Clear
-                        </button>
-                    </div>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleSearch}
+                        disabled={isLoading}
+                    >
+                        <Search size={16} />
+                        Search
+                    </button>
+                    <button
+                        className="btn btn-ghost"
+                        onClick={handleClearFilters}
+                        title="Clear filters"
+                    >
+                        <X size={16} />
+                        Clear
+                    </button>
                 </div>
             </div>
 

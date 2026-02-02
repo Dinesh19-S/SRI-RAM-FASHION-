@@ -1,94 +1,344 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchSettings, updateSettings } from '../store/slices/settingsSlice';
-import { Building, CreditCard, Percent, FileText, Save } from 'lucide-react';
-import BillTemplateDesigner from '../components/BillTemplateDesigner';
+import { Building, User, Bell, Shield, Save, Check } from 'lucide-react';
 
 const SettingsPage = () => {
     const dispatch = useDispatch();
     const { data: settings, isLoading } = useSelector((state) => state.settings);
     const [activeTab, setActiveTab] = useState('company');
     const [formData, setFormData] = useState({
-        company: { name: 'Sri Ram Fashions', address: '123 Main Street', city: 'Chennai', state: 'Tamil Nadu', pincode: '600001', phone: '+91 98765 43210', email: 'info@sriramfashions.com', gstin: '33AAAAA0000A1Z5' },
-        bank: { bankName: '', accountNumber: '', ifscCode: '', accountHolderName: '', upiId: '' },
-        tax: { cgstRate: 9, sgstRate: 9, enableGst: true }
+        company: {
+            name: '',
+            address: '',
+            gstin: '',
+            state: 'Tamil Nadu',
+            stateCode: '33',
+            invoicePrefix: 'INV',
+            voucherPrefix: 'V'
+        },
+        profile: { name: '', email: '', phone: '' },
+        notifications: { emailNotifications: true, smsNotifications: false },
+        security: { twoFactorAuth: false }
     });
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     useEffect(() => { dispatch(fetchSettings()); }, [dispatch]);
-    useEffect(() => { if (settings) setFormData(settings); }, [settings]);
+    useEffect(() => { if (settings) setFormData(prev => ({ ...prev, ...settings })); }, [settings]);
 
     const tabs = [
-        { id: 'company', label: 'Company Info', icon: Building },
-        { id: 'bank', label: 'Bank Details', icon: CreditCard },
-        { id: 'tax', label: 'Tax Settings', icon: Percent },
-        { id: 'template', label: 'Bill Template', icon: FileText }
+        { id: 'company', label: 'Company', icon: Building },
+        { id: 'profile', label: 'Profile', icon: User },
+        { id: 'notifications', label: 'Notifications', icon: Bell },
+        { id: 'security', label: 'Security', icon: Shield }
     ];
 
-    const handleSave = () => dispatch(updateSettings(formData));
+    const handleSave = async () => {
+        await dispatch(updateSettings(formData));
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+    };
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-                <button className="btn btn-primary" onClick={handleSave} disabled={isLoading}><Save size={18} />{isLoading ? 'Saving...' : 'Save Changes'}</button>
+        <div className="settings-page">
+            {/* Header */}
+            <div className="settings-header">
+                <h1 className="settings-title">Settings</h1>
+                <p className="settings-subtitle">Manage your account and preferences</p>
             </div>
 
-            <div className="flex gap-6">
-                <div className="w-56 shrink-0">
-                    <nav className="space-y-1">
-                        {tabs.map((tab) => (
-                            <button key={tab.id} className={`nav-link w-full ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
-                                <tab.icon size={20} /><span>{tab.label}</span>
+            {/* Settings Layout */}
+            <div className="settings-layout">
+                {/* Sidebar Navigation */}
+                <div className="settings-nav">
+                    {tabs.map((tab) => {
+                        const Icon = tab.icon;
+                        return (
+                            <button
+                                key={tab.id}
+                                className={`settings-nav-item ${activeTab === tab.id ? 'active' : ''}`}
+                                onClick={() => setActiveTab(tab.id)}
+                            >
+                                <Icon size={18} />
+                                <span>{tab.label}</span>
                             </button>
-                        ))}
-                    </nav>
+                        );
+                    })}
                 </div>
 
-                <div className="flex-1 card">
+                {/* Main Content */}
+                <div className="settings-main">
+                    {/* Company Settings Tab */}
                     {activeTab === 'company' && (
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900">Company Information</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="form-label">Company Name</label><input className="form-input" value={formData.company?.name || ''} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, name: e.target.value } })} /></div>
-                                <div><label className="form-label">Phone</label><input className="form-input" value={formData.company?.phone || ''} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, phone: e.target.value } })} /></div>
-                                <div><label className="form-label">Email</label><input className="form-input" value={formData.company?.email || ''} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, email: e.target.value } })} /></div>
-                                <div><label className="form-label">GSTIN</label><input className="form-input" value={formData.company?.gstin || ''} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, gstin: e.target.value } })} /></div>
-                                <div className="col-span-2"><label className="form-label">Address</label><input className="form-input" value={formData.company?.address || ''} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, address: e.target.value } })} /></div>
-                                <div><label className="form-label">City</label><input className="form-input" value={formData.company?.city || ''} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, city: e.target.value } })} /></div>
-                                <div><label className="form-label">State</label><input className="form-input" value={formData.company?.state || ''} onChange={(e) => setFormData({ ...formData, company: { ...formData.company, state: e.target.value } })} /></div>
+                        <div className="settings-card">
+                            <h2 className="settings-card-title">Company Settings</h2>
+
+                            <div className="settings-form">
+                                <div className="form-field">
+                                    <label className="field-label">Company Name</label>
+                                    <input
+                                        type="text"
+                                        className="field-input"
+                                        value={formData.company?.name || ''}
+                                        onChange={(e) => setFormData({ ...formData, company: { ...formData.company, name: e.target.value } })}
+                                        placeholder="Enter company name"
+                                    />
+                                </div>
+
+                                <div className="form-field">
+                                    <label className="field-label">Address</label>
+                                    <textarea
+                                        className="field-textarea"
+                                        value={formData.company?.address || ''}
+                                        onChange={(e) => setFormData({ ...formData, company: { ...formData.company, address: e.target.value } })}
+                                        placeholder="Enter full address"
+                                        rows={2}
+                                    />
+                                </div>
+
+                                <div className="form-row-3">
+                                    <div className="form-field">
+                                        <label className="field-label">GSTIN</label>
+                                        <input
+                                            type="text"
+                                            className="field-input"
+                                            value={formData.company?.gstin || ''}
+                                            onChange={(e) => setFormData({ ...formData, company: { ...formData.company, gstin: e.target.value } })}
+                                            placeholder="Enter GSTIN"
+                                        />
+                                    </div>
+                                    <div className="form-field">
+                                        <label className="field-label">State</label>
+                                        <input
+                                            type="text"
+                                            className="field-input"
+                                            value={formData.company?.state || ''}
+                                            onChange={(e) => setFormData({ ...formData, company: { ...formData.company, state: e.target.value } })}
+                                            placeholder="Enter state"
+                                        />
+                                    </div>
+                                    <div className="form-field form-field-small">
+                                        <label className="field-label">Code</label>
+                                        <input
+                                            type="text"
+                                            className="field-input"
+                                            value={formData.company?.stateCode || ''}
+                                            onChange={(e) => setFormData({ ...formData, company: { ...formData.company, stateCode: e.target.value } })}
+                                            placeholder="33"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-row-2">
+                                    <div className="form-field">
+                                        <label className="field-label">Invoice Prefix</label>
+                                        <input
+                                            type="text"
+                                            className="field-input"
+                                            value={formData.company?.invoicePrefix || ''}
+                                            onChange={(e) => setFormData({ ...formData, company: { ...formData.company, invoicePrefix: e.target.value } })}
+                                            placeholder="INV"
+                                        />
+                                    </div>
+                                    <div className="form-field">
+                                        <label className="field-label">Voucher Prefix</label>
+                                        <input
+                                            type="text"
+                                            className="field-input"
+                                            value={formData.company?.voucherPrefix || ''}
+                                            onChange={(e) => setFormData({ ...formData, company: { ...formData.company, voucherPrefix: e.target.value } })}
+                                            placeholder="V"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-actions">
+                                    <button
+                                        className={`save-btn ${saveSuccess ? 'success' : ''}`}
+                                        onClick={handleSave}
+                                        disabled={isLoading}
+                                    >
+                                        {saveSuccess ? (
+                                            <>
+                                                <Check size={16} />
+                                                Saved!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save size={16} />
+                                                {isLoading ? 'Saving...' : 'Save Changes'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {activeTab === 'bank' && (
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900">Bank Details</h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="form-label">Bank Name</label><input className="form-input" value={formData.bank?.bankName || ''} onChange={(e) => setFormData({ ...formData, bank: { ...formData.bank, bankName: e.target.value } })} /></div>
-                                <div><label className="form-label">Account Number</label><input className="form-input" value={formData.bank?.accountNumber || ''} onChange={(e) => setFormData({ ...formData, bank: { ...formData.bank, accountNumber: e.target.value } })} /></div>
-                                <div><label className="form-label">IFSC Code</label><input className="form-input" value={formData.bank?.ifscCode || ''} onChange={(e) => setFormData({ ...formData, bank: { ...formData.bank, ifscCode: e.target.value } })} /></div>
-                                <div><label className="form-label">Account Holder</label><input className="form-input" value={formData.bank?.accountHolderName || ''} onChange={(e) => setFormData({ ...formData, bank: { ...formData.bank, accountHolderName: e.target.value } })} /></div>
-                                <div><label className="form-label">UPI ID</label><input className="form-input" value={formData.bank?.upiId || ''} onChange={(e) => setFormData({ ...formData, bank: { ...formData.bank, upiId: e.target.value } })} /></div>
+                    {/* Profile Tab */}
+                    {activeTab === 'profile' && (
+                        <div className="settings-card">
+                            <h2 className="settings-card-title">Profile Settings</h2>
+
+                            <div className="settings-form">
+                                <div className="form-field">
+                                    <label className="field-label">Full Name</label>
+                                    <input
+                                        type="text"
+                                        className="field-input"
+                                        value={formData.profile?.name || ''}
+                                        onChange={(e) => setFormData({ ...formData, profile: { ...formData.profile, name: e.target.value } })}
+                                        placeholder="Enter your full name"
+                                    />
+                                </div>
+
+                                <div className="form-row-2">
+                                    <div className="form-field">
+                                        <label className="field-label">Email Address</label>
+                                        <input
+                                            type="email"
+                                            className="field-input"
+                                            value={formData.profile?.email || ''}
+                                            onChange={(e) => setFormData({ ...formData, profile: { ...formData.profile, email: e.target.value } })}
+                                            placeholder="Enter email"
+                                        />
+                                    </div>
+                                    <div className="form-field">
+                                        <label className="field-label">Phone Number</label>
+                                        <input
+                                            type="text"
+                                            className="field-input"
+                                            value={formData.profile?.phone || ''}
+                                            onChange={(e) => setFormData({ ...formData, profile: { ...formData.profile, phone: e.target.value } })}
+                                            placeholder="Enter phone number"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-actions">
+                                    <button
+                                        className={`save-btn ${saveSuccess ? 'success' : ''}`}
+                                        onClick={handleSave}
+                                        disabled={isLoading}
+                                    >
+                                        {saveSuccess ? (
+                                            <>
+                                                <Check size={16} />
+                                                Saved!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save size={16} />
+                                                {isLoading ? 'Saving...' : 'Save Changes'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {activeTab === 'tax' && (
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-semibold text-gray-900">Tax Settings</h3>
-                            <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                                <input type="checkbox" id="enableGst" checked={formData.tax?.enableGst ?? true} onChange={(e) => setFormData({ ...formData, tax: { ...formData.tax, enableGst: e.target.checked } })} className="w-5 h-5 rounded" />
-                                <label htmlFor="enableGst" className="font-medium text-gray-900">Enable GST on bills</label>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="form-label">CGST Rate (%)</label><input type="number" className="form-input" value={formData.tax?.cgstRate || 9} onChange={(e) => setFormData({ ...formData, tax: { ...formData.tax, cgstRate: Number(e.target.value) } })} /></div>
-                                <div><label className="form-label">SGST Rate (%)</label><input type="number" className="form-input" value={formData.tax?.sgstRate || 9} onChange={(e) => setFormData({ ...formData, tax: { ...formData.tax, sgstRate: Number(e.target.value) } })} /></div>
+                    {/* Notifications Tab */}
+                    {activeTab === 'notifications' && (
+                        <div className="settings-card">
+                            <h2 className="settings-card-title">Notification Preferences</h2>
+
+                            <div className="settings-form">
+                                <div className="toggle-option">
+                                    <div className="toggle-info">
+                                        <span className="toggle-label">Email Notifications</span>
+                                        <span className="toggle-description">Receive notifications via email</span>
+                                    </div>
+                                    <label className="toggle-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.notifications?.emailNotifications ?? true}
+                                            onChange={(e) => setFormData({ ...formData, notifications: { ...formData.notifications, emailNotifications: e.target.checked } })}
+                                        />
+                                        <span className="toggle-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div className="toggle-option">
+                                    <div className="toggle-info">
+                                        <span className="toggle-label">SMS Notifications</span>
+                                        <span className="toggle-description">Receive notifications via SMS</span>
+                                    </div>
+                                    <label className="toggle-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.notifications?.smsNotifications ?? false}
+                                            onChange={(e) => setFormData({ ...formData, notifications: { ...formData.notifications, smsNotifications: e.target.checked } })}
+                                        />
+                                        <span className="toggle-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div className="form-actions">
+                                    <button
+                                        className={`save-btn ${saveSuccess ? 'success' : ''}`}
+                                        onClick={handleSave}
+                                        disabled={isLoading}
+                                    >
+                                        {saveSuccess ? (
+                                            <>
+                                                <Check size={16} />
+                                                Saved!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save size={16} />
+                                                {isLoading ? 'Saving...' : 'Save Changes'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {activeTab === 'template' && (
-                        <BillTemplateDesigner formData={formData} setFormData={setFormData} />
+                    {/* Security Tab */}
+                    {activeTab === 'security' && (
+                        <div className="settings-card">
+                            <h2 className="settings-card-title">Security Settings</h2>
+
+                            <div className="settings-form">
+                                <div className="toggle-option">
+                                    <div className="toggle-info">
+                                        <span className="toggle-label">Two-Factor Authentication</span>
+                                        <span className="toggle-description">Add an extra layer of security to your account</span>
+                                    </div>
+                                    <label className="toggle-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.security?.twoFactorAuth ?? false}
+                                            onChange={(e) => setFormData({ ...formData, security: { ...formData.security, twoFactorAuth: e.target.checked } })}
+                                        />
+                                        <span className="toggle-slider"></span>
+                                    </label>
+                                </div>
+
+                                <div className="form-actions">
+                                    <button
+                                        className={`save-btn ${saveSuccess ? 'success' : ''}`}
+                                        onClick={handleSave}
+                                        disabled={isLoading}
+                                    >
+                                        {saveSuccess ? (
+                                            <>
+                                                <Check size={16} />
+                                                Saved!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save size={16} />
+                                                {isLoading ? 'Saving...' : 'Save Changes'}
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

@@ -155,32 +155,33 @@ const SupplierEntryPage = () => {
             </div>
 
             {/* Search Section */}
-            <div className="card py-4">
+            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex-shrink-0">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Name / Mobile</label>
+                    <div className="flex-shrink-0 w-64">
+                        <label className="form-label">Name / Mobile</label>
                         <input
                             type="text"
                             placeholder="Enter name or mobile"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            className="form-input w-48 text-sm py-1.5"
+                            className="form-input"
                         />
                     </div>
+
                     <button
                         onClick={handleSearch}
                         disabled={isLoading}
-                        className="flex items-center gap-1.5 px-4 py-1.5 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
-                        style={{ backgroundColor: '#3b82f6' }}
+                        className="btn btn-primary"
                     >
-                        <Search size={14} />
-                        SEARCH
+                        <Search size={16} />
+                        Search
                     </button>
                     <button
                         onClick={() => { setSearchQuery(''); fetchSuppliers(); }}
-                        className="px-3 py-1.5 text-gray-500 hover:text-gray-700 font-medium text-sm"
+                        className="btn btn-ghost"
                     >
+                        <X size={16} />
                         Clear
                     </button>
                 </div>

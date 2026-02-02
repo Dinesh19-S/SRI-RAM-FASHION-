@@ -18,7 +18,8 @@
 12. [Database Architecture - NoSQL (MongoDB)](#12-database-architecture---nosql-mongodb)
 13. [Sustainable Development Goals (SDG)](#13-sustainable-development-goals-sdg)
 14. [Conclusion](#14-conclusion)
-15. [References](#15-references)
+15. [Repository Management](#15-repository-management)
+16. [References](#16-references)
 
 ---
 
@@ -1278,7 +1279,57 @@ Through this project, the following skills were developed:
 
 ---
 
-## 15. References
+---
+
+## 15. Repository Management
+
+### 15.1 Repository Details
+- **Remote URL**: [https://github.com/Dinesh19-S/SRI-RAM-FASHION-.git](https://github.com/Dinesh19-S/SRI-RAM-FASHION-.git)
+- **Primary Branch**: `main`
+
+### 15.2 Setup Instructions
+
+#### 1. Clone the Repository
+```bash
+git clone https://github.com/Dinesh19-S/SRI-RAM-FASHION-.git
+cd sri-ram-fashion-app
+```
+
+#### 2. Install Dependencies
+The project consists of two parts: Backend and Frontend.
+
+**Backend Setup:**
+```bash
+cd backend
+npm install
+```
+
+**Frontend Setup:**
+```bash
+cd ../frontend-new
+npm install
+```
+
+#### 3. Running the Application
+You need to run both servers concurrently.
+
+**Start Backend (Port 5000):**
+```bash
+# In terminal 1
+cd backend
+npm run dev
+```
+
+**Start Frontend (Port 5173):**
+```bash
+# In terminal 2
+cd frontend-new
+npm run dev
+```
+
+---
+
+## 16. References
 
 ### 15.1 Books and Publications
 
