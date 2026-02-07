@@ -98,8 +98,18 @@ router.post('/google', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Google auth error:', error);
-        res.status(401).json({ success: false, message: 'Google authentication failed' });
+        console.error('Google auth error:', error.message);
+        console.error('Full error:', error);
+        // Return more specific error message for debugging
+        let errorMessage = 'Google authentication failed';
+        if (error.message.includes('Token used too late')) {
+            errorMessage = 'Token expired. Please try again.';
+        } else if (error.message.includes('Invalid token')) {
+            errorMessage = 'Invalid token. Please try again.';
+        } else if (error.message.includes('audience')) {
+            errorMessage = 'Client ID mismatch. Check Google Cloud Console configuration.';
+        }
+        res.status(401).json({ success: false, message: errorMessage, debug: error.message });
     }
 });
 

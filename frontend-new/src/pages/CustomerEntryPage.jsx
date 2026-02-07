@@ -149,7 +149,7 @@ const CustomerEntryPage = () => {
                 </div>
                 <button
                     className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium text-sm transition-colors"
-                    style={{ backgroundColor: '#d4a853' }}
+                    style={{ backgroundColor: '#3b82f6' }}
                     onClick={() => handleOpenModal()}
                 >
                     <Plus size={16} />

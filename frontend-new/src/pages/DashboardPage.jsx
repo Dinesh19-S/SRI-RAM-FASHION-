@@ -123,19 +123,35 @@ const DashboardPage = () => {
                 </p>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Stats Cards - Modern Premium Design */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {statsCards.map((stat, index) => (
-                    <div key={index} className="stats-card">
-                        <div className={`p-3 rounded-xl ${colorClasses[stat.color]}`}>
-                            <stat.icon size={24} />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                            <p className="text-xl font-bold text-gray-900">{stat.value}</p>
-                            <div className={`flex items-center gap-1 text-xs font-semibold ${stat.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {stat.change >= 0 ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                                <span>{Math.abs(stat.change)}% vs last month</span>
+                    <div key={index} className="relative bg-white rounded-2xl p-5 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
+                        {/* Gradient Accent Bar */}
+                        <div className={`absolute top-0 left-0 w-full h-1 ${stat.color === 'sage' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' :
+                                stat.color === 'blue' ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
+                                    stat.color === 'green' ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
+                                        'bg-gradient-to-r from-orange-400 to-amber-500'
+                            }`}></div>
+
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-500 mb-1">{stat.title}</p>
+                                <p className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</p>
+                                <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${stat.change >= 0
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-red-100 text-red-700'
+                                    }`}>
+                                    {stat.change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                                    <span>{Math.abs(stat.change)}% vs last month</span>
+                                </div>
+                            </div>
+                            <div className={`p-3 rounded-xl ${stat.color === 'sage' ? 'bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600' :
+                                    stat.color === 'blue' ? 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600' :
+                                        stat.color === 'green' ? 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-600' :
+                                            'bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600'
+                                } group-hover:scale-110 transition-transform duration-300`}>
+                                <stat.icon size={24} />
                             </div>
                         </div>
                     </div>

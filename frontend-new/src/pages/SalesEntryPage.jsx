@@ -518,7 +518,8 @@ const SalesEntryPage = () => {
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-900">Sales</h1>
                 <button
-                    className="btn btn-new-entry flex items-center gap-2"
+                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium text-sm transition-colors"
+                    style={{ backgroundColor: '#3b82f6' }}
                     onClick={handleNewSale}
                 >
                     <Plus size={18} />

@@ -224,7 +224,8 @@ const ItemsPage = () => {
                     <h1 className="text-2xl font-bold text-gray-900">Items / Products</h1>
                 </div>
                 <button
-                    className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-lg font-medium text-sm transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium text-sm transition-colors"
+                    style={{ backgroundColor: '#3b82f6' }}
                     onClick={() => handleOpenModal()}
                 >
                     <Plus size={16} />

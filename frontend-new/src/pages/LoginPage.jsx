@@ -210,12 +210,18 @@ const LoginPage = () => {
                     <div className="flex justify-center w-full">
                         <GoogleLogin
                             onSuccess={async (credentialResponse) => {
+                                console.log('Google credential received:', credentialResponse);
                                 const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
+                                console.log('Backend response:', result);
                                 if (googleLogin.fulfilled.match(result)) {
                                     navigate('/');
                                 }
                             }}
-                            onError={() => console.error('Google Login Failed')}
+                            onError={(error) => {
+                                console.error('Google Login Error Details:', error);
+                                // This error happens BEFORE contacting the backend - it means the Google popup itself failed
+                                dispatch(clearError());
+                            }}
                             theme="outline"
                             size="large"
                             width="340"
