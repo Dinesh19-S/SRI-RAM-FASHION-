@@ -224,12 +224,11 @@ const ItemsPage = () => {
                     <h1 className="text-2xl font-bold text-gray-900">Items / Products</h1>
                 </div>
                 <button
-                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium text-sm transition-colors"
-                    style={{ backgroundColor: '#3b82f6' }}
+                    className="btn btn-primary"
                     onClick={() => handleOpenModal()}
                 >
                     <Plus size={16} />
-                    ADD PRODUCT
+                    Add Product
                 </button>
             </div>
 
@@ -280,18 +279,18 @@ const ItemsPage = () => {
             {/* Table */}
             <div className="card p-0 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="table">
                         <thead>
-                            <tr className="bg-gray-100 border-b-2 border-gray-300">
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">S No</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">HSN Code</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Category</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Size</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Stock</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Price</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">GST</th>
-                                <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                            <tr>
+                                <th>S No</th>
+                                <th>Name</th>
+                                <th>HSN Code</th>
+                                <th>Category</th>
+                                <th>Size</th>
+                                <th>Stock</th>
+                                <th>Price</th>
+                                <th>GST</th>
+                                <th className="text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -309,16 +308,16 @@ const ItemsPage = () => {
                                 </tr>
                             ) : (
                                 items.map((item, index) => (
-                                    <tr key={item._id} className="border-b border-gray-200 hover:bg-gray-50">
-                                        <td className="py-3 px-4 text-gray-900">{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                                        <td className="py-3 px-4 text-gray-900 font-medium">{item.name}</td>
-                                        <td className="py-3 px-4 text-blue-600 font-mono">{item.hsn || '-'}</td>
-                                        <td className="py-3 px-4 text-gray-900">{item.category?.name || '-'}</td>
-                                        <td className="py-3 px-4 text-gray-900">{item.size || '-'}</td>
-                                        <td className="py-3 px-4 text-gray-900 font-semibold">{item.stock || 0}</td>
-                                        <td className="py-3 px-4 text-gray-900">{formatCurrency(item.sellingPrice || 0)}</td>
-                                        <td className="py-3 px-4 text-gray-900">{item.gstRate || 5}%</td>
-                                        <td className="py-3 px-4">
+                                    <tr key={item._id}>
+                                        <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
+                                        <td className="font-medium">{item.name}</td>
+                                        <td className="text-blue-600 font-mono">{item.hsn || '-'}</td>
+                                        <td>{item.category?.name || '-'}</td>
+                                        <td>{item.size || '-'}</td>
+                                        <td className="font-semibold">{item.stock || 0}</td>
+                                        <td>{formatCurrency(item.sellingPrice || 0)}</td>
+                                        <td>{item.gstRate || 5}%</td>
+                                        <td>
                                             <div className="flex justify-end gap-2">
                                                 <button
                                                     className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
@@ -361,8 +360,7 @@ const ItemsPage = () => {
                                     <button
                                         key={pageNum}
                                         onClick={() => handlePageChange(pageNum)}
-                                        className={`px-3 py-1 text-sm rounded ${pagination.page === pageNum ? 'text-white' : 'text-gray-600 hover:bg-gray-200'}`}
-                                        style={pagination.page === pageNum ? { backgroundColor: '#3b82f6' } : {}}
+                                        className={`px-3 py-1 text-sm rounded font-medium ${pagination.page === pageNum ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                                     >
                                         {pageNum}
                                     </button>
@@ -381,7 +379,7 @@ const ItemsPage = () => {
                                 <button
                                     key={limit}
                                     onClick={() => handleLimitChange(limit)}
-                                    className={`px-3 py-1 text-sm rounded ${pagination.limit === limit ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`px-3 py-1 text-sm rounded font-medium ${pagination.limit === limit ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     {limit}
                                 </button>
@@ -395,7 +393,7 @@ const ItemsPage = () => {
             {showModal && (
                 <div className="modal-overlay" onClick={() => { setShowModal(false); resetForm(); }}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <div className="px-6 py-4 rounded-t-2xl" style={{ backgroundColor: '#1e3a2f' }}>
+                        <div className="px-6 py-4" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
                             <h3 className="text-lg font-semibold text-white">
                                 {isEditing ? 'Edit Product' : 'Add New Product'}
                             </h3>
@@ -550,7 +548,7 @@ const ItemsPage = () => {
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && selectedItem && (
                 <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
                         <div className="text-center">
                             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Trash2 size={32} className="text-red-600" />
@@ -562,13 +560,13 @@ const ItemsPage = () => {
                             <div className="flex gap-3 justify-center">
                                 <button
                                     onClick={() => setShowDeleteConfirm(false)}
-                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                    className="btn btn-secondary"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleDelete}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+                                    className="btn btn-danger"
                                 >
                                     Delete
                                 </button>
@@ -582,7 +580,7 @@ const ItemsPage = () => {
             {showCategoryModal && (
                 <div className="modal-overlay" onClick={() => { setShowCategoryModal(false); setNewCategory({ name: '', description: '' }); }}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-                        <div className="px-6 py-4 rounded-t-2xl flex items-center gap-2" style={{ backgroundColor: '#1e3a2f' }}>
+                        <div className="px-6 py-4 flex items-center gap-2" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
                             <FolderPlus size={20} className="text-white" />
                             <h3 className="text-lg font-semibold text-white">Add New Category</h3>
                         </div>

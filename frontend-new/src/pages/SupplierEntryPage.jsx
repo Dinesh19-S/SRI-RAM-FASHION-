@@ -145,12 +145,11 @@ const SupplierEntryPage = () => {
                     <h1 className="text-2xl font-bold text-gray-900">Supplier Entry</h1>
                 </div>
                 <button
-                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium text-sm transition-colors"
-                    style={{ backgroundColor: '#3b82f6' }}
+                    className="btn btn-primary"
                     onClick={() => handleOpenModal()}
                 >
                     <Plus size={16} />
-                    NEW SUPPLIER
+                    New Supplier
                 </button>
             </div>
 
@@ -190,15 +189,15 @@ const SupplierEntryPage = () => {
             {/* Table */}
             <div className="card p-0 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="table">
                         <thead>
-                            <tr className="bg-gray-100 border-b-2 border-gray-300">
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">S.No</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Company Name</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Mobile</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-                                <th className="text-left py-3 px-4 font-semibold text-gray-700">GSTIN</th>
-                                <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Company Name</th>
+                                <th>Mobile</th>
+                                <th>Email</th>
+                                <th>GSTIN</th>
+                                <th className="text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -216,13 +215,13 @@ const SupplierEntryPage = () => {
                                 </tr>
                             ) : (
                                 suppliers.map((supplier, index) => (
-                                    <tr key={supplier._id} className="border-b border-gray-200 hover:bg-gray-50">
-                                        <td className="py-3 px-4 text-gray-900">{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                                        <td className="py-3 px-4 text-blue-600 font-medium">{supplier.companyName}</td>
-                                        <td className="py-3 px-4 text-gray-900">{supplier.mobile}</td>
-                                        <td className="py-3 px-4 text-gray-900">{supplier.email || '-'}</td>
-                                        <td className="py-3 px-4 text-gray-900 font-mono text-sm">{supplier.gstin || '-'}</td>
-                                        <td className="py-3 px-4">
+                                    <tr key={supplier._id}>
+                                        <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
+                                        <td className="text-blue-600 font-medium">{supplier.companyName}</td>
+                                        <td>{supplier.mobile}</td>
+                                        <td>{supplier.email || '-'}</td>
+                                        <td className="font-mono">{supplier.gstin || '-'}</td>
+                                        <td>
                                             <div className="flex justify-end gap-2">
                                                 <button
                                                     className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
@@ -265,8 +264,7 @@ const SupplierEntryPage = () => {
                                     <button
                                         key={pageNum}
                                         onClick={() => handlePageChange(pageNum)}
-                                        className={`px-3 py-1 text-sm rounded ${pagination.page === pageNum ? 'text-white' : 'text-gray-600 hover:bg-gray-200'}`}
-                                        style={pagination.page === pageNum ? { backgroundColor: '#3b82f6' } : {}}
+                                        className={`px-3 py-1 text-sm rounded font-medium ${pagination.page === pageNum ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                                     >
                                         {pageNum}
                                     </button>
@@ -285,7 +283,7 @@ const SupplierEntryPage = () => {
                                 <button
                                     key={limit}
                                     onClick={() => handleLimitChange(limit)}
-                                    className={`px-3 py-1 text-sm rounded ${pagination.limit === limit ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`px-3 py-1 text-sm rounded font-medium ${pagination.limit === limit ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     {limit}
                                 </button>
@@ -298,8 +296,8 @@ const SupplierEntryPage = () => {
             {/* New/Edit Supplier Modal */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-                        <div className="px-6 py-4 rounded-t-lg" style={{ backgroundColor: '#1e3a2f' }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="px-6 py-4" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
                             <h3 className="text-lg font-semibold text-white">
                                 {isEditing ? 'Edit Supplier' : 'New Supplier'}
                             </h3>
@@ -395,20 +393,19 @@ const SupplierEntryPage = () => {
                                 />
                             </div>
                         </div>
-                        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 rounded-b-lg">
+                        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50">
                             <button
                                 onClick={() => setShowModal(false)}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                className="btn btn-secondary"
                             >
-                                CANCEL
+                                Cancel
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium"
-                                style={{ backgroundColor: '#3b82f6' }}
+                                className="btn btn-primary"
                             >
                                 <Save size={16} />
-                                SAVE
+                                Save
                             </button>
                         </div>
                     </div>
@@ -418,7 +415,7 @@ const SupplierEntryPage = () => {
             {/* Delete Confirmation Modal */}
             {showDeleteConfirm && selectedSupplier && (
                 <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
                         <div className="text-center">
                             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <Trash2 size={32} className="text-red-600" />
@@ -430,13 +427,13 @@ const SupplierEntryPage = () => {
                             <div className="flex gap-3 justify-center">
                                 <button
                                     onClick={() => setShowDeleteConfirm(false)}
-                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                                    className="btn btn-secondary"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleDelete}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+                                    className="btn btn-danger"
                                 >
                                     Delete
                                 </button>

@@ -40,14 +40,14 @@ const navigationSections = [
         title: 'PURCHASE',
         items: [
             { name: 'Purchase Entry', href: '/dashboard/purchase/entry', icon: Calculator },
-            { name: 'Purchase Payments', href: '/dashboard/purchase/payments', icon: IndianRupee },
+
         ]
     },
     {
         title: 'SALES',
         items: [
             { name: 'Sales Entry', href: '/dashboard/sales/entry', icon: ShoppingCart },
-            { name: 'Sales Payments', href: '/dashboard/sales/payments', icon: IndianRupee },
+
         ]
     },
     {
@@ -113,10 +113,10 @@ const MainLayout = () => {
     const searchSuggestions = [
         { label: 'Dashboard', path: '/dashboard', keywords: ['dashboard', 'home', 'overview'] },
         { label: 'Purchase Entry', path: '/dashboard/purchase/entry', keywords: ['purchase', 'buy', 'supplier', 'invoice'] },
-        { label: 'Purchase Payments', path: '/dashboard/purchase/payments', keywords: ['purchase', 'payment', 'pay'] },
+
         { label: 'Purchase Reports', path: '/dashboard/reports/purchase', keywords: ['purchase', 'report', 'analysis'] },
         { label: 'Sales Entry', path: '/dashboard/sales/entry', keywords: ['sales', 'sell', 'customer', 'invoice'] },
-        { label: 'Sales Payments', path: '/dashboard/sales/payments', keywords: ['sales', 'payment', 'pay'] },
+
         { label: 'Sales Reports', path: '/dashboard/reports/sales', keywords: ['sales', 'report', 'analysis'] },
         { label: 'Billing', path: '/dashboard/billing', keywords: ['billing', 'bill', 'invoice', 'receipt'] },
         { label: 'Products', path: '/dashboard/inventory', keywords: ['inventory', 'stock', 'product', 'item'] },
@@ -187,20 +187,24 @@ const MainLayout = () => {
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+                style={{
+                    background: 'linear-gradient(180deg, #1e3a5f 0%, #0f2744 50%, #0a1929 100%)',
+                    borderRight: '1px solid rgba(255,255,255,0.1)'
+                }}
             >
                 {/* Logo */}
-                <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-3 px-6 py-5" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                     <img
                         src={logoImage}
                         alt="Sri Ram Fashions"
-                        className="w-10 h-10 rounded-lg object-cover shadow-sm"
+                        className="w-10 h-10 rounded-lg object-cover shadow-lg ring-2 ring-white/20"
                     />
                     <div>
-                        <div className="text-sm font-bold text-gray-900">
+                        <div className="text-sm font-bold text-white">
                             Sri Ram Fashions
                         </div>
-                        <div className="text-xs text-gray-500">Purchase & Sales</div>
+                        <div className="text-xs text-blue-200/70">Purchase & Sales</div>
                     </div>
                 </div>
 
@@ -210,7 +214,7 @@ const MainLayout = () => {
                         <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-4' : ''}>
                             <button
                                 onClick={() => toggleSection(section.title)}
-                                className="flex items-center justify-between w-full text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-3 py-1 hover:text-gray-600 transition-colors"
+                                className="flex items-center justify-between w-full text-xs font-bold text-blue-200/60 uppercase tracking-wider mb-2 px-3 py-1 hover:text-blue-100 transition-colors"
                             >
                                 {section.title}
                                 <ChevronRight
@@ -236,8 +240,8 @@ const MainLayout = () => {
                                                 className={({ isActive }) => `
                                                     flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group
                                                     ${isActive
-                                                        ? 'bg-blue-50 text-blue-600'
-                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                                                        ? 'bg-white/15 text-white shadow-lg'
+                                                        : 'text-blue-100/80 hover:bg-white/10 hover:text-white'}
                                                 `}
                                                 onClick={() => setSidebarOpen(false)}
                                             >
@@ -245,7 +249,7 @@ const MainLayout = () => {
                                                     <>
                                                         <item.icon
                                                             size={18}
-                                                            className={`transition-colors ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`}
+                                                            className={`transition-colors ${isActive ? 'text-cyan-300' : 'text-blue-300/60 group-hover:text-cyan-300'}`}
                                                             strokeWidth={2}
                                                         />
                                                         <span className="text-sm font-medium">{item.name}</span>
@@ -261,10 +265,10 @@ const MainLayout = () => {
                 </nav>
 
                 {/* Logout */}
-                <div className="absolute bottom-0 left-0 right-0 px-3 py-4 border-t border-gray-100 bg-white">
+                <div className="absolute bottom-0 left-0 right-0 px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' }}>
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-colors"
                     >
                         <LogOut size={18} />
                         <span className="text-sm font-medium">Logout</span>

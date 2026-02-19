@@ -181,14 +181,123 @@ const InventoryPage = () => {
             {/* Stock Update Modal */}
             {showStockModal && selectedProduct && (
                 <div className="modal-overlay" onClick={() => setShowStockModal(false)}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header"><h3 className="text-lg font-semibold text-gray-900">{stockType === 'in' ? 'Stock In' : 'Stock Out'}</h3><button className="btn btn-ghost btn-icon" onClick={() => setShowStockModal(false)}><X size={20} /></button></div>
-                        <div className="modal-body space-y-4">
-                            <p className="font-medium">{selectedProduct.name} (Current: {selectedProduct.stock})</p>
-                            <div><label className="form-label">Quantity</label><input type="number" className="form-input" min="1" value={stockQuantity} onChange={(e) => setStockQuantity(Number(e.target.value))} /></div>
-                            <div><label className="form-label">Reason</label><select className="form-input" value={stockReason} onChange={(e) => setStockReason(e.target.value)}><option value="">Select reason</option>{stockType === 'in' ? <><option value="purchase">Purchase</option><option value="return">Return</option></> : <><option value="sale">Sale</option><option value="damage">Damaged</option></>}<option value="adjustment">Adjustment</option></select></div>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        {/* Colored Header */}
+                        <div
+                            className="px-6 py-5 flex items-center justify-between"
+                            style={{
+                                background: stockType === 'in'
+                                    ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                                    : 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)'
+                            }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                    {stockType === 'in'
+                                        ? <ArrowUpCircle size={22} className="text-white" />
+                                        : <ArrowDownCircle size={22} className="text-white" />
+                                    }
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">{stockType === 'in' ? 'Stock In' : 'Stock Out'}</h3>
+                                    <p className="text-xs text-white/70">Update inventory quantity</p>
+                                </div>
+                            </div>
+                            <button
+                                className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                                onClick={() => setShowStockModal(false)}
+                            >
+                                <X size={18} className="text-white" />
+                            </button>
                         </div>
-                        <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowStockModal(false)}>Cancel</button><button className={`btn ${stockType === 'in' ? 'bg-green-600' : 'bg-orange-500'} text-white`} onClick={handleStockUpdate}>Update</button></div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-5">
+                            {/* Product Info */}
+                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <div>
+                                    <p className="font-semibold text-gray-900 text-base">{selectedProduct.name}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5">SKU: {selectedProduct.sku || 'N/A'}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-xs font-medium text-gray-500 block">Current Stock</span>
+                                    <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-bold ${selectedProduct.stock <= (selectedProduct.lowStockThreshold || 5)
+                                            ? 'bg-red-100 text-red-700'
+                                            : 'bg-green-100 text-green-700'
+                                        }`}>
+                                        {selectedProduct.stock}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Quantity */}
+                            <div>
+                                <label className="form-label">Quantity</label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    min="1"
+                                    value={stockQuantity}
+                                    onChange={(e) => setStockQuantity(Number(e.target.value))}
+                                    placeholder="Enter quantity"
+                                />
+                                {stockQuantity > 0 && (
+                                    <p className="text-xs mt-1.5 text-gray-500">
+                                        New stock will be: <span className="font-semibold text-gray-800">
+                                            {stockType === 'in'
+                                                ? selectedProduct.stock + stockQuantity
+                                                : Math.max(0, selectedProduct.stock - stockQuantity)
+                                            }
+                                        </span>
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Reason */}
+                            <div>
+                                <label className="form-label">Reason</label>
+                                <select
+                                    className="form-input"
+                                    value={stockReason}
+                                    onChange={(e) => setStockReason(e.target.value)}
+                                >
+                                    <option value="">Select reason</option>
+                                    {stockType === 'in' ? (
+                                        <>
+                                            <option value="purchase">Purchase</option>
+                                            <option value="return">Customer Return</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="sale">Sale</option>
+                                            <option value="damage">Damaged / Defective</option>
+                                        </>
+                                    )}
+                                    <option value="adjustment">Manual Adjustment</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
+                            <button className="btn btn-secondary" onClick={() => setShowStockModal(false)}>Cancel</button>
+                            <button
+                                className="btn text-white font-semibold"
+                                style={{
+                                    background: stockType === 'in'
+                                        ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                                        : 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                                    boxShadow: stockType === 'in'
+                                        ? '0 4px 14px rgba(5, 150, 105, 0.4)'
+                                        : '0 4px 14px rgba(234, 88, 12, 0.4)'
+                                }}
+                                onClick={handleStockUpdate}
+                                disabled={!stockQuantity || !stockReason}
+                            >
+                                {stockType === 'in' ? <ArrowUpCircle size={18} /> : <ArrowDownCircle size={18} />}
+                                Update Stock
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

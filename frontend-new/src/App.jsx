@@ -10,9 +10,9 @@ import BillingPage from './pages/BillingPage';
 import InventoryPage from './pages/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
 import PurchaseEntryPage from './pages/PurchaseEntryPage';
-import PurchasePaymentsPage from './pages/PurchasePaymentsPage';
+
 import SalesEntryPage from './pages/SalesEntryPage';
-import SalesPaymentsPage from './pages/SalesPaymentsPage';
+
 import PurchaseReportsPage from './pages/PurchaseReportsPage';
 import SalesReportsPage from './pages/SalesReportsPage';
 import StockReportsPage from './pages/StockReportsPage';
@@ -123,9 +123,9 @@ const AnimatedRoutes = () => {
         >
           <Route index element={<DashboardPage />} />
           <Route path="purchase/entry" element={<PurchaseEntryPage />} />
-          <Route path="purchase/payments" element={<PurchasePaymentsPage />} />
+
           <Route path="sales/entry" element={<SalesEntryPage />} />
-          <Route path="sales/payments" element={<SalesPaymentsPage />} />
+
           <Route path="billing" element={<BillingPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="reports/purchase" element={<PurchaseReportsPage />} />

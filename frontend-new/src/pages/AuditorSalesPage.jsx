@@ -148,7 +148,7 @@ const AuditorSalesPage = () => {
 
                         {/* Clear */}
                         <button
-                            className="px-5 py-2.5 bg-gray-400 hover:bg-gray-500 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow"
+                            className="btn btn-secondary"
                             onClick={() => { setFromDate(''); setToDate(''); }}
                         >
                             <X size={16} />
@@ -159,17 +159,17 @@ const AuditorSalesPage = () => {
                         <div className="h-8 w-px bg-gray-300 mx-1 hidden md:block"></div>
 
                         {/* Actions */}
-                        <button className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handleExport}>
+                        <button className="btn text-white bg-green-600 hover:bg-green-700" onClick={handleExport}>
                             <FileSpreadsheet size={16} />
                             Excel
                         </button>
 
-                        <button className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handlePrint}>
+                        <button className="btn btn-primary" onClick={handlePrint}>
                             <Printer size={16} />
                             Print
                         </button>
 
-                        <button className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm flex items-center gap-2 transition-all shadow-sm hover:shadow" onClick={handleEmail}>
+                        <button className="btn text-white bg-purple-600 hover:bg-purple-700" onClick={handleEmail}>
                             <Mail size={16} />
                             Mail
                         </button>

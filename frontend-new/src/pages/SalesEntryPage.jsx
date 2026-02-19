@@ -688,8 +688,8 @@ const SalesEntryPage = () => {
             {/* View Modal */}
             {showViewModal && selectedEntry && (
                 <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <div className="px-6 py-4 rounded-t-lg flex justify-between items-center" style={{ backgroundColor: '#1e3a2f' }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="px-6 py-4 flex justify-between items-center" style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
                             <h3 className="text-lg font-semibold text-white">Sales Entry Details</h3>
                             <button onClick={() => setShowViewModal(false)} className="text-white hover:text-gray-200">
                                 <X size={20} />
