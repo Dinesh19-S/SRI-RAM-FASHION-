@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories, updateProductStock, createCategory, deleteProduct } from '../store/slices/productsSlice';
 import { Package, Plus, Search, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Box, TrendingUp, X, FolderPlus, Trash2 } from 'lucide-react';
+import { useToast } from '../components/common';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const InventoryPage = () => {
+    const toast = useToast();
     const dispatch = useDispatch();
     const { items: products, categories, isLoading } = useSelector((state) => state.products);
 
@@ -34,17 +36,22 @@ const InventoryPage = () => {
 
     const handleStockUpdate = async () => {
         if (!selectedProduct || !stockQuantity || !stockReason) return;
-        await dispatch(updateProductStock({ id: selectedProduct._id, data: { type: stockType, quantity: stockQuantity, reason: stockReason } }));
-        setShowStockModal(false);
-        setSelectedProduct(null);
-        setStockQuantity(1);
-        setStockReason('');
-        dispatch(fetchProducts());
+        try {
+            await dispatch(updateProductStock({ id: selectedProduct._id, data: { type: stockType, quantity: stockQuantity, reason: stockReason } })).unwrap();
+            toast.success(`Stock ${stockType === 'in' ? 'added' : 'removed'} successfully`);
+            setShowStockModal(false);
+            setSelectedProduct(null);
+            setStockQuantity(1);
+            setStockReason('');
+            dispatch(fetchProducts());
+        } catch (error) {
+            toast.error('Failed to update stock: ' + (error || 'Unknown error'));
+        }
     };
 
     const handleAddCategory = async () => {
         if (!newCategory.name.trim()) {
-            alert('Please enter a category name');
+            toast.warning('Please enter a category name');
             return;
         }
 
@@ -59,7 +66,7 @@ const InventoryPage = () => {
             setNewCategory({ name: '', description: '' });
             dispatch(fetchCategories());
         } catch (error) {
-            alert('Failed to add category: ' + (error || 'Unknown error'));
+            toast.error('Failed to add category: ' + (error || 'Unknown error'));
         } finally {
             setIsSubmitting(false);
         }
@@ -78,7 +85,7 @@ const InventoryPage = () => {
             setShowDeleteConfirm(false);
             setProductToDelete(null);
         } catch (error) {
-            alert('Failed to delete product: ' + (error || 'Unknown error'));
+            toast.error('Failed to delete product: ' + (error || 'Unknown error'));
         } finally {
             setIsDeleting(false);
         }
@@ -149,21 +156,21 @@ const InventoryPage = () => {
                                     <td>
                                         <div className="flex justify-end gap-2">
                                             <button
-                                                className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                                                className="action-btn action-btn-green"
                                                 onClick={() => { setSelectedProduct(p); setStockType('in'); setShowStockModal(true); }}
                                                 title="Stock In"
                                             >
                                                 <ArrowUpCircle size={18} />
                                             </button>
                                             <button
-                                                className="p-2 rounded-lg bg-orange-100 text-orange-600 hover:bg-orange-200 transition-colors"
+                                                className="action-btn action-btn-amber"
                                                 onClick={() => { setSelectedProduct(p); setStockType('out'); setShowStockModal(true); }}
                                                 title="Stock Out"
                                             >
                                                 <ArrowDownCircle size={18} />
                                             </button>
                                             <button
-                                                className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                className="action-btn action-btn-red"
                                                 onClick={() => handleDeleteClick(p)}
                                                 title="Delete"
                                             >
@@ -222,8 +229,8 @@ const InventoryPage = () => {
                                 <div className="text-right">
                                     <span className="text-xs font-medium text-gray-500 block">Current Stock</span>
                                     <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-bold ${selectedProduct.stock <= (selectedProduct.lowStockThreshold || 5)
-                                            ? 'bg-red-100 text-red-700'
-                                            : 'bg-green-100 text-green-700'
+                                        ? 'bg-red-100 text-red-700'
+                                        : 'bg-green-100 text-green-700'
                                         }`}>
                                         {selectedProduct.stock}
                                     </span>

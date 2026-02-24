@@ -5,12 +5,6 @@ import { ArrowRight, LayoutDashboard } from 'lucide-react';
 const HomePage = () => {
     const { isAuthenticated } = useSelector((state) => state.auth);
 
-    // Logo as base64 data URL (the lotus flower logo provided by the user)
-    const logoDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
-
-    // Note: The actual logo image will be displayed via the showroom background
-    // For now, using a lotus emoji as placeholder until the actual image is properly saved
-
     return (
         <div className="relative h-screen w-full flex items-center justify-center overflow-hidden font-sans">
             {/* Background Image - Showroom with white display shelf */}
@@ -31,16 +25,11 @@ const HomePage = () => {
                 {/* Logo - Lotus Flower */}
                 <div className="mb-6 opacity-0 animate-fade-in-down">
                     <div className="w-32 h-32 md:w-40 md:h-40 mx-auto mb-4 flex items-center justify-center">
-                        {/* Lotus Flower Symbol */}
-                        <div className="text-8xl md:text-9xl" style={{
-                            background: 'linear-gradient(135deg, #8b7355 0%, #d4a574 50%, #8b7355 100%)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.15))'
-                        }}>
-                            🪷
-                        </div>
+                        <img
+                            src="/assets/sri-ram-lotus.png"
+                            alt="Sri Ram Fashions Logo"
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.2))' }}
+                        />
                     </div>
                 </div>
 

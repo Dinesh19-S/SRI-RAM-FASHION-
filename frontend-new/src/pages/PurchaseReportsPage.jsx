@@ -4,10 +4,12 @@ import DateRangeFilter from '../components/reports/DateRangeFilter';
 import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcel } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
-import { reportsAPI } from '../services/api';
+import { reportsAPI, emailAPI } from '../services/api';
+import { useToast } from '../components/common';
 import { formatDate } from '../utils/dateUtils';
 
 const PurchaseReportsPage = () => {
+    const toast = useToast();
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [supplierSearch, setSupplierSearch] = useState('');
@@ -37,7 +39,7 @@ const PurchaseReportsPage = () => {
             setReportData(response.data.data || []);
         } catch (error) {
             console.error('Error fetching purchase data:', error);
-            alert('Error loading purchase data. Please try again.');
+            toast.error('Error loading purchase data. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -45,7 +47,7 @@ const PurchaseReportsPage = () => {
 
     const handleExport = () => {
         if (reportData.length === 0) {
-            alert('No data to export');
+            toast.warning('No data to export');
             return;
         }
 
@@ -66,8 +68,32 @@ const PurchaseReportsPage = () => {
         printReport('printable-report');
     };
 
-    const handleEmail = () => {
-        alert('Email functionality will be implemented');
+    const handleEmail = async () => {
+        if (reportData.length === 0) {
+            toast.warning('No data to email');
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            const response = await emailAPI.sendReport({
+                type: 'purchase',
+                fromDate,
+                toDate,
+                data: reportData
+            });
+
+            if (response.data.success) {
+                toast.success('Purchase report emailed successfully!');
+            } else {
+                toast.error(response.data.message || 'Failed to email report');
+            }
+        } catch (error) {
+            console.error('Error emailing report:', error);
+            toast.error(error.response?.data?.message || 'Error emailing report');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -84,7 +110,7 @@ const PurchaseReportsPage = () => {
             <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
                     {/* Inv No */}
-                    <div className="flex-shrink-0 w-32">
+                    <div className="shrink-0 w-32">
                         <label className="form-label">Inv No</label>
                         <input
                             type="text"
@@ -96,7 +122,7 @@ const PurchaseReportsPage = () => {
                     </div>
 
                     {/* Supplier */}
-                    <div className="flex-shrink-0 w-48">
+                    <div className="shrink-0 w-48">
                         <label className="form-label">Supplier</label>
                         <input
                             type="text"
@@ -108,7 +134,7 @@ const PurchaseReportsPage = () => {
                     </div>
 
                     {/* From Date */}
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">From Date</label>
                         <input
                             type="date"
@@ -119,7 +145,7 @@ const PurchaseReportsPage = () => {
                     </div>
 
                     {/* To Date */}
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">To Date</label>
                         <input
                             type="date"

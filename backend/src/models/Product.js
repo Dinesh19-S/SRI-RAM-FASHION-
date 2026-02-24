@@ -54,6 +54,9 @@ const productSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    lastLowStockAlertAt: {
+        type: Date
     }
 }, {
     timestamps: true

@@ -1,7 +1,24 @@
 import express from 'express';
 import SalesEntry from '../models/SalesEntry.js';
+import Bill from '../models/Bill.js';
+import Product from '../models/Product.js';
+import StockMovement from '../models/StockMovement.js';
 
 const router = express.Router();
+
+// Generate bill number
+const generateBillNumber = () => {
+    const date = new Date();
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return `SRF${year}${month}${random}`;
+};
+
+// Number to words for Indian currency
+const numberToWords = (num) => {
+    return `Rupees ${Math.floor(num)} Only`;
+};
 
 // Get all sales entries with filters and pagination
 router.get('/', async (req, res) => {
@@ -84,6 +101,7 @@ router.post('/', async (req, res) => {
             totalIgst += igstAmount;
 
             return {
+                product: item.product || undefined,
                 particular: item.particular,
                 size: item.size || '',
                 quantity: parseFloat(item.quantity) || 0,
@@ -162,6 +180,7 @@ router.put('/:id', async (req, res) => {
                 totalIgst += igstAmount;
 
                 return {
+                    product: item.product || undefined,
                     particular: item.particular,
                     size: item.size || '',
                     quantity: parseFloat(item.quantity) || 0,
@@ -205,6 +224,121 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// Generate bill from sales entry
+router.post('/:id/generate-bill', async (req, res) => {
+    try {
+        const entry = await SalesEntry.findById(req.params.id);
+        if (!entry) {
+            return res.status(404).json({ success: false, message: 'Sales entry not found' });
+        }
+
+        // Map sales entry items to bill items
+        const processedItems = [];
+        let subtotal = 0;
+        let totalTax = 0;
+
+        for (const item of entry.items) {
+            const itemSubtotal = item.quantity * item.rate;
+            const itemCgstAmount = (itemSubtotal * (item.cgst || 0)) / 100;
+            const itemSgstAmount = (itemSubtotal * (item.sgst || 0)) / 100;
+            const itemIgstAmount = (itemSubtotal * (item.igst || 0)) / 100;
+            const gstAmount = itemCgstAmount + itemSgstAmount + itemIgstAmount;
+            const gstRate = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+
+            const billItem = {
+                productName: item.particular,
+                sizesOrPieces: item.size || '',
+                quantity: item.quantity,
+                price: item.rate,
+                ratePerPiece: item.rate,
+                pcsInPack: 1,
+                ratePerPack: item.rate,
+                noOfPacks: item.quantity,
+                gstRate: gstRate,
+                gstAmount: gstAmount,
+                discount: 0,
+                total: itemSubtotal + gstAmount
+            };
+
+            // If item has a product reference, link it and deduct stock
+            if (item.product) {
+                const product = await Product.findById(item.product);
+                if (product) {
+                    billItem.product = product._id;
+                    billItem.sku = product.sku;
+                    billItem.hsn = product.hsn;
+                    billItem.hsnCode = product.hsn;
+                    billItem.mrp = product.mrp;
+
+                    // Deduct stock
+                    const previousStock = product.stock;
+                    product.stock = Math.max(0, product.stock - item.quantity);
+                    await product.save();
+
+                    // Check for low stock and notify if necessary
+                    const { checkAndNotifyLowStock } = await import('../services/emailService.js');
+                    checkAndNotifyLowStock(product).catch(err => console.error('Low stock alert error:', err));
+
+                    // Record stock movement
+                    await new StockMovement({
+                        product: product._id,
+                        type: 'out',
+                        quantity: item.quantity,
+                        previousStock: previousStock,
+                        newStock: product.stock,
+                        reason: `Sold - Bill from Sales Entry #${entry.invoiceNumber}`
+                    }).save();
+                }
+            }
+
+            processedItems.push(billItem);
+            subtotal += itemSubtotal;
+            totalTax += gstAmount;
+        }
+
+        const cgst = totalTax / 2;
+        const sgst = totalTax / 2;
+        const grandTotal = Math.round(subtotal + totalTax);
+        const roundOff = grandTotal - (subtotal + totalTax);
+
+        const totalPacks = entry.items.reduce((sum, item) => sum + item.quantity, 0);
+
+        const bill = new Bill({
+            billNumber: generateBillNumber(),
+            date: entry.date,
+            customer: {
+                name: entry.customer.name,
+                phone: entry.customer.mobile || '',
+                address: entry.customer.address || '',
+                gstin: entry.customer.gstin || '',
+                state: 'Tamilnadu',
+                stateCode: '33'
+            },
+            items: processedItems,
+            subtotal,
+            discountAmount: 0,
+            taxableAmount: subtotal,
+            cgst,
+            sgst,
+            totalTax,
+            grandTotal,
+            roundOff,
+            totalPacks,
+            numOfBundles: 1,
+            amountInWords: numberToWords(grandTotal),
+            paymentMethod: 'cash',
+            paymentStatus: 'paid',
+            notes: `Generated from Sales Entry #${entry.invoiceNumber}`
+        });
+
+        await bill.save();
+
+        res.status(201).json({ success: true, data: bill });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Delete sales entry
 router.delete('/:id', async (req, res) => {
     try {
@@ -219,3 +353,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 export default router;
+

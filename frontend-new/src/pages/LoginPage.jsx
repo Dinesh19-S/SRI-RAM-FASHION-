@@ -58,7 +58,7 @@ const LoginPage = () => {
         newOtp[index] = value;
         setOtp(newOtp);
         if (value && index < 5) {
-            document.getElementById(`otp-${index + 1}`)?.focus();
+            document.getElementById(`otp-${index + 2}`)?.focus();
         }
     };
 
@@ -123,7 +123,6 @@ const LoginPage = () => {
     return (
         <div className="min-h-screen w-full flex items-center justify-center p-4 relative font-sans">
             {/* Background Image */}
-            {/* Background Image */}
             <div
                 className="absolute inset-0 z-0 bg-cover bg-center"
                 style={{
@@ -132,12 +131,17 @@ const LoginPage = () => {
             ></div>
 
             {/* Dark Overlay */}
-            {/* Dark Overlay */}
             <div className="absolute inset-0 z-[1] bg-black/70"></div>
 
             {/* Login Card */}
             <div className="relative z-[2] bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl border border-gray-100 text-center">
                 <div className="mb-8">
+                    <img
+                        src="/assets/sri-ram-logo.png"
+                        alt="Sri Ram Fashions Logo"
+                        className="mx-auto mb-4"
+                        style={{ width: '120px', height: 'auto', borderRadius: '12px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
+                    />
                     <h2 className="font-serif text-3xl text-black mb-2 font-bold tracking-tight">SRI RAM FASHIONS</h2>
                     <p className="text-sm text-gray-700 font-bold">Welcome back! Please sign in.</p>
                 </div>
@@ -210,9 +214,7 @@ const LoginPage = () => {
                     <div className="flex justify-center w-full">
                         <GoogleLogin
                             onSuccess={async (credentialResponse) => {
-                                console.log('Google credential received:', credentialResponse);
                                 const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
-                                console.log('Backend response:', result);
                                 if (googleLogin.fulfilled.match(result)) {
                                     navigate('/');
                                 }

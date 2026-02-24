@@ -24,6 +24,7 @@ import paymentRoutes from './routes/payments.js';
 import salesEntriesRoutes from './routes/salesEntries.js';
 import purchaseEntriesRoutes from './routes/purchaseEntries.js';
 import aiRoutes from './routes/ai.js';
+import emailRoutes from './routes/email.js';
 
 const app = express();
 
@@ -108,6 +109,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/sales-entries', salesEntriesRoutes);
 app.use('/api/purchase-entries', purchaseEntriesRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/email', emailRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -131,9 +133,14 @@ app.use((req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
+import { initScheduler } from './services/schedulerService.js';
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 API URL: http://localhost:${PORT}/api`);
+
+    // Start automated tasks
+    initScheduler();
 });
 
 export default app;

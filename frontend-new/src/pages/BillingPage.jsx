@@ -3,12 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchBills, createBill, deleteBill } from '../store/slices/billsSlice';
 import { fetchProducts } from '../store/slices/productsSlice';
 import { fetchSettings } from '../store/slices/settingsSlice';
-import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users, Receipt } from 'lucide-react';
+import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users, Receipt, Mail } from 'lucide-react';
 import BillTemplate from '../components/BillTemplate';
-import { downloadBillPDF } from '../utils/pdfGenerator';
-import { customersAPI } from '../services/api';
+import { downloadInvoicePDF } from '../utils/invoiceGenerator';
+import { customersAPI, emailAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const BillingPage = () => {
+    const toast = useToast();
     const dispatch = useDispatch();
     const { items: bills, isLoading } = useSelector((state) => state.bills);
     const { items: products } = useSelector((state) => state.products);
@@ -22,6 +24,10 @@ const BillingPage = () => {
     const [selectedBill, setSelectedBill] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showEmptyInvoiceModal, setShowEmptyInvoiceModal] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailBill, setEmailBill] = useState(null);
+    const [emailTo, setEmailTo] = useState('');
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [customer, setCustomer] = useState({
@@ -138,7 +144,7 @@ const BillingPage = () => {
 
     const handleCreateBill = async () => {
         if (!customer.name || !customer.phone || billItems.length === 0) {
-            alert('Please fill customer details and add items');
+            toast.warning('Please fill customer details and add items');
             return;
         }
 
@@ -182,11 +188,11 @@ const BillingPage = () => {
                 resetForm();
                 dispatch(fetchBills());
             } else {
-                alert('Failed to create bill: ' + (result.payload || 'Unknown error'));
+                toast.error('Failed to create bill: ' + (result.payload || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error creating bill:', error);
-            alert('Failed to create bill: ' + (error.message || 'Unknown error'));
+            toast.error('Failed to create bill: ' + (error.message || 'Unknown error'));
         }
     };
 
@@ -217,27 +223,42 @@ const BillingPage = () => {
             setShowDeleteConfirm(false);
             setSelectedBill(null);
         } catch (error) {
-            alert('Failed to delete bill: ' + (error || 'Unknown error'));
+            toast.error('Failed to delete bill: ' + (error || 'Unknown error'));
         } finally {
             setIsDeleting(false);
         }
     };
 
-    const handleDownloadPDF = async (bill) => {
-        setSelectedBill(bill);
-        // Wait for state update and render
-        setTimeout(async () => {
-            const element = document.getElementById('bill-template-download');
-            if (element) {
-                await downloadBillPDF(element, bill.billNumber);
-            }
-        }, 100);
+    const handleDownloadPDF = (bill) => {
+        downloadInvoicePDF(bill, settings);
     };
 
-    const handlePrintBill = async () => {
-        const element = billTemplateRef.current;
-        if (element) {
-            await downloadBillPDF(element, selectedBill?.billNumber);
+    const handleEmailBill = async () => {
+        if (!emailTo || !emailBill) {
+            toast.warning('Please enter an email address');
+            return;
+        }
+        setIsSendingEmail(true);
+        try {
+            const response = await emailAPI.sendBill(emailBill._id, emailTo);
+            if (response.data.success) {
+                toast.success(response.data.message || 'Bill emailed successfully!');
+                setShowEmailModal(false);
+                setEmailTo('');
+                setEmailBill(null);
+            } else {
+                toast.error(response.data.message || 'Failed to send email');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to send email');
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
+
+    const handlePrintBill = () => {
+        if (selectedBill) {
+            downloadInvoicePDF(selectedBill, settings);
         }
     };
 
@@ -302,21 +323,29 @@ const BillingPage = () => {
                                     <td>
                                         <div className="flex justify-end gap-2">
                                             <button
-                                                className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                className="action-btn action-btn-blue"
                                                 onClick={() => handleViewBill(bill)}
                                                 title="View Bill"
                                             >
                                                 <Eye size={18} />
                                             </button>
                                             <button
-                                                className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                                                className="action-btn action-btn-green"
                                                 onClick={() => handleDownloadPDF(bill)}
                                                 title="Download PDF"
                                             >
                                                 <Download size={18} />
                                             </button>
                                             <button
-                                                className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                className="action-btn"
+                                                style={{ color: '#7c3aed', backgroundColor: '#f5f3ff' }}
+                                                onClick={() => { setEmailBill(bill); setEmailTo(bill.customer?.email || ''); setShowEmailModal(true); }}
+                                                title="Email Bill"
+                                            >
+                                                <Mail size={18} />
+                                            </button>
+                                            <button
+                                                className="action-btn action-btn-red"
                                                 onClick={() => handleDeleteClick(bill)}
                                                 title="Delete"
                                             >
@@ -331,14 +360,7 @@ const BillingPage = () => {
                 )}
             </div>
 
-            {/* Hidden bill template for PDF download */}
-            {selectedBill && (
-                <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-                    <div id="bill-template-download">
-                        <BillTemplate bill={selectedBill} settings={settings} forPrint={true} />
-                    </div>
-                </div>
-            )}
+
 
             {/* Bill Preview Modal */}
             {showPreviewModal && selectedBill && (
@@ -543,6 +565,47 @@ const BillingPage = () => {
                 </div>
             )
             }
+
+            {/* Email Bill Modal */}
+            {showEmailModal && emailBill && (
+                <div className="modal-overlay" onClick={() => { setShowEmailModal(false); setEmailBill(null); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="text-center">
+                            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#f5f3ff' }}>
+                                <Mail size={32} style={{ color: '#7c3aed' }} />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Email Bill</h3>
+                            <p className="text-gray-600 mb-4">
+                                Send bill <strong>{emailBill.billNumber}</strong> ({formatCurrency(emailBill.grandTotal)}) via email.
+                            </p>
+                            <input
+                                type="email"
+                                className="form-input w-full mb-4"
+                                placeholder="Recipient email address"
+                                value={emailTo}
+                                onChange={(e) => setEmailTo(e.target.value)}
+                                autoFocus
+                            />
+                            <div className="flex gap-3 justify-center">
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={() => { setShowEmailModal(false); setEmailBill(null); }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn"
+                                    style={{ backgroundColor: '#7c3aed', color: 'white' }}
+                                    onClick={handleEmailBill}
+                                    disabled={isSendingEmail || !emailTo}
+                                >
+                                    {isSendingEmail ? 'Sending...' : 'Send Email'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Bill Confirmation Modal */}
             {

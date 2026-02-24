@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchSettings, updateSettings } from '../store/slices/settingsSlice';
 import { Building, User, Bell, Shield, Save, Check, FileText, Download, Eye, Printer } from 'lucide-react';
+import { useToast } from '../components/common';
 import { downloadLetterheadWithContent, getLetterheadPreviewUrlWithContent } from '../utils/letterheadGenerator';
 
 const SettingsPage = () => {
+    const toast = useToast();
     const dispatch = useDispatch();
     const { data: settings, isLoading } = useSelector((state) => state.settings);
     const [activeTab, setActiveTab] = useState('company');

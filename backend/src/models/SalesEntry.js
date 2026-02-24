@@ -1,6 +1,10 @@
 import mongoose from 'mongoose';
 
 const salesEntryItemSchema = new mongoose.Schema({
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+    },
     particular: { type: String, required: true },
     size: { type: String, default: '' },
     quantity: { type: Number, required: true, min: 0 },

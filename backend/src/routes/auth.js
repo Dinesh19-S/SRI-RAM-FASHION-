@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
+import { sendPasswordResetEmail, isEmailConfigured } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -189,11 +190,19 @@ router.post('/forgot-password', async (req, res) => {
             expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
         });
 
-        // In production, send email. For now, log to console (mock email)
-        console.log(`\n========================================`);
-        console.log(`Password Reset Code for ${email}: ${resetCode}`);
-        console.log(`This code expires in 10 minutes.`);
-        console.log(`========================================\n`);
+        // Send reset code via email
+        if (isEmailConfigured()) {
+            const emailResult = await sendPasswordResetEmail(email, resetCode);
+            if (!emailResult.success) {
+                console.warn('⚠️ Failed to send reset email:', emailResult.message);
+            }
+        } else {
+            // Fallback: log to console when email is not configured
+            console.log(`\n========================================`);
+            console.log(`Password Reset Code for ${email}: ${resetCode}`);
+            console.log(`This code expires in 10 minutes.`);
+            console.log(`========================================\n`);
+        }
 
         res.json({ success: true, message: 'Reset code sent to your email' });
     } catch (error) {

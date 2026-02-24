@@ -5,8 +5,10 @@ import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcel } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
 import { reportsAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const AuditorPurchasePage = () => {
+    const toast = useToast();
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [reportData, setReportData] = useState([]);
@@ -50,7 +52,7 @@ const AuditorPurchasePage = () => {
             setTotals(newTotals);
         } catch (error) {
             console.error('Error fetching auditor purchase data:', error);
-            alert('Error loading auditor purchase data. Please try again.');
+            toast.error('Error loading auditor purchase data. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -58,7 +60,7 @@ const AuditorPurchasePage = () => {
 
     const handleExport = () => {
         if (reportData.length === 0) {
-            alert('No data to export');
+            toast.warning('No data to export');
             return;
         }
 
@@ -95,7 +97,7 @@ const AuditorPurchasePage = () => {
     };
 
     const handleEmail = () => {
-        alert('Email functionality will be implemented');
+        toast.info('Email functionality will be implemented');
     };
 
     return (
@@ -110,70 +112,67 @@ const AuditorPurchasePage = () => {
 
             {/* Filters and Actions */}
             <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                {/* Filters and Actions */}
-                <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                    <div className="flex flex-wrap items-end gap-3">
+                <div className="flex flex-wrap items-end gap-3">
 
-                        {/* From Date */}
-                        <div className="flex-shrink-0 w-36">
-                            <label className="form-label">From Date</label>
-                            <input
-                                type="date"
-                                className="form-input"
-                                value={fromDate}
-                                onChange={(e) => setFromDate(e.target.value)}
-                            />
-                        </div>
-
-                        {/* To Date */}
-                        <div className="flex-shrink-0 w-36">
-                            <label className="form-label">To Date</label>
-                            <input
-                                type="date"
-                                className="form-input"
-                                value={toDate}
-                                onChange={(e) => setToDate(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Search */}
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleSearch}
-                            disabled={isLoading}
-                        >
-                            <Search size={16} />
-                            Search
-                        </button>
-
-                        {/* Clear */}
-                        <button
-                            className="btn btn-secondary"
-                            onClick={() => { setFromDate(''); setToDate(''); }}
-                        >
-                            <X size={16} />
-                            Clear
-                        </button>
-
-                        {/* Divider */}
-                        <div className="h-8 w-px bg-gray-300 mx-1 hidden md:block"></div>
-
-                        {/* Actions */}
-                        <button className="btn text-white bg-green-600 hover:bg-green-700" onClick={handleExport}>
-                            <FileSpreadsheet size={16} />
-                            Excel
-                        </button>
-
-                        <button className="btn btn-primary" onClick={handlePrint}>
-                            <Printer size={16} />
-                            Print
-                        </button>
-
-                        <button className="btn text-white bg-purple-600 hover:bg-purple-700" onClick={handleEmail}>
-                            <Mail size={16} />
-                            Mail
-                        </button>
+                    {/* From Date */}
+                    <div className="flex-shrink-0 w-36">
+                        <label className="form-label">From Date</label>
+                        <input
+                            type="date"
+                            className="form-input"
+                            value={fromDate}
+                            onChange={(e) => setFromDate(e.target.value)}
+                        />
                     </div>
+
+                    {/* To Date */}
+                    <div className="flex-shrink-0 w-36">
+                        <label className="form-label">To Date</label>
+                        <input
+                            type="date"
+                            className="form-input"
+                            value={toDate}
+                            onChange={(e) => setToDate(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Search */}
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleSearch}
+                        disabled={isLoading}
+                    >
+                        <Search size={16} />
+                        Search
+                    </button>
+
+                    {/* Clear */}
+                    <button
+                        className="btn btn-secondary"
+                        onClick={() => { setFromDate(''); setToDate(''); }}
+                    >
+                        <X size={16} />
+                        Clear
+                    </button>
+
+                    {/* Divider */}
+                    <div className="h-8 w-px bg-gray-300 mx-1 hidden md:block"></div>
+
+                    {/* Actions */}
+                    <button className="btn text-white bg-green-600 hover:bg-green-700" onClick={handleExport}>
+                        <FileSpreadsheet size={16} />
+                        Excel
+                    </button>
+
+                    <button className="btn btn-primary" onClick={handlePrint}>
+                        <Printer size={16} />
+                        Print
+                    </button>
+
+                    <button className="btn text-white bg-purple-600 hover:bg-purple-700" onClick={handleEmail}>
+                        <Mail size={16} />
+                        Mail
+                    </button>
                 </div>
             </div>
 

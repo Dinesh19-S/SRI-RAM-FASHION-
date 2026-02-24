@@ -65,6 +65,10 @@ router.post('/movements', async (req, res) => {
         });
         await movement.save();
 
+        // Check for low stock and notify if necessary
+        const { checkAndNotifyLowStock } = await import('../services/emailService.js');
+        checkAndNotifyLowStock(product).catch(err => console.error('Low stock alert error:', err));
+
         res.status(201).json({ success: true, data: movement });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

@@ -4,8 +4,10 @@ import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcel } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
 import { reportsAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const StockReportsPage = () => {
+    const toast = useToast();
     const [nameSearch, setNameSearch] = useState('');
     const [sizeFilter, setSizeFilter] = useState('');
     const [reportData, setReportData] = useState([]);
@@ -23,7 +25,7 @@ const StockReportsPage = () => {
             setReportData(response.data.data || []);
         } catch (error) {
             console.error('Error fetching stock data:', error);
-            alert('Error loading stock data. Please try again.');
+            toast.error('Error loading stock data. Please try again.');
         } finally {
             setIsLoading(false);
         }
@@ -31,7 +33,7 @@ const StockReportsPage = () => {
 
     const handleExport = () => {
         if (reportData.length === 0) {
-            alert('No data to export');
+            toast.warning('No data to export');
             return;
         }
 
@@ -52,7 +54,7 @@ const StockReportsPage = () => {
     };
 
     const handleEmail = () => {
-        alert('Email functionality will be implemented');
+        toast.info('Email functionality will be implemented');
     };
 
     return (

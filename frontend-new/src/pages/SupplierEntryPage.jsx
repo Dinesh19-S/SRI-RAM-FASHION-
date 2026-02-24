@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Truck, Plus, Search, Edit, Trash2, X, Save } from 'lucide-react';
 import { suppliersAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const SupplierEntryPage = () => {
+    const toast = useToast();
     const [suppliers, setSuppliers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -91,20 +93,22 @@ const SupplierEntryPage = () => {
 
     const handleSave = async () => {
         if (!formData.companyName || !formData.mobile) {
-            alert('Please fill Company Name and Phone No');
+            toast.warning('Please fill Company Name and Phone No');
             return;
         }
         try {
             if (isEditing && selectedSupplier) {
                 await suppliersAPI.update(selectedSupplier._id, formData);
+                toast.success('Supplier updated successfully');
             } else {
                 await suppliersAPI.create(formData);
+                toast.success('Supplier added successfully');
             }
             setShowModal(false);
             resetForm();
             fetchSuppliers();
         } catch (error) {
-            alert('Error saving supplier: ' + (error.response?.data?.message || error.message));
+            toast.error('Error saving supplier: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -116,11 +120,12 @@ const SupplierEntryPage = () => {
     const handleDelete = async () => {
         try {
             await suppliersAPI.delete(selectedSupplier._id);
+            toast.success('Supplier deleted successfully');
             setShowDeleteConfirm(false);
             setSelectedSupplier(null);
             fetchSuppliers();
         } catch (error) {
-            alert('Error deleting supplier: ' + (error.response?.data?.message || error.message));
+            toast.error('Error deleting supplier: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -224,14 +229,14 @@ const SupplierEntryPage = () => {
                                         <td>
                                             <div className="flex justify-end gap-2">
                                                 <button
-                                                    className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                    className="action-btn action-btn-blue"
                                                     onClick={() => handleOpenModal(supplier)}
                                                     title="Edit"
                                                 >
                                                     <Edit size={16} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                    className="action-btn action-btn-red"
                                                     onClick={() => handleDeleteClick(supplier)}
                                                     title="Delete"
                                                 >

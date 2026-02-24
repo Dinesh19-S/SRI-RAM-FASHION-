@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Wallet, Plus, Search, Edit, Trash2, X, Save, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { paymentsAPI, suppliersAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const PurchasePaymentsPage = () => {
+    const toast = useToast();
     const navigate = useNavigate();
     const [payments, setPayments] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -138,7 +140,7 @@ const PurchasePaymentsPage = () => {
 
     const handleSave = async () => {
         if (!formData.companyName || !formData.amount) {
-            alert('Please fill Supplier and Amount');
+            toast.warning('Please fill Supplier and Amount');
             return;
         }
         try {
@@ -149,14 +151,16 @@ const PurchasePaymentsPage = () => {
             };
             if (isEditing && selectedPayment) {
                 await paymentsAPI.update(selectedPayment._id, payload);
+                toast.success('Payment updated successfully');
             } else {
                 await paymentsAPI.create(payload);
+                toast.success('Payment added successfully');
             }
             setShowModal(false);
             resetForm();
             fetchPayments();
         } catch (error) {
-            alert('Error saving payment: ' + (error.response?.data?.message || error.message));
+            toast.error('Error saving payment: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -168,11 +172,12 @@ const PurchasePaymentsPage = () => {
     const handleDelete = async () => {
         try {
             await paymentsAPI.delete(selectedPayment._id);
+            toast.success('Payment deleted successfully');
             setShowDeleteConfirm(false);
             setSelectedPayment(null);
             fetchPayments();
         } catch (error) {
-            alert('Error deleting payment: ' + (error.response?.data?.message || error.message));
+            toast.error('Error deleting payment: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -220,6 +225,7 @@ const PurchasePaymentsPage = () => {
                 <div className="flex gap-2">
                     <button
                         className="flex items-center gap-2 px-4 py-2 border border-gray-400 text-gray-600 rounded-lg font-medium text-sm hover:bg-gray-50"
+                        onClick={() => toast.info('Invoice feature coming soon')}
                     >
                         <FileText size={16} />
                         INVOICE
@@ -325,14 +331,14 @@ const PurchasePaymentsPage = () => {
                                         <td className="py-3 px-4">
                                             <div className="flex justify-end gap-2">
                                                 <button
-                                                    className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                    className="action-btn action-btn-blue"
                                                     onClick={() => handleOpenModal(payment)}
                                                     title="Edit"
                                                 >
                                                     <Edit size={16} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                    className="action-btn action-btn-red"
                                                     onClick={() => handleDeleteClick(payment)}
                                                     title="Delete"
                                                 >

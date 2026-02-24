@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Package, Plus, Search, Edit, Trash2, X, Save, FolderPlus } from 'lucide-react';
 import { productsAPI, categoriesAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const ItemsPage = () => {
+    const toast = useToast();
     const [items, setItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +41,7 @@ const ItemsPage = () => {
     const fetchItems = async () => {
         setIsLoading(true);
         try {
-            const searchQuery = searchName || searchHSN;
+            const searchQuery = [searchName, searchHSN].filter(Boolean).join(' ');
             const response = await productsAPI.getAll({
                 search: searchQuery,
                 page: pagination.page,
@@ -83,7 +85,7 @@ const ItemsPage = () => {
 
     const handleAddCategory = async () => {
         if (!newCategory.name.trim()) {
-            alert('Please enter a category name');
+            toast.warning('Please enter a category name');
             return;
         }
         try {
@@ -96,8 +98,9 @@ const ItemsPage = () => {
             setFormData(prev => ({ ...prev, category: createdCategory._id }));
             setShowCategoryModal(false);
             setNewCategory({ name: '', description: '' });
+            toast.success('Category added successfully');
         } catch (error) {
-            alert('Failed to add category: ' + (error.response?.data?.message || error.message));
+            toast.error('Failed to add category: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -148,7 +151,7 @@ const ItemsPage = () => {
     const handleSave = async () => {
         // Validation - removed SKU requirement
         if (!formData.name || !formData.category || !formData.sellingPrice || !formData.stock) {
-            alert('Please fill in all required fields (Name, Category, Selling Price, Stock)');
+            toast.warning('Please fill in all required fields (Name, Category, Selling Price, Stock)');
             return;
         }
 
@@ -172,14 +175,16 @@ const ItemsPage = () => {
 
             if (isEditing && selectedItem) {
                 await productsAPI.update(selectedItem._id, productData);
+                toast.success('Product updated successfully');
             } else {
                 await productsAPI.create(productData);
+                toast.success('Product added successfully');
             }
             setShowModal(false);
             resetForm();
             fetchItems();
         } catch (error) {
-            alert('Error saving product: ' + (error.response?.data?.message || error.message));
+            toast.error('Error saving product: ' + (error.response?.data?.message || error.message));
         } finally {
             setIsSubmitting(false);
         }
@@ -193,11 +198,12 @@ const ItemsPage = () => {
     const handleDelete = async () => {
         try {
             await productsAPI.delete(selectedItem._id);
+            toast.success('Product deleted successfully');
             setShowDeleteConfirm(false);
             setSelectedItem(null);
             fetchItems();
         } catch (error) {
-            alert('Error deleting product: ' + (error.response?.data?.message || error.message));
+            toast.error('Error deleting product: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -320,14 +326,14 @@ const ItemsPage = () => {
                                         <td>
                                             <div className="flex justify-end gap-2">
                                                 <button
-                                                    className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                    className="action-btn action-btn-blue"
                                                     onClick={() => handleOpenModal(item)}
                                                     title="Edit"
                                                 >
                                                     <Edit size={16} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                    className="action-btn action-btn-red"
                                                     onClick={() => handleDeleteClick(item)}
                                                     title="Delete"
                                                 >

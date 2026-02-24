@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, emailAPI } from '../services/api';
+import { useToast } from '../components/common';
 import {
     TrendingUp,
     ShoppingBag,
@@ -7,7 +8,9 @@ import {
     IndianRupee,
     ArrowUpRight,
     ArrowDownRight,
-    AlertTriangle
+    AlertTriangle,
+    Mail,
+    Loader2
 } from 'lucide-react';
 import {
     AreaChart,
@@ -26,10 +29,29 @@ const DashboardPage = () => {
     const [revenueData, setRevenueData] = useState([]);
     const [lowStockAlerts, setLowStockAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [sendingSummary, setSendingSummary] = useState(false);
+    const toast = useToast();
 
     useEffect(() => {
         fetchDashboardData();
     }, []);
+
+    const handleSendSummary = async () => {
+        try {
+            setSendingSummary(true);
+            const response = await emailAPI.sendDailySummary();
+            if (response.data.success) {
+                toast.success('Daily summary email sent successfully!');
+            } else {
+                toast.error(response.data.message || 'Failed to send summary email');
+            }
+        } catch (error) {
+            console.error('Error sending daily summary:', error);
+            toast.error(error.response?.data?.message || 'Error sending daily summary email');
+        } finally {
+            setSendingSummary(false);
+        }
+    };
 
     const fetchDashboardData = async () => {
         try {
@@ -86,14 +108,14 @@ const DashboardPage = () => {
         {
             title: 'Avg Order Value',
             value: formatCurrency(stats?.avgOrderValue || 0),
-            change: 5.2,
+            change: null,
             icon: TrendingUp,
             color: 'green'
         },
         {
             title: 'Total Customers',
             value: stats?.totalCustomers || 0,
-            change: 10.5,
+            change: null,
             icon: Users,
             color: 'orange'
         }
@@ -116,11 +138,26 @@ const DashboardPage = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-gray-600 font-medium">
-                    {getTodayFormatted()}
-                </p>
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleSendSummary}
+                        disabled={sendingSummary}
+                        className="btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed group"
+                        style={{ backgroundColor: '#7c3aed' }}
+                    >
+                        {sendingSummary ? (
+                            <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                            <Mail size={18} className="group-hover:scale-110 transition-transform" />
+                        )}
+                        <span>{sendingSummary ? 'Sending...' : 'Send Daily Summary'}</span>
+                    </button>
+                    <p className="text-gray-600 font-medium whitespace-nowrap">
+                        {getTodayFormatted()}
+                    </p>
+                </div>
             </div>
 
             {/* Stats Cards - Modern Premium Design */}
@@ -129,27 +166,29 @@ const DashboardPage = () => {
                     <div key={index} className="relative bg-white rounded-2xl p-5 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
                         {/* Gradient Accent Bar */}
                         <div className={`absolute top-0 left-0 w-full h-1 ${stat.color === 'sage' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' :
-                                stat.color === 'blue' ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
-                                    stat.color === 'green' ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
-                                        'bg-gradient-to-r from-orange-400 to-amber-500'
+                            stat.color === 'blue' ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
+                                stat.color === 'green' ? 'bg-gradient-to-r from-green-400 to-emerald-500' :
+                                    'bg-gradient-to-r from-orange-400 to-amber-500'
                             }`}></div>
 
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
                                 <p className="text-sm font-medium text-gray-500 mb-1">{stat.title}</p>
                                 <p className="text-2xl font-bold text-gray-900 mb-2">{stat.value}</p>
-                                <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${stat.change >= 0
+                                {stat.change != null && (
+                                    <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${stat.change >= 0
                                         ? 'bg-green-100 text-green-700'
                                         : 'bg-red-100 text-red-700'
-                                    }`}>
-                                    {stat.change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                                    <span>{Math.abs(stat.change)}% vs last month</span>
-                                </div>
+                                        }`}>
+                                        {stat.change >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                                        <span>{Math.abs(stat.change)}% vs last month</span>
+                                    </div>
+                                )}
                             </div>
                             <div className={`p-3 rounded-xl ${stat.color === 'sage' ? 'bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-600' :
-                                    stat.color === 'blue' ? 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600' :
-                                        stat.color === 'green' ? 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-600' :
-                                            'bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600'
+                                stat.color === 'blue' ? 'bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600' :
+                                    stat.color === 'green' ? 'bg-gradient-to-br from-green-100 to-emerald-100 text-green-600' :
+                                        'bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600'
                                 } group-hover:scale-110 transition-transform duration-300`}>
                                 <stat.icon size={24} />
                             </div>

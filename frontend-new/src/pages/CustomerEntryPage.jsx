@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Users, Plus, Search, Edit, Trash2, Download, X, Save } from 'lucide-react';
 import { customersAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const CustomerEntryPage = () => {
+    const toast = useToast();
     const [customers, setCustomers] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -94,20 +96,22 @@ const CustomerEntryPage = () => {
 
     const handleSave = async () => {
         if (!formData.companyName || !formData.mobile) {
-            alert('Please fill Company Name and Mobile');
+            toast.warning('Please fill Company Name and Mobile');
             return;
         }
         try {
             if (isEditing && selectedCustomer) {
                 await customersAPI.update(selectedCustomer._id, formData);
+                toast.success('Customer updated successfully');
             } else {
                 await customersAPI.create(formData);
+                toast.success('Customer added successfully');
             }
             setShowModal(false);
             resetForm();
             fetchCustomers();
         } catch (error) {
-            alert('Error saving customer: ' + (error.response?.data?.message || error.message));
+            toast.error('Error saving customer: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -122,8 +126,9 @@ const CustomerEntryPage = () => {
             setShowDeleteConfirm(false);
             setSelectedCustomer(null);
             fetchCustomers();
+            toast.success('Customer deleted successfully');
         } catch (error) {
-            alert('Error deleting customer: ' + (error.response?.data?.message || error.message));
+            toast.error('Error deleting customer: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -257,21 +262,21 @@ Generated on: ${new Date().toLocaleString('en-IN')}
                                         <td>
                                             <div className="flex justify-end gap-2">
                                                 <button
-                                                    className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                                                    className="action-btn action-btn-green"
                                                     onClick={() => handleDownload(customer)}
                                                     title="Download"
                                                 >
                                                     <Download size={16} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                    className="action-btn action-btn-blue"
                                                     onClick={() => handleOpenModal(customer)}
                                                     title="Edit"
                                                 >
                                                     <Edit size={16} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                    className="action-btn action-btn-red"
                                                     onClick={() => handleDeleteClick(customer)}
                                                     title="Delete"
                                                 >

@@ -3,8 +3,7 @@ import mongoose from 'mongoose';
 const billItemSchema = new mongoose.Schema({
     product: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
-        required: true
+        ref: 'Product'
     },
     productName: String,
     sku: String,
@@ -55,7 +54,7 @@ const billSchema = new mongoose.Schema({
     },
     customer: {
         name: { type: String, required: true },
-        phone: { type: String, required: true },
+        phone: { type: String, default: '' },
         email: String,
         address: String,
         gstin: String,

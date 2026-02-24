@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X } from 'lucide-react';
+import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X, Receipt } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
-import { salesEntriesAPI, customersAPI } from '../services/api';
+import { salesEntriesAPI, customersAPI, productsAPI, emailAPI } from '../services/api';
+import { useToast } from '../components/common';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchSettings } from '../store/slices/settingsSlice';
 import BillTemplate from '../components/BillTemplate';
 import { downloadBillPDF } from '../utils/pdfGenerator';
 
 const SalesEntryPage = () => {
+    const toast = useToast();
     const dispatch = useDispatch();
     const settings = useSelector((state) => state.settings.data);
     const [showNewEntry, setShowNewEntry] = useState(false);
@@ -17,6 +19,7 @@ const SalesEntryPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [sales, setSales] = useState([]);
     const [customers, setCustomers] = useState([]);
+    const [products, setProducts] = useState([]);
     const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
     const [filters, setFilters] = useState({
         invNo: '',
@@ -30,6 +33,7 @@ const SalesEntryPage = () => {
     const [selectedEntry, setSelectedEntry] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
+    const [isGeneratingBill, setIsGeneratingBill] = useState(false);
     const [newSale, setNewSale] = useState({
         customer: '',
         date: new Date().toISOString().split('T')[0],
@@ -37,12 +41,13 @@ const SalesEntryPage = () => {
     });
 
     const [items, setItems] = useState([
-        { id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }
+        { id: 1, product: '', particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }
     ]);
 
     useEffect(() => {
         fetchSales();
         fetchCustomers();
+        fetchProductsList();
         dispatch(fetchSettings());
     }, [pagination.page, pagination.limit, dispatch]);
 
@@ -81,6 +86,15 @@ const SalesEntryPage = () => {
         }
     };
 
+    const fetchProductsList = async () => {
+        try {
+            const response = await productsAPI.getAll({ limit: 200 });
+            setProducts(response.data.data || []);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        }
+    };
+
     const handleSearch = () => {
         setPagination(prev => ({ ...prev, page: 1 }));
         fetchSales();
@@ -107,7 +121,7 @@ const SalesEntryPage = () => {
             date: new Date().toISOString().split('T')[0],
             invNo: ''
         });
-        setItems([{ id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
+        setItems([{ id: 1, product: '', particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
         setIsEditing(false);
         setSelectedEntry(null);
     };
@@ -115,6 +129,7 @@ const SalesEntryPage = () => {
     const handleAddItem = () => {
         setItems([...items, {
             id: items.length + 1,
+            product: '',
             particular: '',
             size: '',
             quantity: '',
@@ -137,6 +152,26 @@ const SalesEntryPage = () => {
         ));
     };
 
+    const handleProductSelect = (id, productId) => {
+        const product = products.find(p => p._id === productId);
+        if (product) {
+            setItems(items.map(item =>
+                item.id === id ? {
+                    ...item,
+                    product: product._id,
+                    particular: product.name,
+                    rate: product.sellingPrice?.toString() || '',
+                    size: product.size || ''
+                } : item
+            ));
+        } else {
+            // Clear product link if "None" selected
+            setItems(items.map(item =>
+                item.id === id ? { ...item, product: '' } : item
+            ));
+        }
+    };
+
     const calculateItemTotal = (item) => {
         const amount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
         const cgst = (amount * (parseFloat(item.cgst) || 0)) / 100;
@@ -147,13 +182,13 @@ const SalesEntryPage = () => {
 
     const handleSave = async () => {
         if (!newSale.customer) {
-            alert('Please enter customer name');
+            toast.warning('Please enter customer name');
             return;
         }
 
         const validItems = items.filter(item => item.particular && item.quantity && item.rate);
         if (validItems.length === 0) {
-            alert('Please add at least one item with particulars, quantity and rate');
+            toast.warning('Please add at least one item with particulars, quantity and rate');
             return;
         }
 
@@ -164,6 +199,7 @@ const SalesEntryPage = () => {
                 date: newSale.date,
                 invoiceNumber: newSale.invNo || undefined,
                 items: validItems.map(item => ({
+                    product: item.product || undefined,
                     particular: item.particular,
                     size: item.size,
                     quantity: parseFloat(item.quantity) || 0,
@@ -184,7 +220,7 @@ const SalesEntryPage = () => {
             resetForm();
             fetchSales();
         } catch (error) {
-            alert('Error saving sales entry: ' + (error.response?.data?.message || error.message));
+            toast.error('Error saving sales entry: ' + (error.response?.data?.message || error.message));
         } finally {
             setIsSubmitting(false);
         }
@@ -203,6 +239,7 @@ const SalesEntryPage = () => {
         });
         setItems(entry.items?.map((item, index) => ({
             id: index + 1,
+            product: item.product || '',
             particular: item.particular || '',
             size: item.size || '',
             quantity: item.quantity?.toString() || '',
@@ -210,7 +247,7 @@ const SalesEntryPage = () => {
             cgst: item.cgst?.toString() || '',
             sgst: item.sgst?.toString() || '',
             igst: item.igst?.toString() || ''
-        })) || [{ id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
+        })) || [{ id: 1, product: '', particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
         setSelectedEntry(entry);
         setIsEditing(true);
         setShowNewEntry(true);
@@ -228,13 +265,32 @@ const SalesEntryPage = () => {
             setSelectedEntry(null);
             fetchSales();
         } catch (error) {
-            alert('Error deleting sales entry: ' + (error.response?.data?.message || error.message));
+            toast.error('Error deleting sales entry: ' + (error.response?.data?.message || error.message));
+        }
+    };
+
+    const handleGenerateBill = async (entry) => {
+        setIsGeneratingBill(true);
+        try {
+            const response = await salesEntriesAPI.generateBill(entry._id);
+            if (response.data.success) {
+                const bill = response.data.data;
+                toast.success(`Bill #${bill.billNumber} generated successfully!`);
+                // Show bill preview
+                setPreviewBill(bill);
+                setShowInvoicePreview(true);
+                setShowViewModal(false);
+            }
+        } catch (error) {
+            toast.error('Error generating bill: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setIsGeneratingBill(false);
         }
     };
 
     const handleInvoicePreview = () => {
         if (!newSale.customer) {
-            alert('Please select a customer first');
+            toast.warning('Please select a customer first');
             return;
         }
 
@@ -284,6 +340,28 @@ const SalesEntryPage = () => {
         const element = document.getElementById('bill-template-preview');
         if (element) {
             await downloadBillPDF(element, previewBill.billNumber || 'Invoice');
+        }
+    };
+
+    const handleEmailBill = async () => {
+        if (!previewBill || !previewBill._id) {
+            toast.warning('Please save and generate a proper bill before emailing.');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const response = await emailAPI.sendBill(previewBill._id);
+            if (response.data.success) {
+                toast.success(`Bill emailed successfully to ${previewBill.customer?.email || 'customer'}!`);
+            } else {
+                toast.error(response.data.message || 'Failed to email bill');
+            }
+        } catch (error) {
+            console.error('Error emailing bill:', error);
+            toast.error(error.response?.data?.message || 'Error emailing bill');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -364,6 +442,7 @@ const SalesEntryPage = () => {
                             <thead>
                                 <tr className="bg-gray-100 border-b-2 border-gray-300">
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700">S No</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Product</th>
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700">Particulars *</th>
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700">Size</th>
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700">Quantity *</th>
@@ -380,6 +459,20 @@ const SalesEntryPage = () => {
                                 {items.map((item, index) => (
                                     <tr key={item.id} className="border-b border-gray-200">
                                         <td className="p-3 text-sm font-medium text-gray-900">{index + 1}</td>
+                                        <td className="p-3">
+                                            <select
+                                                className="form-input w-36 text-sm"
+                                                value={item.product || ''}
+                                                onChange={(e) => handleProductSelect(item.id, e.target.value)}
+                                            >
+                                                <option value="">-- Select --</option>
+                                                {products.map(p => (
+                                                    <option key={p._id} value={p._id}>
+                                                        {p.name} (₹{p.sellingPrice})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
                                         <td className="p-3">
                                             <input
                                                 type="text"
@@ -624,21 +717,29 @@ const SalesEntryPage = () => {
                                         <td className="p-4">
                                             <div className="flex gap-2">
                                                 <button
-                                                    className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                    className="action-btn action-btn-blue"
                                                     title="View"
                                                     onClick={() => handleView(sale)}
                                                 >
                                                     <Eye size={18} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                                                    className="action-btn action-btn-green"
                                                     title="Edit"
                                                     onClick={() => handleEdit(sale)}
                                                 >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                    className="p-2 rounded-lg transition-colors bg-amber-100 hover:bg-amber-200 text-amber-700"
+                                                    title="Generate Bill"
+                                                    onClick={() => handleGenerateBill(sale)}
+                                                    disabled={isGeneratingBill}
+                                                >
+                                                    <Receipt size={18} />
+                                                </button>
+                                                <button
+                                                    className="action-btn action-btn-red"
                                                     title="Delete"
                                                     onClick={() => handleDeleteClick(sale)}
                                                 >
@@ -716,7 +817,10 @@ const SalesEntryPage = () => {
                                 <tbody>
                                     {selectedEntry.items?.map((item, i) => (
                                         <tr key={i} className="border-b">
-                                            <td className="p-2">{item.particular}</td>
+                                            <td className="p-2">
+                                                {item.particular}
+                                                {item.product && <span className="ml-1 text-xs text-blue-600">(Linked)</span>}
+                                            </td>
                                             <td className="p-2">{item.size || '-'}</td>
                                             <td className="p-2 text-right">{item.quantity}</td>
                                             <td className="p-2 text-right">₹{item.rate}</td>
@@ -725,6 +829,18 @@ const SalesEntryPage = () => {
                                     ))}
                                 </tbody>
                             </table>
+
+                            {/* Generate Bill Button in View Modal */}
+                            <div className="mt-6 flex justify-end">
+                                <button
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors"
+                                    onClick={() => handleGenerateBill(selectedEntry)}
+                                    disabled={isGeneratingBill}
+                                >
+                                    <Receipt size={18} />
+                                    {isGeneratingBill ? 'Generating...' : 'Generate Bill'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -761,13 +877,26 @@ const SalesEntryPage = () => {
                 </div>
             )}
 
-            {/* Invoice Preview Modal */}
+            {/* Invoice/Bill Preview Modal */}
             {showInvoicePreview && previewBill && (
                 <div className="modal-overlay" onClick={() => setShowInvoicePreview(false)}>
                     <div className="bg-white rounded-2xl shadow-2xl max-w-[230mm] max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3 className="text-lg font-semibold text-gray-900">Invoice Preview</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                {previewBill.billNumber && previewBill.billNumber !== 'DRAFT'
+                                    ? `Bill Preview - ${previewBill.billNumber}`
+                                    : 'Invoice Preview'}
+                            </h3>
                             <div className="flex gap-2">
+                                {previewBill._id && (
+                                    <button
+                                        className="btn btn-sm text-white bg-purple-600 hover:bg-purple-700"
+                                        onClick={handleEmailBill}
+                                        disabled={isSubmitting}
+                                    >
+                                        <Mail size={16} /> {isSubmitting ? 'Sending...' : 'Email'}
+                                    </button>
+                                )}
                                 <button className="btn btn-primary btn-sm" onClick={handleDownloadPDF}>
                                     <FileText size={16} /> Download PDF
                                 </button>

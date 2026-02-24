@@ -168,6 +168,7 @@ export const salesEntriesAPI = {
     create: (data) => api.post('/sales-entries', data),
     update: (id, data) => api.put(`/sales-entries/${id}`, data),
     delete: (id) => api.delete(`/sales-entries/${id}`),
+    generateBill: (id) => api.post(`/sales-entries/${id}/generate-bill`),
 };
 
 // Purchase Entries API
@@ -186,6 +187,15 @@ export const aiAPI = {
     getInventoryPredictions: () => api.get('/ai/inventory-predictions'),
     smartSearch: (query) => api.post('/ai/search', { query }),
     healthCheck: () => api.get('/ai/health'),
+};
+
+// Email API
+export const emailAPI = {
+    getStatus: () => api.get('/email/status'),
+    sendTest: (to) => api.post('/email/test', { to }),
+    sendBill: (billId, to) => api.post(`/email/send-bill/${billId}`, { to }),
+    sendDailySummary: () => api.post('/email/daily-summary'),
+    sendReport: (data) => api.post('/email/send-report', data),
 };
 
 export default api;

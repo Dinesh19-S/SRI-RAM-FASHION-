@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { purchaseEntriesAPI, suppliersAPI } from '../services/api';
+import { useToast } from '../components/common';
 
 const PurchaseEntryPage = () => {
+    const toast = useToast();
     const [showNewEntry, setShowNewEntry] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,18 +140,18 @@ const PurchaseEntryPage = () => {
 
     const handleSave = async () => {
         if (!newPurchase.supplier) {
-            alert('Please enter supplier name');
+            toast.warning('Please enter supplier name');
             return;
         }
 
         if (!newPurchase.invNo) {
-            alert('Please enter invoice number');
+            toast.warning('Please enter invoice number');
             return;
         }
 
         const validItems = items.filter(item => item.particular && item.quantity && item.rate);
         if (validItems.length === 0) {
-            alert('Please add at least one item with particulars, quantity and rate');
+            toast.warning('Please add at least one item with particulars, quantity and rate');
             return;
         }
 
@@ -180,7 +182,7 @@ const PurchaseEntryPage = () => {
             resetForm();
             fetchPurchases();
         } catch (error) {
-            alert('Error saving purchase entry: ' + (error.response?.data?.message || error.message));
+            toast.error('Error saving purchase entry: ' + (error.response?.data?.message || error.message));
         } finally {
             setIsSubmitting(false);
         }
@@ -224,7 +226,7 @@ const PurchaseEntryPage = () => {
             setSelectedEntry(null);
             fetchPurchases();
         } catch (error) {
-            alert('Error deleting purchase entry: ' + (error.response?.data?.message || error.message));
+            toast.error('Error deleting purchase entry: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -561,21 +563,21 @@ const PurchaseEntryPage = () => {
                                         <td className="p-4">
                                             <div className="flex gap-2">
                                                 <button
-                                                    className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                                                    className="action-btn action-btn-blue"
                                                     title="View"
                                                     onClick={() => handleView(purchase)}
                                                 >
                                                     <Eye size={18} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+                                                    className="action-btn action-btn-green"
                                                     title="Edit"
                                                     onClick={() => handleEdit(purchase)}
                                                 >
                                                     <Edit size={18} />
                                                 </button>
                                                 <button
-                                                    className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                    className="action-btn action-btn-red"
                                                     title="Delete"
                                                     onClick={() => handleDeleteClick(purchase)}
                                                 >
