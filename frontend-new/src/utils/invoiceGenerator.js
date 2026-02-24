@@ -31,79 +31,53 @@ const fmtDate = (d) => {
     return `${dt.getDate().toString().padStart(2, '0')}/${(dt.getMonth() + 1).toString().padStart(2, '0')}/${dt.getFullYear()}`;
 };
 
-// Colors
-const BLUE = { r: 25, g: 60, b: 150 };
+// Colors matching BillTemplate.css exactly
+const BLUE = { r: 26, g: 61, b: 124 };   // #1a3d7c
 const BLACK = { r: 0, g: 0, b: 0 };
-const GREY_BG = { r: 230, g: 230, b: 230 };
-const RED = { r: 180, g: 0, b: 0 };
+const RED = { r: 204, g: 0, b: 0 };       // #cc0000 (#c00)
+const GRAY_TEXT = { r: 34, g: 34, b: 34 }; // #222
+const GRAY_BORDER = { r: 51, g: 51, b: 51 }; // #333
+const GRAY_LIGHT = { r: 85, g: 85, b: 85 }; // #555
+const BANK_BG = { r: 255, g: 251, b: 230 }; // #fffbe6
+const BANK_BORDER = { r: 212, g: 160, b: 23 }; // #d4a017
 
-/** Draw bordered rectangle */
-const rect = (pdf, x, y, w, h, opts = {}) => {
-    if (opts.fill) { pdf.setFillColor(opts.fill.r, opts.fill.g, opts.fill.b); pdf.rect(x, y, w, h, 'F'); }
-    pdf.setDrawColor(opts.stroke?.r ?? 0, opts.stroke?.g ?? 0, opts.stroke?.b ?? 0);
-    pdf.setLineWidth(opts.lw ?? 0.3);
-    pdf.rect(x, y, w, h, 'S');
-};
-
-/** Draw a cell: border + text */
-const cell = (pdf, x, y, w, h, text, opts = {}) => {
-    if (opts.fill) { pdf.setFillColor(opts.fill.r, opts.fill.g, opts.fill.b); pdf.rect(x, y, w, h, 'F'); }
-    pdf.setDrawColor(opts.stroke?.r ?? 0, opts.stroke?.g ?? 0, opts.stroke?.b ?? 0);
-    pdf.setLineWidth(opts.lw ?? 0.3);
-    pdf.rect(x, y, w, h, 'S');
-
-    pdf.setFont('helvetica', opts.bold ? 'bold' : 'normal');
-    pdf.setFontSize(opts.fs ?? 8);
-    pdf.setTextColor(opts.color?.r ?? 0, opts.color?.g ?? 0, opts.color?.b ?? 0);
-
-    const align = opts.align ?? 'center';
-    let tx;
-    if (align === 'left') tx = x + 1.5;
-    else if (align === 'right') tx = x + w - 1.5;
-    else tx = x + w / 2;
-
-    const str = String(text ?? '');
-    if (str.includes('\n')) {
-        const lines = str.split('\n');
-        const lh = 3.2;
-        const sy = y + (h - lines.length * lh) / 2 + lh - 0.3;
-        lines.forEach((l, i) => pdf.text(l, tx, sy + i * lh, { align }));
-    } else {
-        pdf.text(str, tx, y + h / 2 + 1, { align });
-    }
-};
+// Helper: set color
+const setC = (pdf, c) => pdf.setTextColor(c.r, c.g, c.b);
+const setD = (pdf, c) => pdf.setDrawColor(c.r, c.g, c.b);
+const setF = (pdf, c) => pdf.setFillColor(c.r, c.g, c.b);
 
 // ==============================
-// Main generator
+// Main generator — matches BillTemplate.css layout exactly
+// The bill fits precisely on one A4 page.
 // ==============================
 
-/**
- * Generate SRI RAM FASHIONS Tax Invoice PDF – matching the reference design
- */
 export const generateInvoicePDF = (bill, settings = {}) => {
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const PW = 210; // page width
-    const LM = 8;   // left margin
-    const RE = PW - 8; // right edge
-    const CW = RE - LM; // content width
+    // Page dimensions
+    const PW = 210;
+    const PH = 297;
+    const M = 8;       // 8mm margin (from CSS @page { margin: 8mm })
+    const W = PW - M * 2; // content width
+    const H = PH - M * 2; // content height
 
     // ---- Settings / defaults ----
     const co = settings?.company || {};
     const companyName = co.name || 'SRI RAM FASHIONS';
     const gstin = co.gstin || '33AZRPM4425F2ZA';
-    const addr1 = co.address1 || 'OFF : 61C9, Anupparpalayam Puthur, Tirupur. 641652';
-    const addr2 = co.address2 || 'OFF : 81 K, Madurai Road, SankerNager, Tirunelveli Dt. 627357';
+    const addr1 = co.address1 || '61C9, Anupparpalayam Puthur, Tirupur. 641652';
+    const addr2 = co.address2 || '81 K, Madurai Road, SankerNager, Tirunelveli Dt. 627357';
     const state = co.state || 'Tamilnadu';
     const stateCode = co.stateCode || '33';
-    const email = co.email || 'sriramfashionstrp@gmail.com';
+    const email = co.email || 'sriramfashionserp@gmail.com';
     const phone = co.phone || '9080573831';
 
     const bk = settings?.bank || {};
-    const bankName = bk.name || 'South Indian Bank';
-    const bankAcc = bk.account || '0338073000002328';
-    const bankBranch = bk.branch || 'TIRUPUR';
-    const bankIfsc = bk.ifsc || 'SIBL0000338';
+    const bankName = bk.bankName || bk.name || 'SOUTH INDIAN BANK';
+    const bankAcc = bk.accountNumber || bk.account || '0338073000002328';
+    const bankBranch = bk.branchName || bk.branch || 'TIRUPUR';
+    const bankIfsc = bk.ifscCode || bk.ifsc || 'SIBL0000338';
+    const bankAccName = bk.accountHolderName || companyName;
 
     const cgstRate = settings?.tax?.cgstRate || 2.5;
     const sgstRate = settings?.tax?.sgstRate || 2.5;
@@ -117,336 +91,437 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     const sgstAmt = (taxableAmt * sgstRate) / 100;
     const totalGst = cgstAmt + sgstAmt;
     const rawTotal = taxableAmt + totalGst;
-    const roundOff = Math.round(rawTotal) - rawTotal;
+    const roundOff = bill.roundOff || (Math.round(rawTotal) - rawTotal);
     const totalAmt = Math.round(rawTotal);
     const totalPacks = bill.totalPacks || items.reduce((s, i) => s + (i.noOfPacks || i.quantity || 0), 0) || 0;
     const numBundles = bill.numOfBundles || 1;
 
-    let Y = 10;
+    // ===== Fixed section heights (mm) =====
+    const row1H = 12;    // Company Name + GSTIN
+    const row2H = 24;    // Address + Invoice Details
+    const row3H = 8;     // TAX INVOICE title
+    const row4H = 20;    // Buyer / Consignee
+    const thH = 9;       // Table header
+    const row6H = 32;    // Summary section
+    const row7H = 34;    // Footer
 
-    // ================================================================
-    // ROW 1 — Company name (left, blue) + GSTIN (right, blue)
-    // ================================================================
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(20);
-    pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
-    pdf.text(companyName, LM, Y + 6);
+    const fixedH = row1H + row2H + row3H + row4H + thH + row6H + row7H;
+    const tableBodyH = H - fixedH;
 
-    pdf.setFontSize(12);
-    pdf.text(`GSTIN: ${gstin}`, RE, Y + 6, { align: 'right' });
+    // Dynamic row height to fill remaining space
+    const minRows = Math.max(items.length, 10);
+    const rowH = tableBodyH / minRows;
 
-    Y += 10;
-    // Blue line
-    pdf.setDrawColor(BLUE.r, BLUE.g, BLUE.b);
+    // ===== Outer border (2px solid #333) =====
+    let y = M;
+    setD(pdf, GRAY_BORDER);
     pdf.setLineWidth(0.6);
-    pdf.line(LM, Y, RE, Y);
-    Y += 4;
+    pdf.rect(M, M, W, H, 'S');
 
-    // ================================================================
-    // ROW 2 — Address (left) + Invoice details (right)
-    // ================================================================
-    const addrX = LM;
-    const detailLabelX = RE - 65;
-    const detailSepX = RE - 25;
-    const detailValX = RE - 23;
+    // Helpers
+    const hLine = (yPos, lw = 0.5) => {
+        setD(pdf, GRAY_BORDER);
+        pdf.setLineWidth(lw);
+        pdf.line(M, yPos, M + W, yPos);
+    };
+    const vLine = (x, y1, y2, lw = 0.5) => {
+        setD(pdf, GRAY_BORDER);
+        pdf.setLineWidth(lw);
+        pdf.line(x, y1, x, y2);
+    };
 
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(BLACK.r, BLACK.g, BLACK.b);
+    const PX = 5; // horizontal padding in mm
 
-    const addrLines = [addr1, addr2, `State: ${state} (Code ${stateCode})`, `Email: ${email}`, `Mob: ${phone}`];
-    addrLines.forEach((l, i) => { pdf.text(l, addrX, Y + i * 4); });
-
-    // Invoice details on right
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    const invDetails = [
-        { label: 'Invoice Number', value: bill.billNumber || '' },
-        { label: 'Invoice Date', value: fmtDate(bill.date || bill.createdAt || new Date()) },
-        { label: 'From', value: bill.fromText || bill.fromDate || '' },
-        { label: 'To', value: bill.toText || bill.toDate || '' },
-    ];
-    invDetails.forEach((d, i) => {
-        pdf.text(d.label, detailLabelX, Y + i * 4);
-        pdf.text(':', detailSepX, Y + i * 4);
-        pdf.text(d.value, detailValX, Y + i * 4);
-    });
-
-    Y += addrLines.length * 4 + 3;
-
-    // ================================================================
-    // ROW 3 — TAX INVOICE (centered, blue, underlined)
-    // ================================================================
+    // =============================================
+    // ROW 1: Company Name + GSTIN
+    // =============================================
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
-    pdf.text('TAX INVOICE', PW / 2, Y, { align: 'center' });
-    // Underline
-    const tw = pdf.getTextWidth('TAX INVOICE');
-    pdf.setDrawColor(BLUE.r, BLUE.g, BLUE.b);
-    pdf.setLineWidth(0.4);
-    pdf.line(PW / 2 - tw / 2, Y + 1, PW / 2 + tw / 2, Y + 1);
-    Y += 6;
+    pdf.setFontSize(16);
+    setC(pdf, BLUE);
+    pdf.text(companyName.toUpperCase(), M + PX, y + 8);
 
-    // ================================================================
-    // ROW 4 — Buyer / Consignee section (bordered box)
-    // ================================================================
-    const buyerH = 6;
-    const halfW = CW / 2;
+    pdf.setFontSize(10);
+    setC(pdf, BLACK);
+    pdf.text(`GSTIN: ${gstin}`, M + W - PX, y + 8, { align: 'right' });
 
-    // Outer border for entire buyer section
-    const buyerStartY = Y;
+    y += row1H;
+    hLine(y);
 
-    // Row: Consignee Copy header (spans left half)
-    pdf.setFont('helvetica', 'italic');
-    pdf.setFontSize(8);
-    pdf.setTextColor(BLACK.r, BLACK.g, BLACK.b);
-    pdf.text('Consigner Copy', LM + 2, Y + 4);
-    Y += buyerH;
+    // =============================================
+    // ROW 2: Address (left) + Invoice Details (right)
+    // Right panel = ~70mm (matching CSS 280px at 210mm)
+    // =============================================
+    const row2Top = y;
+    const invDetW = 70;
+    const addrW = W - invDetW;
 
-    // Left fields
-    const buyerLeft = [
-        { label: 'BUYER:', value: bill.customer?.name || '' },
-        { label: 'STATE:', value: bill.customer?.state || 'Tamilnadu' },
-        { label: 'TRANSPORT:', value: bill.transport || '' },
+    vLine(M + addrW, row2Top, row2Top + row2H);
+
+    // Address
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    setC(pdf, GRAY_TEXT);
+    const addrLines = [
+        `OFF : ${addr1}`,
+        `OFF : ${addr2}`,
+        `State: ${state} (Code ${stateCode})`,
+        `Email: ${email}`,
+        `Mob: ${phone}`
     ];
-    // Right fields
-    const buyerRight = [
-        { label: 'MOB:', value: bill.customer?.phone || '' },
-        { label: 'GSTIN:', value: bill.customer?.gstin || '' },
-        { label: 'CODE:', value: bill.customer?.stateCode || '33' },
-    ];
+    addrLines.forEach((l, i) => pdf.text(l, M + PX, row2Top + 4 + i * 3.8, { maxWidth: addrW - PX * 2 }));
 
-    const bLabelW = 28;
-    const bValW = halfW - bLabelW;
-    const bRLabelW = 22;
-    const bRValW = halfW - bRLabelW;
+    // Invoice details
+    const detX = M + addrW + PX;
+    const detLabelW = 26;
+    let detY = row2Top + 4;
+    const detRowH = 5;
 
-    for (let i = 0; i < buyerLeft.length; i++) {
-        const lf = buyerLeft[i];
-        const rf = buyerRight[i];
-
-        // Left label + value
-        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(0, 0, 0);
-        pdf.text(lf.label, LM + 2, Y + 4);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(lf.value, LM + bLabelW, Y + 4);
-
-        // Right label + value
+    const drawDetailRow = (label, value) => {
         pdf.setFont('helvetica', 'bold');
-        pdf.text(rf.label, LM + halfW + 2, Y + 4);
+        pdf.setFontSize(7.5);
+        setC(pdf, BLACK);
+        pdf.text(label, detX, detY);
+        pdf.text(':', detX + detLabelW, detY);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(rf.value, LM + halfW + bRLabelW, Y + 4);
+        pdf.text(value || '', detX + detLabelW + 3, detY);
+        detY += detRowH;
+    };
 
-        Y += buyerH;
-    }
+    drawDetailRow('Invoice Number', bill.billNumber || '');
+    drawDetailRow('Invoice Date', fmtDate(bill.date || bill.createdAt));
+    drawDetailRow('From', bill.fromText || '');
+    drawDetailRow('To', bill.toText || '');
 
-    // Draw outer border for buyer section
-    const buyerEndY = Y;
-    pdf.setDrawColor(0, 0, 0); pdf.setLineWidth(0.4);
-    pdf.rect(LM, buyerStartY, CW, buyerEndY - buyerStartY, 'S');
-    // Horizontal lines inside
-    let ly = buyerStartY + buyerH;
-    while (ly < buyerEndY) { pdf.line(LM, ly, RE, ly); ly += buyerH; }
-    // Vertical divider between left & right
-    pdf.line(LM + halfW, buyerStartY + buyerH, LM + halfW, buyerEndY);
+    y += row2H;
+    hLine(y);
 
-    Y += 4;
+    // =============================================
+    // ROW 3: TAX INVOICE Title Bar
+    // =============================================
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    setC(pdf, BLUE);
+    const titleText = 'TAX INVOICE';
+    pdf.text(titleText, M + W / 2, y + 5.5, { align: 'center' });
+    // Underline
+    const tw = pdf.getTextWidth(titleText);
+    setD(pdf, BLUE);
+    pdf.setLineWidth(0.3);
+    pdf.line(M + W / 2 - tw / 2, y + 6.5, M + W / 2 + tw / 2, y + 6.5);
 
-    // ================================================================
-    // ROW 5 — Product Table
-    // ================================================================
-    const cols = [
-        { label: 'S.No', w: 12 },
-        { label: 'Product', w: 46 },
-        { label: 'HSN\nCode', w: 20 },
-        { label: 'Sizes/\nPieces', w: 17 },
-        { label: 'Rate Per\nPiece', w: 20 },
-        { label: 'Pcs in\nPack', w: 16 },
-        { label: 'Rate Per\nPack', w: 20 },
-        { label: 'No Of\nPacks', w: 17 },
-    ];
-    const lastColW = CW - cols.reduce((s, c) => s + c.w, 0);
-    cols.push({ label: 'Amount\nRs.', w: lastColW });
+    y += row3H;
+    hLine(y);
 
-    // Header row
-    const hdrH = 10;
-    let cx = LM;
-    cols.forEach(c => {
-        cell(pdf, cx, Y, c.w, hdrH, c.label, { bold: true, fill: GREY_BG, fs: 7 });
-        cx += c.w;
-    });
-    Y += hdrH;
+    // =============================================
+    // ROW 4: Buyer / Consignee Section
+    // Left (flex:1) | Right (280px → 70mm)
+    // =============================================
+    const row4Top = y;
+    const buyerRightW = invDetW;
+    const buyerLeftW = W - buyerRightW;
 
-    // Data rows
-    const rowH = 7;
-    items.forEach((item, idx) => {
-        const rpp = item.ratePerPack || item.price || 0;
-        const nop = item.noOfPacks || item.quantity || 0;
-        const amt = item.total || (rpp * nop);
-        const vals = [
-            String(idx + 1),
-            item.productName || item.name || '',
-            String(item.hsnCode || item.hsn || ''),
-            String(item.sizesOrPieces || ''),
-            String(item.ratePerPiece || ''),
-            String(item.pcsInPack || ''),
-            String(rpp),
-            String(nop),
-            String(amt)
-        ];
-        cx = LM;
-        cols.forEach((c, ci) => {
-            cell(pdf, cx, Y, c.w, rowH, vals[ci], { align: ci === 1 ? 'left' : 'center', fs: 8 });
-            cx += c.w;
+    vLine(M + buyerLeftW, row4Top, row4Top + row4H);
+
+    // Left - Consignee Copy
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(6);
+    setC(pdf, GRAY_LIGHT);
+    pdf.text('Consignee Copy', M + PX, row4Top + 3);
+
+    // Buyer fields
+    const bFieldX = M + PX;
+    const bLabelW = 22;
+    let bFieldY = row4Top + 7;
+    const bFieldRowH = 4.5;
+
+    const drawBuyerField = (label, value) => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.5);
+        setC(pdf, BLACK);
+        pdf.text(label, bFieldX, bFieldY);
+        pdf.text((value || '').toUpperCase(), bFieldX + bLabelW + 2, bFieldY, { maxWidth: buyerLeftW - PX * 2 - bLabelW - 2 });
+        bFieldY += bFieldRowH;
+    };
+
+    drawBuyerField('BUYER:', bill.customer?.name || '');
+    drawBuyerField('STATE:', bill.customer?.state || 'Tamilnadu');
+    // Transport with normal weight value
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    setC(pdf, BLACK);
+    pdf.text('TRANSPORT:', bFieldX, bFieldY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text((bill.transport || '').toUpperCase(), bFieldX + bLabelW + 2, bFieldY, { maxWidth: buyerLeftW - PX * 2 - bLabelW - 2 });
+
+    // Right side
+    const bRightX = M + buyerLeftW + PX;
+    const bRLabelW = 14;
+    let bRightY = row4Top + 7;
+    const bRRowH = 4.5;
+
+    const drawBuyerRight = (label, value) => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7.5);
+        setC(pdf, BLACK);
+        pdf.text(label, bRightX, bRightY);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(value || '', bRightX + bRLabelW, bRightY);
+        bRightY += bRRowH;
+    };
+
+    drawBuyerRight('MOB:', bill.customer?.phone || '');
+    drawBuyerRight('GSTIN:', bill.customer?.gstin || '');
+    drawBuyerRight('CODE:', bill.customer?.stateCode || '33');
+
+    y += row4H;
+    hLine(y);
+
+    // =============================================
+    // ROW 5: Items Table (fills remaining A4 space)
+    // Column widths: 5%, 18%, 9%, 10%, 10%, 8%, 11%, 9%, rest
+    // =============================================
+    const colPct = [0.05, 0.18, 0.09, 0.10, 0.10, 0.08, 0.11, 0.09];
+    const colSum = colPct.reduce((a, b) => a + b, 0);
+    colPct.push(1 - colSum);
+    const colW = colPct.map(p => W * p);
+
+    const headers = ['S.No', 'Product', 'HSN\nCode', 'Sizes/\nPieces', 'Rate Per\nPiece', 'Pcs in\nPack', 'Rate Per\nPack', 'No Of\nPacks', 'Amount\nRs.'];
+
+    // Table header
+    let tY = y;
+    let tX = M;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.5);
+    setC(pdf, BLACK);
+    setD(pdf, GRAY_BORDER);
+    pdf.setLineWidth(0.3);
+
+    for (let i = 0; i < 9; i++) {
+        pdf.rect(tX, tY, colW[i], thH, 'S');
+        const lines = headers[i].split('\n');
+        const lineH = 3;
+        const startY = tY + (thH - lines.length * lineH) / 2 + lineH - 0.5;
+        lines.forEach((line, li) => {
+            pdf.text(line, tX + colW[i] / 2, startY + li * lineH, { align: 'center' });
         });
-        Y += rowH;
-    });
-
-    // Empty rows (min 10)
-    const emptyCount = Math.max(0, 10 - items.length);
-    for (let e = 0; e < emptyCount; e++) {
-        cx = LM;
-        cols.forEach(c => { cell(pdf, cx, Y, c.w, rowH, '', { fs: 8 }); cx += c.w; });
-        Y += rowH;
+        tX += colW[i];
     }
-    Y += 4;
+    tY += thH;
 
-    // ================================================================
-    // ROW 6 — Summary (3-column layout matching image)
-    // ================================================================
-    const sumStartY = Y;
-    const leftW = CW * 0.38;
-    const midW = CW * 0.24;
-    const rightW = CW * 0.38;
+    // Data rows — dynamically sized
+    for (let r = 0; r < minRows; r++) {
+        tX = M;
+        const item = items[r];
 
-    // ----- LEFT column: Total Packs, Bill Amount, In words -----
-    const leftX = LM;
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9); pdf.setTextColor(0, 0, 0);
-    pdf.text('Total Packs', leftX, Y + 4);
-    pdf.text(':', leftX + 28, Y + 4);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(String(totalPacks), leftX + 32, Y + 4);
-    Y += 6;
+        setD(pdf, GRAY_BORDER);
+        pdf.setLineWidth(0.3);
 
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Bill Amount', leftX, Y + 4);
-    pdf.text(':', leftX + 28, Y + 4);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(String(totalAmt), leftX + 32, Y + 4);
-    Y += 6;
+        for (let c = 0; c < 9; c++) {
+            // Left border
+            pdf.line(tX, tY, tX, tY + rowH);
+            // Right border on last column
+            if (c === 8) pdf.line(tX + colW[c], tY, tX + colW[c], tY + rowH);
 
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('In words', leftX, Y + 4);
-    pdf.text(':', leftX + 28, Y + 4);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    const wordsText = `Rupees ${numberToWords(totalAmt)} Only`;
-    const wordLines = pdf.splitTextToSize(wordsText, leftW - 34);
-    wordLines.forEach((line, i) => { pdf.text(line, leftX + 32, Y + 4 + i * 3.5); });
-    const wordsH = wordLines.length * 3.5;
+            if (item) {
+                const rpp = item.ratePerPack || item.price || 0;
+                const nop = item.noOfPacks || item.quantity || 0;
+                const amt = item.total || (rpp * nop);
 
-    // ----- MIDDLE column: NUM OF BUNDLES + TOTAL GST box -----
-    const midX = LM + leftW;
-    let midY = sumStartY;
+                let cellText = '';
+                let align = 'center';
 
-    // NUM OF BUNDLES box
-    cell(pdf, midX, midY, midW, 7, '', {}); // outer cell
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(7.5); pdf.setTextColor(0, 0, 0);
-    pdf.text('NUM OF BUNDLES :', midX + 2, midY + 4.5);
-    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
-    pdf.text(String(numBundles), midX + midW - 5, midY + 4.5, { align: 'right' });
+                switch (c) {
+                    case 0: cellText = `${r + 1}`; break;
+                    case 1: cellText = item.productName || item.name || ''; align = 'left'; break;
+                    case 2: cellText = String(item.hsnCode || item.hsn || ''); break;
+                    case 3: cellText = String(item.sizesOrPieces || ''); break;
+                    case 4: cellText = item.ratePerPiece ? `${item.ratePerPiece}` : ''; break;
+                    case 5: cellText = item.pcsInPack ? `${item.pcsInPack}` : ''; break;
+                    case 6: cellText = `${rpp}`; break;
+                    case 7: cellText = `${nop}`; break;
+                    case 8: cellText = `${amt}`; break;
+                }
 
-    midY += 14;
+                if (cellText) {
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7);
+                    setC(pdf, BLACK);
+                    const txtX = align === 'left' ? tX + 2 : tX + colW[c] / 2;
+                    pdf.text(cellText, txtX, tY + rowH / 2 + 1, { align, maxWidth: colW[c] - 3 });
+                }
+            }
 
-    // TOTAL GST box (red border)
-    const gstBoxW = midW - 4;
-    const gstBoxX = midX + 2;
-    rect(pdf, gstBoxX, midY, gstBoxW, 9, { stroke: RED, lw: 0.6 });
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
-    pdf.setTextColor(RED.r, RED.g, RED.b);
-    pdf.text('TOTAL GST', gstBoxX + 3, midY + 6);
-    pdf.text(totalGst.toFixed(0), gstBoxX + gstBoxW - 3, midY + 6, { align: 'right' });
-
-    // ----- RIGHT column: Tax breakdown -----
-    const rightX = LM + leftW + midW;
-    const taxLabelW = rightW * 0.6;
-    const taxValW = rightW * 0.4;
-    let taxY = sumStartY;
-    const taxRowH = 5.5;
-
-    const taxRows = [
-        { label: 'Product Amt', value: productAmt.toFixed(0), bold: false, highlight: false },
-        { label: 'Discount', value: discount.toFixed(0), bold: false, highlight: false },
-        { label: 'Taxable Amt', value: taxableAmt.toFixed(0), bold: false, highlight: false },
-        { label: `CGST @ ${cgstRate}%`, value: cgstAmt.toFixed(2), bold: false, highlight: true },
-        { label: `SGST @ ${sgstRate}%`, value: sgstAmt.toFixed(2), bold: false, highlight: true },
-        { label: 'Round Off', value: roundOff.toFixed(2), bold: false, highlight: false },
-        { label: '', value: '', bold: false, highlight: false }, // spacer
-        { label: 'Total Amt', value: String(totalAmt), bold: true, highlight: false },
-    ];
-
-    taxRows.forEach(row => {
-        if (!row.label && !row.value) { taxY += 2; return; }
-        pdf.setFont('helvetica', row.bold ? 'bold' : 'normal');
-        pdf.setFontSize(8);
-        pdf.setTextColor(row.highlight ? BLUE.r : 0, row.highlight ? BLUE.g : 0, row.highlight ? BLUE.b : 0);
-        pdf.text(row.label, rightX + 2, taxY + 4);
-        pdf.text(row.value, rightX + rightW - 2, taxY + 4, { align: 'right' });
-        if (row.bold) {
-            // Draw line above total
-            pdf.setDrawColor(0, 0, 0); pdf.setLineWidth(0.3);
-            pdf.line(rightX, taxY, rightX + rightW, taxY);
+            tX += colW[c];
         }
-        taxY += taxRowH;
-    });
+        tY += rowH;
+    }
 
-    Y = Math.max(Y + wordsH + 4, taxY + 2, midY + 14);
-    Y += 4;
+    // Bottom border of last row
+    y = tY;
+    hLine(y, 0.6);
 
-    // ================================================================
-    // ROW 7 — Footer: Terms & Conditions + Bank + Certification
-    // ================================================================
-    pdf.setDrawColor(0, 0, 0); pdf.setLineWidth(0.3);
-    pdf.line(LM, Y, RE, Y);
-    Y += 3;
+    // =============================================
+    // ROW 6: Summary (3-column, flex 1.2:0.8:1)
+    // =============================================
+    const sumTotalFlex = 3.0;
+    const sumLeftW = W * (1.2 / sumTotalFlex);
+    const sumMidW = W * (0.8 / sumTotalFlex);
+    const sumRightW = W * (1.0 / sumTotalFlex);
 
-    // LEFT side — Terms and Conditions
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(8); pdf.setTextColor(0, 0, 0);
-    pdf.text('Terms And Conditions', LM, Y + 3);
-    Y += 5;
-    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.5);
-    const terms = [
+    vLine(M + sumLeftW, y, y + row6H);
+    vLine(M + sumLeftW + sumMidW, y, y + row6H);
+
+    // Left column: Total Packs / Bill Amount / In Words
+    const sLX = M + PX;
+    let sLY = y + 4;
+    const sLabelW = 22;
+    const sRowGap = 5;
+
+    const drawSummaryField = (label, value, isWords = false) => {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(isWords ? 6.5 : 7.5);
+        setC(pdf, BLACK);
+        pdf.text(label, sLX, sLY);
+        pdf.text(':', sLX + sLabelW, sLY);
+        pdf.text(value, sLX + sLabelW + 3, sLY, { maxWidth: sumLeftW - PX * 2 - sLabelW - 5 });
+        sLY += sRowGap;
+    };
+
+    drawSummaryField('Total Packs', `${totalPacks}`);
+    drawSummaryField('Bill Amount', `${totalAmt}`);
+    drawSummaryField('In words', `Rupees ${numberToWords(totalAmt)} Only`, true);
+
+    // Middle column: Bundles + GST Box
+    const sMX = M + sumLeftW + 4;
+    const sMW = sumMidW - 8;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7);
+    setC(pdf, BLACK);
+    pdf.text('NUM OF BUNDLES :', sMX, y + 5);
+    pdf.setFontSize(9);
+    pdf.text(`${numBundles}`, sMX + sMW, y + 5, { align: 'right' });
+
+    // GST Box: border 2px solid #c00
+    const gstBoxY = y + row6H - 12;
+    const gstBoxH = 9;
+    setD(pdf, RED);
+    pdf.setLineWidth(0.6);
+    pdf.rect(sMX, gstBoxY, sMW, gstBoxH, 'S');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    setC(pdf, RED);
+    pdf.text('TOTAL GST', sMX + 3, gstBoxY + 6);
+    pdf.setFontSize(10);
+    pdf.text(`${totalGst.toFixed(0)}`, sMX + sMW - 3, gstBoxY + 6, { align: 'right' });
+
+    // Right column: Tax breakdown
+    const sRX = M + sumLeftW + sumMidW + PX;
+    const sRW = sumRightW - PX * 2;
+    const taxFontSize = 7.5;
+    const taxRowH = 3.8;
+    let txY = y + 3;
+
+    const drawTaxRow = (label, value, isHighlight = false, isTotal = false) => {
+        if (isTotal) {
+            txY += 1;
+            setD(pdf, BLACK);
+            pdf.setLineWidth(0.4);
+            pdf.line(sRX - 1, txY, sRX + sRW + 1, txY);
+            txY += 1.5;
+        }
+
+        const color = isHighlight ? RED : BLACK;
+        const fontSize = isTotal ? 8.5 : taxFontSize;
+
+        pdf.setFont('helvetica', (isHighlight || isTotal) ? 'bold' : 'normal');
+        pdf.setFontSize(fontSize);
+        setC(pdf, color);
+        pdf.text(label, sRX, txY);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(value, sRX + sRW, txY, { align: 'right' });
+        txY += taxRowH;
+    };
+
+    drawTaxRow('Product Amt', productAmt.toFixed(2));
+    drawTaxRow('Discount', discount.toFixed(0));
+    drawTaxRow('Taxable Amt', taxableAmt.toFixed(2));
+    drawTaxRow(`CGST @ ${cgstRate}%`, cgstAmt.toFixed(2), true);
+    drawTaxRow(`SGST @ ${sgstRate}%`, sgstAmt.toFixed(2), true);
+    drawTaxRow('Round Off', roundOff.toFixed(2));
+    drawTaxRow('Total Amt', `${totalAmt}`, false, true);
+
+    y += row6H;
+    hLine(y, 0.5);
+
+    // =============================================
+    // ROW 7: Footer (Terms + Bank | Certification)
+    // flex 1.2 : 1
+    // =============================================
+    const footFlex = 2.2;
+    const footLeftW = W * (1.2 / footFlex);
+    const footRightW = W * (1.0 / footFlex);
+
+    vLine(M + footLeftW, y, y + row7H);
+
+    // Left: Terms
+    const fLX = M + PX;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    setC(pdf, BLUE);
+    pdf.text('Terms And Conditions', fLX, y + 4);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(5.5);
+    setC(pdf, GRAY_BORDER);
+    const termsLines = [
         'Subject to Tirupur Jurisdiction.',
         'Payment by Cheque/DD only, payable at Tirupur.',
-        `Cheques made in favour of ${companyName} to be sent to`,
-        'Tirunelveli Address All disputes are subjected',
-        'to Tirunelveli Jurisdiction.'
+        `Cheques made in favour of ${companyName} to be sent to Tirunelveli Address`,
+        'All disputes are subjected to Tirunelveli Jurisdiction'
     ];
-    terms.forEach((t, i) => { pdf.text(t, LM, Y + i * 3); });
-    Y += terms.length * 3 + 2;
+    termsLines.forEach((t, i) => pdf.text(t, fLX, y + 7.5 + i * 2.8, { maxWidth: footLeftW - PX * 2 }));
 
-    // RIGHT side — Certification
-    const certX = RE - 65;
-    pdf.setFont('helvetica', 'italic'); pdf.setFontSize(7);
-    pdf.text('Certified that above particulars are true', certX, Y - 10);
-    pdf.text('and correct', certX + 15, Y - 7);
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
-    pdf.setTextColor(BLUE.r, BLUE.g, BLUE.b);
-    pdf.text(`For ${companyName}`, RE, Y - 2, { align: 'right' });
-
-    // Bank details box
-    pdf.setTextColor(0, 0, 0);
-    const bankBoxY = Y;
-    const bankBoxW = CW * 0.55;
+    // Bank box: yellow background, gold border
+    const bankBoxY = y + 20;
+    const bankBoxW = footLeftW - PX * 2;
     const bankBoxH = 12;
-    rect(pdf, LM, bankBoxY, bankBoxW, bankBoxH, { lw: 0.4 });
 
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(7);
-    pdf.text('Bank Details:', LM + 2, bankBoxY + 4);
-    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(6.5);
-    pdf.text(`${bankName}, Account: ${bankAcc}`, LM + 2, bankBoxY + 8);
-    pdf.text(`Branch: ${bankBranch}, IFSC: ${bankIfsc}`, LM + 2, bankBoxY + 11);
+    setF(pdf, BANK_BG);
+    pdf.rect(fLX, bankBoxY, bankBoxW, bankBoxH, 'F');
+    setD(pdf, BANK_BORDER);
+    pdf.setLineWidth(0.5);
+    pdf.rect(fLX, bankBoxY, bankBoxW, bankBoxH, 'S');
+
+    // Bank title
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.5);
+    setC(pdf, RED);
+    pdf.text('Bank Details:', fLX + 3, bankBoxY + 3.5);
+
+    // Bank info
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6);
+    setC(pdf, BLUE);
+    pdf.text(`ACC NAME: ${bankAccName}    BANK: ${bankName}`, fLX + 3, bankBoxY + 7, { maxWidth: bankBoxW - 6 });
+    pdf.text(`ACC NUM: ${bankAcc}    BRANCH: ${bankBranch}    IFSC: ${bankIfsc}`, fLX + 3, bankBoxY + 10, { maxWidth: bankBoxW - 6 });
+
+    // Right: Certification + Signature
+    const fRX = M + footLeftW + PX;
+    const fRW = footRightW - PX * 2;
+    const fRCenterX = M + footLeftW + footRightW / 2;
+
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(7.5);
+    setC(pdf, GRAY_BORDER);
+    pdf.text('Certified that above particulars are true', fRCenterX, y + 10, { align: 'center' });
+    pdf.text('and correct', fRCenterX, y + 13.5, { align: 'center' });
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    setC(pdf, BLUE);
+    pdf.text(`For ${companyName}`, fRCenterX, y + 25, { align: 'center' });
 
     return pdf;
 };
