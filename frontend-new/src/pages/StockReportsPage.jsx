@@ -71,7 +71,7 @@ const StockReportsPage = () => {
             <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
                     {/* Name */}
-                    <div className="flex-shrink-0 w-64">
+                    <div className="shrink-0 w-64">
                         <label className="form-label">Name</label>
                         <input
                             type="text"
@@ -83,7 +83,7 @@ const StockReportsPage = () => {
                     </div>
 
                     {/* Size */}
-                    <div className="flex-shrink-0 w-32">
+                    <div className="shrink-0 w-32">
                         <label className="form-label">Size</label>
                         <select
                             className="form-input"

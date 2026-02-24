@@ -194,7 +194,7 @@ Generated on: ${new Date().toLocaleString('en-IN')}
             {/* Search Section */}
             <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex-shrink-0 w-64">
+                    <div className="shrink-0 w-64">
                         <label className="form-label">Company Name</label>
                         <input
                             type="text"

@@ -241,7 +241,7 @@ const ItemsPage = () => {
             {/* Search Section */}
             <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex-shrink-0 w-48">
+                    <div className="shrink-0 w-48">
                         <label className="form-label">Name</label>
                         <input
                             type="text"
@@ -252,7 +252,7 @@ const ItemsPage = () => {
                             className="form-input"
                         />
                     </div>
-                    <div className="flex-shrink-0 w-32">
+                    <div className="shrink-0 w-32">
                         <label className="form-label">HSN Code</label>
                         <input
                             type="text"

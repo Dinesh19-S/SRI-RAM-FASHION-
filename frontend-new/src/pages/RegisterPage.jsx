@@ -116,10 +116,10 @@ const RegisterPage = () => {
 
             {/* Dark Overlay */}
             {/* Dark Overlay */}
-            <div className="absolute inset-0 z-[1] bg-black/60"></div>
+            <div className="absolute inset-0 z-1 bg-black/60"></div>
 
             {/* Register Card */}
-            <div className="relative z-[2] bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl text-center border border-gray-100">
+            <div className="relative z-2 bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl text-center border border-gray-100">
                 <h2 className="font-serif text-3xl text-black mb-2 font-bold tracking-tight">SRI RAM FASHIONS</h2>
                 <p className="text-sm text-gray-700 mb-8 font-bold">Create your account</p>
 

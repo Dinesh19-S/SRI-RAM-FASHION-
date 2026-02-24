@@ -244,7 +244,7 @@ const PurchasePaymentsPage = () => {
             {/* Search Section */}
             <div className="card py-4">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Company</label>
                         <input
                             type="text"
@@ -255,7 +255,7 @@ const PurchasePaymentsPage = () => {
                             className="form-input w-40 text-sm py-1.5"
                         />
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                         <label className="block text-xs font-medium text-gray-600 mb-1">From Date</label>
                         <input
                             type="date"
@@ -264,7 +264,7 @@ const PurchasePaymentsPage = () => {
                             className="form-input w-36 text-sm py-1.5"
                         />
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                         <label className="block text-xs font-medium text-gray-600 mb-1">To Date</label>
                         <input
                             type="date"

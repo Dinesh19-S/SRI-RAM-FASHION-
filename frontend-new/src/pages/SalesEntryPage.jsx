@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X, Receipt } from 'lucide-react';
+import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X, Receipt, Mail } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { salesEntriesAPI, customersAPI, productsAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
@@ -623,7 +623,7 @@ const SalesEntryPage = () => {
             {/* Search Filters Card */}
             <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex-shrink-0 w-32">
+                    <div className="shrink-0 w-32">
                         <label className="form-label">Inv No</label>
                         <input
                             type="text"
@@ -633,7 +633,7 @@ const SalesEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, invNo: e.target.value })}
                         />
                     </div>
-                    <div className="flex-shrink-0 w-48">
+                    <div className="shrink-0 w-48">
                         <label className="form-label">Customer</label>
                         <input
                             type="text"
@@ -643,7 +643,7 @@ const SalesEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, customer: e.target.value })}
                         />
                     </div>
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">From Date</label>
                         <input
                             type="date"
@@ -652,7 +652,7 @@ const SalesEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
                         />
                     </div>
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">To Date</label>
                         <input
                             type="date"
@@ -710,7 +710,7 @@ const SalesEntryPage = () => {
                                     >
                                         <td className="p-4 text-sm font-medium text-gray-900">{(pagination.page - 1) * pagination.limit + index + 1}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{formatDate(sale.date)}</td>
-                                        <td className="p-4 text-sm font-medium font-semibold" style={{ color: '#1e40af' }}>{sale.invoiceNumber}</td>
+                                        <td className="p-4 text-sm font-semibold" style={{ color: '#1e40af' }}>{sale.invoiceNumber}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{sale.customer?.name || '-'}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{sale.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0}</td>
                                         <td className="p-4 text-sm font-bold text-green-600">₹{(sale.grandTotal || 0).toLocaleString()}</td>

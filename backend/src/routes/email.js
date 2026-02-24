@@ -1,8 +1,6 @@
 import express from 'express';
 import Bill from '../models/Bill.js';
-import Product from '../models/Product.js';
-import Customer from '../models/Customer.js';
-import { isEmailConfigured, sendBillNotification, sendNotification, sendDailySummary, sendReportEmail } from '../services/emailService.js';
+import { isEmailConfigured, sendBillNotification, sendNotification, sendReportEmail, calculateAndSendDailySummary } from '../services/emailService.js';
 
 const router = express.Router();
 

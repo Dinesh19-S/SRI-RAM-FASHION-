@@ -469,7 +469,7 @@ const PurchaseEntryPage = () => {
             {/* Search Filters Card */}
             <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex-shrink-0 w-32">
+                    <div className="shrink-0 w-32">
                         <label className="form-label">Inv No</label>
                         <input
                             type="text"
@@ -479,7 +479,7 @@ const PurchaseEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, invNo: e.target.value })}
                         />
                     </div>
-                    <div className="flex-shrink-0 w-48">
+                    <div className="shrink-0 w-48">
                         <label className="form-label">Company</label>
                         <input
                             type="text"
@@ -489,7 +489,7 @@ const PurchaseEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, company: e.target.value })}
                         />
                     </div>
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">From Date</label>
                         <input
                             type="date"
@@ -498,7 +498,7 @@ const PurchaseEntryPage = () => {
                             onChange={(e) => setFilters({ ...filters, fromDate: e.target.value })}
                         />
                     </div>
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">To Date</label>
                         <input
                             type="date"
@@ -556,7 +556,7 @@ const PurchaseEntryPage = () => {
                                     >
                                         <td className="p-4 text-sm font-medium text-gray-900">{(pagination.page - 1) * pagination.limit + index + 1}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{formatDate(purchase.date)}</td>
-                                        <td className="p-4 text-sm font-medium font-semibold" style={{ color: '#1e40af' }}>{purchase.invoiceNumber}</td>
+                                        <td className="p-4 text-sm font-semibold" style={{ color: '#1e40af' }}>{purchase.invoiceNumber}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{purchase.supplier?.name || '-'}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{purchase.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0}</td>
                                         <td className="p-4 text-sm font-bold text-green-600">₹{(purchase.grandTotal || 0).toLocaleString()}</td>

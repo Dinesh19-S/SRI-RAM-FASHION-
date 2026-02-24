@@ -115,7 +115,7 @@ const AuditorSalesPage = () => {
                 <div className="flex flex-wrap items-end gap-3">
 
                     {/* From Date */}
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">From Date</label>
                         <input
                             type="date"
@@ -126,7 +126,7 @@ const AuditorSalesPage = () => {
                     </div>
 
                     {/* To Date */}
-                    <div className="flex-shrink-0 w-36">
+                    <div className="shrink-0 w-36">
                         <label className="form-label">To Date</label>
                         <input
                             type="date"

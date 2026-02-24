@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { login, sendOTP, loginWithPhone, clearError, googleLogin, forgotPassword, resetPassword } from '../store/slices/authSlice';
-import { Mail, Lock, Phone, Eye, EyeOff, X, CheckCircle, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, X, CheckCircle, ArrowRight } from 'lucide-react';
 
 const LoginPage = () => {
     const dispatch = useDispatch();
@@ -82,7 +82,7 @@ const LoginPage = () => {
         newCode[index] = value;
         setResetCode(newCode);
         if (value && index < 5) {
-            document.getElementById(`reset-code-${index + 1}`)?.focus();
+            document.getElementById(`reset-code-${index + 2}`)?.focus();
         }
     };
 
@@ -131,10 +131,10 @@ const LoginPage = () => {
             ></div>
 
             {/* Dark Overlay */}
-            <div className="absolute inset-0 z-[1] bg-black/70"></div>
+            <div className="absolute inset-0 z-1 bg-black/70"></div>
 
             {/* Login Card */}
-            <div className="relative z-[2] bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl border border-gray-100 text-center">
+            <div className="relative z-2 bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl border border-gray-100 text-center">
                 <div className="mb-8">
                     <img
                         src="/assets/sri-ram-logo.png"
@@ -220,7 +220,7 @@ const LoginPage = () => {
                                 }
                             }}
                             onError={(error) => {
-                                console.error('Google Login Error Details:', error);
+                                // Google popup failed before reaching backend
                                 // This error happens BEFORE contacting the backend - it means the Google popup itself failed
                                 dispatch(clearError());
                             }}
