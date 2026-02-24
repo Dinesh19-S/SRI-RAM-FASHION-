@@ -890,7 +890,7 @@ const SalesEntryPage = () => {
                             <div className="flex gap-2">
                                 {previewBill._id && (
                                     <button
-                                        className="btn btn-sm text-white bg-purple-600 hover:bg-purple-700"
+                                        className="btn btn-sm text-white bg-blue-600 hover:bg-blue-700"
                                         onClick={handleEmailBill}
                                         disabled={isSubmitting}
                                     >

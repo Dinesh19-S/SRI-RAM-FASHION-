@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logout } from '../../store/slices/authSlice';
+import { dashboardAPI } from '../../services/api';
+import { formatDate } from '../../utils/dateUtils';
 import {
     LayoutDashboard,
     Receipt,
@@ -26,6 +28,12 @@ import {
 } from 'lucide-react';
 
 import logoImage from '../../assets/logo.jpg';
+
+const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+}).format(amount || 0);
 
 const navigationSections = [
     {
@@ -86,7 +94,17 @@ const MainLayout = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearchDropdown, setShowSearchDropdown] = useState(false);
     const [collapsedSections, setCollapsedSections] = useState({});
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [notificationsLoading, setNotificationsLoading] = useState(false);
+    const [notificationsError, setNotificationsError] = useState('');
+    const [notifications, setNotifications] = useState([]);
     const searchRef = useRef(null);
+    const notificationsRef = useRef(null);
+
+    const unreadCount = useMemo(
+        () => notifications.filter((notification) => !notification.read).length,
+        [notifications]
+    );
 
     // Page transition animation variants
     const pageVariants = {
@@ -166,8 +184,88 @@ const MainLayout = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+                setNotificationsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const loadNotifications = useCallback(async () => {
+        setNotificationsLoading(true);
+        setNotificationsError('');
+        try {
+            const [lowStockResponse, recentBillsResponse] = await Promise.all([
+                dashboardAPI.getLowStockAlerts(),
+                dashboardAPI.getRecentBills(5)
+            ]);
+
+            const lowStockItems = lowStockResponse?.data?.data || [];
+            const recentBills = recentBillsResponse?.data?.data || [];
+
+            const nextNotifications = [
+                ...recentBills.map((bill) => {
+                    const customerName = bill?.customer?.name || 'Customer';
+                    const paymentStatus = bill?.paymentStatus
+                        ? bill.paymentStatus.charAt(0).toUpperCase() + bill.paymentStatus.slice(1)
+                        : 'Pending';
+                    return {
+                        id: `bill:${bill._id || bill.billNumber}`,
+                        type: 'bill',
+                        title: `Bill #${bill.billNumber}`,
+                        message: `${customerName} | ${formatCurrency(bill.grandTotal)} | ${paymentStatus}`,
+                        date: bill.date,
+                        action: '/dashboard/billing'
+                    };
+                }),
+                ...lowStockItems.map((product) => ({
+                    id: `stock:${product._id || product.name}`,
+                    type: 'low-stock',
+                    title: `Low stock: ${product.name}`,
+                    message: `Stock ${product.stock} / ${product.lowStockThreshold}`,
+                    action: '/dashboard/inventory'
+                }))
+            ];
+
+            setNotifications((prev) => {
+                const readMap = new Map(prev.map((item) => [item.id, item.read]));
+                return nextNotifications.map((item) => ({
+                    ...item,
+                    read: readMap.get(item.id) ?? false
+                }));
+            });
+        } catch (error) {
+            setNotificationsError('Failed to load notifications');
+        } finally {
+            setNotificationsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (notificationsOpen) {
+            loadNotifications();
+        }
+    }, [notificationsOpen, loadNotifications]);
+
     const handleLogout = () => {
         dispatch(logout());
+    };
+
+    const handleNotificationClick = (notification) => {
+        setNotifications((prev) =>
+            prev.map((item) => (item.id === notification.id ? { ...item, read: true } : item))
+        );
+        if (notification.action) {
+            navigate(notification.action);
+        }
+        setNotificationsOpen(false);
+    };
+
+    const markAllNotificationsRead = () => {
+        setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
     };
 
     return (
@@ -330,17 +428,142 @@ const MainLayout = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
-                            <Bell size={20} />
-                            <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
+                        <div className="relative" ref={notificationsRef}>
+                            <button
+                                className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+                                onClick={() => setNotificationsOpen((prev) => !prev)}
+                                aria-label="Notifications"
+                            >
+                                <Bell size={20} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full border-2 border-white flex items-center justify-center">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            <AnimatePresence>
+                                {notificationsOpen && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 8 }}
+                                        className="absolute right-0 mt-3 w-96 max-w-[90vw] bg-white rounded-xl shadow-xl border border-gray-100 z-50"
+                                    >
+                                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                                            <div>
+                                                <div className="text-sm font-semibold text-gray-900">Notifications</div>
+                                                <div className="text-xs text-gray-500">Latest updates and alerts</div>
+                                            </div>
+                                            {unreadCount > 0 && (
+                                                <button
+                                                    className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                                                    onClick={markAllNotificationsRead}
+                                                >
+                                                    Mark all read
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="max-h-96 overflow-y-auto">
+                                            {notificationsLoading && (
+                                                <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                                    Loading notifications...
+                                                </div>
+                                            )}
+
+                                            {!notificationsLoading && notificationsError && (
+                                                <div className="px-4 py-6 text-sm text-red-600 text-center">
+                                                    {notificationsError}
+                                                </div>
+                                            )}
+
+                                            {!notificationsLoading && !notificationsError && notifications.length === 0 && (
+                                                <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                                                    No notifications yet.
+                                                </div>
+                                            )}
+
+                                            {!notificationsLoading && !notificationsError && notifications.length > 0 && (
+                                                <>
+                                                    {notifications.filter((n) => n.type === 'bill').length > 0 && (
+                                                        <div className="px-4 pt-3 text-xs font-semibold text-gray-400 uppercase">
+                                                            Recent Bills
+                                                        </div>
+                                                    )}
+                                                    {notifications
+                                                        .filter((n) => n.type === 'bill')
+                                                        .map((notification) => (
+                                                            <button
+                                                                key={notification.id}
+                                                                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3"
+                                                                onClick={() => handleNotificationClick(notification)}
+                                                            >
+                                                                <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                                                    <Receipt size={18} />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="text-sm font-semibold text-gray-900 truncate">
+                                                                        {notification.title}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500">
+                                                                        {notification.message}
+                                                                    </div>
+                                                                    {notification.date && (
+                                                                        <div className="text-xs text-gray-400 mt-1">
+                                                                            {formatDate(notification.date)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                {!notification.read && (
+                                                                    <span className="mt-1 w-2 h-2 rounded-full bg-blue-500" />
+                                                                )}
+                                                            </button>
+                                                        ))}
+
+                                                    {notifications.filter((n) => n.type === 'low-stock').length > 0 && (
+                                                        <div className="px-4 pt-3 text-xs font-semibold text-gray-400 uppercase">
+                                                            Low Stock Alerts
+                                                        </div>
+                                                    )}
+                                                    {notifications
+                                                        .filter((n) => n.type === 'low-stock')
+                                                        .map((notification) => (
+                                                            <button
+                                                                key={notification.id}
+                                                                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3"
+                                                                onClick={() => handleNotificationClick(notification)}
+                                                            >
+                                                                <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                                                                    <Package size={18} />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="text-sm font-semibold text-gray-900 truncate">
+                                                                        {notification.title}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500">
+                                                                        {notification.message}
+                                                                    </div>
+                                                                </div>
+                                                                {!notification.read && (
+                                                                    <span className="mt-1 w-2 h-2 rounded-full bg-amber-500" />
+                                                                )}
+                                                            </button>
+                                                        ))}
+                                                </>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
 
                         <div className="relative">
                             <div
                                 className="flex items-center gap-3 cursor-pointer pl-2"
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                             >
-                                <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
+                                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
                                     {user?.name?.charAt(0) || 'A'}
                                 </div>
                                 <div className="hidden md:block">

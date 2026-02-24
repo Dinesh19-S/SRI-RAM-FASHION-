@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { dashboardAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
 import {
@@ -144,8 +145,7 @@ const DashboardPage = () => {
                     <button
                         onClick={handleSendSummary}
                         disabled={sendingSummary}
-                        className="btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed group"
-                        style={{ backgroundColor: '#7c3aed' }}
+                        className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed group"
                     >
                         {sendingSummary ? (
                             <Loader2 size={18} className="animate-spin" />
@@ -255,7 +255,7 @@ const DashboardPage = () => {
             <div className="card p-0">
                 <div className="flex items-center justify-between p-6 pb-4">
                     <h3 className="text-lg font-bold text-gray-900">Recent Bills</h3>
-                    <a href="/billing" className="text-sm font-semibold hover:underline" style={{ color: '#3b82f6' }}>View All</a>
+                    <Link to="/dashboard/billing" className="text-sm font-semibold hover:underline">View All</Link>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse">

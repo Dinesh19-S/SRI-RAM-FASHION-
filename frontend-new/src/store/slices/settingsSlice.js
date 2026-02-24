@@ -30,7 +30,7 @@ export const updateSettings = createAsyncThunk(
 const initialState = {
     data: null,
     theme: localStorage.getItem('theme') || 'light',
-    themeColor: localStorage.getItem('themeColor') || 'purple',
+    themeColor: localStorage.getItem('themeColor') || 'blue',
     isLoading: false,
     error: null,
 };

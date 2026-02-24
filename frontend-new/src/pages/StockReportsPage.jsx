@@ -3,7 +3,7 @@ import { Package, X, Printer, Search, FileSpreadsheet, Mail } from 'lucide-react
 import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcel } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
-import { reportsAPI } from '../services/api';
+import { reportsAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
 
 const StockReportsPage = () => {
@@ -53,8 +53,33 @@ const StockReportsPage = () => {
         printReport('printable-report');
     };
 
-    const handleEmail = () => {
-        toast.info('Email functionality will be implemented');
+    const handleEmail = async () => {
+        if (reportData.length === 0) {
+            toast.warning('No data to email');
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+            const today = new Date().toISOString().split('T')[0];
+            const response = await emailAPI.sendReport({
+                type: 'stock',
+                fromDate: today,
+                toDate: today,
+                data: reportData
+            });
+
+            if (response.data.success) {
+                toast.success('Stock report emailed successfully!');
+            } else {
+                toast.error(response.data.message || 'Failed to email report');
+            }
+        } catch (error) {
+            console.error('Error emailing report:', error);
+            toast.error(error.response?.data?.message || 'Error emailing report');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -132,7 +157,7 @@ const StockReportsPage = () => {
                         Print
                     </button>
 
-                    <button className="btn text-white bg-purple-600 hover:bg-purple-700" onClick={handleEmail}>
+                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={handleEmail}>
                         <Mail size={16} />
                         Mail
                     </button>

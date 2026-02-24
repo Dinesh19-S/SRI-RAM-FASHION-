@@ -80,7 +80,7 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Public Home Page - Shows first */}
+        {/* Public Home Page - Always accessible */}
         <Route
           path="/"
           element={
@@ -149,7 +149,7 @@ const AnimatedRoutes = () => {
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen app-shell">
         <AnimatedRoutes />
       </div>
     </BrowserRouter>

@@ -90,7 +90,14 @@ router.post('/send-report', async (req, res) => {
             return res.status(400).json({ success: false, message: 'No recipient email configured' });
         }
 
-        const title = type === 'purchase' ? 'Purchase Report' : 'Sales Report';
+        const reportTitles = {
+            sales: 'Sales Report',
+            purchase: 'Purchase Report',
+            stock: 'Stock Report',
+            'auditor-sales': 'Auditor Sales Report',
+            'auditor-purchase': 'Auditor Purchase Report'
+        };
+        const title = reportTitles[type] || 'Report';
         const options = { title, fromDate, toDate, type };
 
         const adminEmails = recipient.split(',').map(e => e.trim());

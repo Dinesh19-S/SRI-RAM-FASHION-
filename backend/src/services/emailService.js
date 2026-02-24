@@ -397,25 +397,129 @@ export const sendPasswordResetEmail = async (email, resetCode) => {
 // Email report function
 export const sendReportEmail = async (data, options, recipientEmails) => {
   const { title, fromDate, toDate, type } = options;
-  const subject = `📄 ${title} - ${new Date().toLocaleDateString('en-IN')}`;
+  const subject = `Report: ${title} - ${new Date().toLocaleDateString('en-IN')}`;
 
-  const headers = type === 'purchase'
-    ? ['S.No', 'Date', 'Invoice No', 'Item', 'Rate', 'Qty', 'Total']
-    : ['S.No', 'Date', 'Inv No', 'Item', 'Rate', 'Qty', 'Total'];
+  const reportData = Array.isArray(data) ? data : [];
+  const formatNumber = (value) => Number(value || 0).toLocaleString('en-IN');
+  const formatMoney = (value) => `Rs ${formatNumber(value)}`;
+  const formatDateValue = (value) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('en-IN');
+  };
 
-  const rowsHtml = data.map(row => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.sno}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${new Date(row.date).toLocaleDateString('en-IN')}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.invNo}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.item}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">₹${row.rate}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${row.qty}</td>
-      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">₹${(row.rate * row.qty).toLocaleString('en-IN')}</td>
-    </tr>
-  `).join('');
+  const periodText = fromDate && toDate
+    ? `Period: ${fromDate} to ${toDate}`
+    : fromDate
+      ? `From: ${fromDate}`
+      : toDate
+        ? `To: ${toDate}`
+        : `Date: ${new Date().toLocaleDateString('en-IN')}`;
 
-  const grandTotal = data.reduce((sum, row) => sum + (row.rate * row.qty), 0);
+  let headers = [];
+  let rowsHtml = '';
+  let totalsRowHtml = '';
+
+  if (type === 'stock') {
+    headers = ['S.No', 'Item', 'Size', 'Qty', 'Rate', 'Total'];
+    rowsHtml = reportData.map(row => {
+      const lineTotal = Number(row.total || (Number(row.rate || 0) * Number(row.qty || 0)));
+      return `
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.sno ?? ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.item ?? ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.size ?? ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(row.qty)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.rate)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatMoney(lineTotal)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const grandTotal = reportData.reduce((sum, row) => {
+      const lineTotal = Number(row.total || (Number(row.rate || 0) * Number(row.qty || 0)));
+      return sum + lineTotal;
+    }, 0);
+
+    totalsRowHtml = `
+      <tr class="total-row">
+        <td colspan="5" style="padding: 12px 10px; text-align: right;">Grand Total:</td>
+        <td style="padding: 12px 10px; text-align: right; color: #1e40af; font-size: 16px;">${formatMoney(grandTotal)}</td>
+      </tr>
+    `;
+  } else if (type === 'auditor-sales' || type === 'auditor-purchase') {
+    headers = ['Company Name', 'GSTIN', 'Date', 'Invoice No', 'Taxable Amount', 'CGST', 'SGST', 'IGST', 'Total'];
+    rowsHtml = reportData.map(row => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.companyName ?? ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.gstin ?? ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${formatDateValue(row.date)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.invNo ?? ''}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.taxableAmount)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.cgst)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.sgst)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.igst)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatMoney(row.total)}</td>
+      </tr>
+    `).join('');
+
+    const totals = reportData.reduce((acc, row) => ({
+      taxableAmount: acc.taxableAmount + Number(row.taxableAmount || 0),
+      cgst: acc.cgst + Number(row.cgst || 0),
+      sgst: acc.sgst + Number(row.sgst || 0),
+      igst: acc.igst + Number(row.igst || 0),
+      total: acc.total + Number(row.total || 0)
+    }), { taxableAmount: 0, cgst: 0, sgst: 0, igst: 0, total: 0 });
+
+    totalsRowHtml = `
+      <tr class="total-row">
+        <td colspan="4" style="padding: 12px 10px;">Total</td>
+        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.taxableAmount)}</td>
+        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.cgst)}</td>
+        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.sgst)}</td>
+        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.igst)}</td>
+        <td style="padding: 12px 10px; text-align: right; color: #1e40af; font-size: 16px;">${formatMoney(totals.total)}</td>
+      </tr>
+    `;
+  } else {
+    headers = type === 'purchase'
+      ? ['S.No', 'Date', 'Invoice No', 'Item', 'Rate', 'Qty', 'Total']
+      : ['S.No', 'Date', 'Inv No', 'Item', 'Rate', 'Qty', 'Total'];
+
+    rowsHtml = reportData.map(row => {
+      const lineTotal = Number(row.rate || 0) * Number(row.qty || 0);
+      return `
+        <tr>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.sno ?? ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${formatDateValue(row.date)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.invNo ?? ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.item ?? ''}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.rate)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(row.qty)}</td>
+          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatMoney(lineTotal)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const grandTotal = reportData.reduce((sum, row) => sum + (Number(row.rate || 0) * Number(row.qty || 0)), 0);
+    totalsRowHtml = `
+      <tr class="total-row">
+        <td colspan="6" style="padding: 12px 10px; text-align: right;">Grand Total:</td>
+        <td style="padding: 12px 10px; text-align: right; color: #1e40af; font-size: 16px;">${formatMoney(grandTotal)}</td>
+      </tr>
+    `;
+  }
+
+  if (!rowsHtml) {
+    rowsHtml = `
+      <tr>
+        <td colspan="${headers.length || 1}" style="padding: 16px 10px; text-align: center; color: #6b7280;">
+          No data available for this report.
+        </td>
+      </tr>
+    `;
+    totalsRowHtml = '';
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -437,7 +541,7 @@ export const sendReportEmail = async (data, options, recipientEmails) => {
       <div class="container">
         <div class="header">
           <h1 style="margin: 0; font-size: 24px;">${title}</h1>
-          <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Period: ${fromDate} to ${toDate}</p>
+          <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">${periodText}</p>
         </div>
         <div class="content">
           <p style="margin-top: 0; color: #6b7280;">Hello,</p>
@@ -452,16 +556,11 @@ export const sendReportEmail = async (data, options, recipientEmails) => {
             <tbody>
               ${rowsHtml}
             </tbody>
-            <tfoot>
-              <tr class="total-row">
-                <td colspan="6" style="padding: 12px 10px; text-align: right;">Grand Total:</td>
-                <td style="padding: 12px 10px; text-align: right; color: #1e40af; font-size: 16px;">₹${grandTotal.toLocaleString('en-IN')}</td>
-              </tr>
-            </tfoot>
+            ${totalsRowHtml ? `<tfoot>${totalsRowHtml}</tfoot>` : ''}
           </table>
         </div>
         <div class="footer">
-          <p>© ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
+          <p>Copyright ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -472,7 +571,6 @@ export const sendReportEmail = async (data, options, recipientEmails) => {
   const responses = await Promise.all(emails.map(email => sendEmail(email, subject, html)));
   return responses;
 };
-
 // Generic notification email
 export const sendNotification = async (to, subject, message) => {
   const html = `

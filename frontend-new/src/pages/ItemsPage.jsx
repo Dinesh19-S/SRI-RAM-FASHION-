@@ -303,7 +303,7 @@ const ItemsPage = () => {
                             {isLoading ? (
                                 <tr>
                                     <td colSpan="9" className="py-8 text-center">
-                                        <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                                     </td>
                                 </tr>
                             ) : items.length === 0 ? (

@@ -391,7 +391,7 @@ const SalesPaymentsPage = () => {
                                 <button
                                     key={limit}
                                     onClick={() => handleLimitChange(limit)}
-                                    className={`px-3 py-1 text-sm rounded ${pagination.limit === limit ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`px-3 py-1 text-sm rounded ${pagination.limit === limit ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     {limit}
                                 </button>

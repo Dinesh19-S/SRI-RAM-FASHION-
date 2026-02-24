@@ -133,7 +133,7 @@ const BillTemplateDesigner = ({ formData, setFormData }) => {
             className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
         >
             <div className="flex items-center gap-2">
-                <Icon size={18} className="text-purple-600" />
+                <Icon size={18} className="text-blue-600" />
                 <span className="font-medium text-gray-900">{title}</span>
             </div>
             {expandedSections[section] ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -160,7 +160,7 @@ const BillTemplateDesigner = ({ formData, setFormData }) => {
             <button
                 type="button"
                 onClick={() => onChange(!checked)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-purple-600' : 'bg-gray-300'}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-blue-600' : 'bg-gray-300'}`}
             >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>

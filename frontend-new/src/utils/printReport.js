@@ -13,7 +13,7 @@ export const printReport = (elementId = null) => {
         // Create a new print window
         const printWindow = window.open('', '_blank', 'width=900,height=700');
         if (!printWindow) {
-            // Popup blocked — fall back to window.print()
+            // Popup blocked - fall back to window.print()
             window.print();
             return;
         }
@@ -34,16 +34,18 @@ export const printReport = (elementId = null) => {
 <head>
     <meta charset="UTF-8">
     <title>Print Report</title>
+    ${linkTags}
+    ${styleTags}
     <style>
-        /* A4 Landscape — full-fit */
+        /* A4 Portrait - full-fit */
         @page {
-            size: A4 landscape;
+            size: A4;
             margin: 10mm;
         }
 
         @media print {
             html, body {
-                width: 297mm;
+                width: 210mm;
                 margin: 0 !important;
                 padding: 0 !important;
                 -webkit-print-color-adjust: exact !important;
@@ -57,9 +59,9 @@ export const printReport = (elementId = null) => {
             background: white;
             padding: 10mm;
             margin: 0 auto;
-            width: 297mm;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-            font-size: 11px;
+            width: 210mm;
+            font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 10.5px;
             line-height: 1.4;
             color: #111;
         }
@@ -72,7 +74,7 @@ export const printReport = (elementId = null) => {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            font-size: 10.5px;
+            font-size: 10px;
         }
 
         th, td {
@@ -129,7 +131,7 @@ export const printReport = (elementId = null) => {
             font-size: 13px; font-weight: 600;
             margin: 0 0 6px; color: #374151;
         }
-        p  { font-size: 11px; color: #555; margin: 0 0 3px; }
+        p  { font-size: 10px; color: #555; margin: 0 0 3px; }
 
         .font-bold { font-weight: 700; }
         .font-semibold { font-weight: 600; }

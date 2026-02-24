@@ -188,7 +188,7 @@ const PurchaseReportsPage = () => {
                         Print
                     </button>
 
-                    <button className="btn text-white bg-purple-600 hover:bg-purple-700" onClick={handleEmail}>
+                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={handleEmail}>
                         <Mail size={16} />
                         Mail
                     </button>
