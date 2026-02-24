@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import Bill from '../models/Bill.js';
 import Product from '../models/Product.js';
 import Customer from '../models/Customer.js';
+import { generateBillPDF } from './pdfGenerator.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -49,12 +50,22 @@ const sendEmail = async (to, subject, html, attachments = []) => {
     try {
       const fromEmail = process.env.RESEND_FROM || 'Sri Ram Fashions <onboarding@resend.dev>';
       console.log('📧 Sending via Resend to:', to, 'from:', fromEmail);
-      const { data, error } = await resend.emails.send({
+      const emailPayload = {
         from: fromEmail,
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
-      });
+      };
+
+      // Add attachments for Resend (base64 format)
+      if (attachments && attachments.length > 0) {
+        emailPayload.attachments = attachments.map(att => ({
+          filename: att.filename,
+          content: att.content, // Buffer will be auto-handled by Resend
+        }));
+      }
+
+      const { data, error } = await resend.emails.send(emailPayload);
       if (error) {
         console.error('❌ Resend API error:', JSON.stringify(error));
         // Fall through to SMTP
@@ -91,7 +102,7 @@ const sendEmail = async (to, subject, html, attachments = []) => {
   return { success: false, message: 'Email service not configured. Set RESEND_API_KEY or EMAIL_USER+EMAIL_PASS in .env' };
 };
 
-// Send bill notification to admin/staff
+// Send bill notification to admin/staff with PDF attachment
 export const sendBillNotification = async (bill, recipientEmails) => {
   const subject = `New Bill Created - ${bill.billNumber}`;
 
@@ -120,7 +131,7 @@ export const sendBillNotification = async (bill, recipientEmails) => {
           <p style="margin: 5px 0 0 0; opacity: 0.9;">Sri Ram Fashions</p>
         </div>
         <div class="content">
-          <p>A new bill has been generated in the system:</p>
+          <p>A new bill has been generated in the system. Please find the bill PDF attached.</p>
           
           <div class="bill-details">
             <div class="detail-row">
@@ -161,8 +172,23 @@ export const sendBillNotification = async (bill, recipientEmails) => {
     </html>
   `;
 
+  // Generate PDF attachment
+  let attachments = [];
+  try {
+    console.log('📄 Generating bill PDF for email attachment...');
+    const pdfBuffer = await generateBillPDF(bill);
+    attachments = [{
+      filename: `SRI_RAM_FASHIONS_Invoice_${bill.billNumber || 'bill'}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf',
+    }];
+    console.log('✅ Bill PDF generated successfully');
+  } catch (pdfError) {
+    console.error('⚠️ Failed to generate bill PDF, sending email without attachment:', pdfError.message);
+  }
+
   const emails = Array.isArray(recipientEmails) ? recipientEmails : [recipientEmails];
-  const results = await Promise.all(emails.map(email => sendEmail(email, subject, html)));
+  const results = await Promise.all(emails.map(email => sendEmail(email, subject, html, attachments)));
   return results;
 };
 
