@@ -10,11 +10,11 @@ dotenv.config();
 export const initScheduler = () => {
     console.log('⏰ Initializing Business Automation Scheduler...');
 
-    // 1. Daily Summary Email - Scheduled for 10:00 PM IST (22:00)
-    // IST is UTC+5:30. In many servers (UTC), this would be 16:30 UTC.
+    // 1. Daily Summary Email - Scheduled for 10:00 AM IST
+    // IST is UTC+5:30. In many servers (UTC), this would be 04:30 UTC.
     // However, node-cron usually uses server time. 
-    // We'll schedule it for 22:00 (server time) as a safe default for local/India servers.
-    cron.schedule('0 22 * * *', async () => {
+    // We'll schedule it for 10:00 (server time) as a safe default for local/India servers.
+    cron.schedule('0 10 * * *', async () => {
         console.log('📊 [Scheduler] Triggering Daily Summary Email...');
 
         try {
@@ -42,7 +42,7 @@ export const initScheduler = () => {
         }
     });
 
-    console.log('✅ Scheduler active: Daily Summary set for 22:00');
+    console.log('✅ Scheduler active: Daily Summary set for 10:00');
 };
 
 export default {
