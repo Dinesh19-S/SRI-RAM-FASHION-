@@ -1,26 +1,35 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from './components/layout/MainLayout';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import BillingPage from './pages/BillingPage';
-import InventoryPage from './pages/InventoryPage';
-import SettingsPage from './pages/SettingsPage';
-import PurchaseEntryPage from './pages/PurchaseEntryPage';
 
-import SalesEntryPage from './pages/SalesEntryPage';
+// Lazy-loaded pages for code splitting
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const BillingPage = lazy(() => import('./pages/BillingPage'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const PurchaseEntryPage = lazy(() => import('./pages/PurchaseEntryPage'));
+const SalesEntryPage = lazy(() => import('./pages/SalesEntryPage'));
+const PurchaseReportsPage = lazy(() => import('./pages/PurchaseReportsPage'));
+const SalesReportsPage = lazy(() => import('./pages/SalesReportsPage'));
+const StockReportsPage = lazy(() => import('./pages/StockReportsPage'));
+const AuditorPurchasePage = lazy(() => import('./pages/AuditorPurchasePage'));
+const AuditorSalesPage = lazy(() => import('./pages/AuditorSalesPage'));
+const CustomerEntryPage = lazy(() => import('./pages/CustomerEntryPage'));
+const ItemsPage = lazy(() => import('./pages/ItemsPage'));
+const SupplierEntryPage = lazy(() => import('./pages/SupplierEntryPage'));
 
-import PurchaseReportsPage from './pages/PurchaseReportsPage';
-import SalesReportsPage from './pages/SalesReportsPage';
-import StockReportsPage from './pages/StockReportsPage';
-import AuditorPurchasePage from './pages/AuditorPurchasePage';
-import AuditorSalesPage from './pages/AuditorSalesPage';
-import CustomerEntryPage from './pages/CustomerEntryPage';
-import ItemsPage from './pages/ItemsPage';
-import SupplierEntryPage from './pages/SupplierEntryPage';
+// Loading fallback
+const PageLoader = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '200px' }}>
+    <div style={{ width: '32px', height: '32px', border: '3px solid #e2e8f0', borderTopColor: '#1e40af', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -34,29 +43,17 @@ const PublicRoute = ({ children }) => {
   return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
 };
 
-// Page transition variants
+// Simplified page transition — opacity only, fast
 const pageVariants = {
-  initial: {
-    opacity: 0,
-    x: 100,
-    scale: 0.95,
-  },
-  in: {
-    opacity: 1,
-    x: 0,
-    scale: 1,
-  },
-  out: {
-    opacity: 0,
-    x: -100,
-    scale: 0.95,
-  }
+  initial: { opacity: 0 },
+  in: { opacity: 1 },
+  out: { opacity: 0 },
 };
 
 const pageTransition = {
   type: 'tween',
-  ease: [0.4, 0, 0.2, 1],
-  duration: 0.7
+  ease: 'easeOut',
+  duration: 0.25,
 };
 
 // Animated Page Wrapper
@@ -78,71 +75,71 @@ const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        {/* Public Home Page - Always accessible */}
-        <Route
-          path="/"
-          element={
-            <AnimatedPage>
-              <HomePage />
-            </AnimatedPage>
-          }
-        />
-
-        {/* Public Auth Routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
+    <Suspense fallback={<PageLoader />}>
+      <AnimatePresence>
+        <Routes location={location} key={location.pathname}>
+          {/* Public Home Page - Always accessible */}
+          <Route
+            path="/"
+            element={
               <AnimatedPage>
-                <LoginPage />
+                <HomePage />
               </AnimatedPage>
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <AnimatedPage>
-                <RegisterPage />
-              </AnimatedPage>
-            </PublicRoute>
-          }
-        />
+            }
+          />
 
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<DashboardPage />} />
-          <Route path="purchase/entry" element={<PurchaseEntryPage />} />
+          {/* Public Auth Routes */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <AnimatedPage>
+                  <LoginPage />
+                </AnimatedPage>
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <AnimatedPage>
+                  <RegisterPage />
+                </AnimatedPage>
+              </PublicRoute>
+            }
+          />
 
-          <Route path="sales/entry" element={<SalesEntryPage />} />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
+            <Route path="purchase/entry" element={<Suspense fallback={<PageLoader />}><PurchaseEntryPage /></Suspense>} />
+            <Route path="sales/entry" element={<Suspense fallback={<PageLoader />}><SalesEntryPage /></Suspense>} />
+            <Route path="billing" element={<Suspense fallback={<PageLoader />}><BillingPage /></Suspense>} />
+            <Route path="inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
+            <Route path="reports/purchase" element={<Suspense fallback={<PageLoader />}><PurchaseReportsPage /></Suspense>} />
+            <Route path="reports/sales" element={<Suspense fallback={<PageLoader />}><SalesReportsPage /></Suspense>} />
+            <Route path="reports/stock" element={<Suspense fallback={<PageLoader />}><StockReportsPage /></Suspense>} />
+            <Route path="auditor/purchase" element={<Suspense fallback={<PageLoader />}><AuditorPurchasePage /></Suspense>} />
+            <Route path="auditor/sales" element={<Suspense fallback={<PageLoader />}><AuditorSalesPage /></Suspense>} />
+            <Route path="master/customers" element={<Suspense fallback={<PageLoader />}><CustomerEntryPage /></Suspense>} />
+            <Route path="master/items" element={<Suspense fallback={<PageLoader />}><ItemsPage /></Suspense>} />
+            <Route path="master/suppliers" element={<Suspense fallback={<PageLoader />}><SupplierEntryPage /></Suspense>} />
+            <Route path="settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
+          </Route>
 
-          <Route path="billing" element={<BillingPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="reports/purchase" element={<PurchaseReportsPage />} />
-          <Route path="reports/sales" element={<SalesReportsPage />} />
-          <Route path="reports/stock" element={<StockReportsPage />} />
-          <Route path="auditor/purchase" element={<AuditorPurchasePage />} />
-          <Route path="auditor/sales" element={<AuditorSalesPage />} />
-          <Route path="master/customers" element={<CustomerEntryPage />} />
-          <Route path="master/items" element={<ItemsPage />} />
-          <Route path="master/suppliers" element={<SupplierEntryPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-        </Route>
-
-        {/* Catch all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
+    </Suspense>
   );
 };
 

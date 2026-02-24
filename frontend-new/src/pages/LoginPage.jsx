@@ -32,7 +32,7 @@ const LoginPage = () => {
         e.preventDefault();
         const result = await dispatch(login({ email, password }));
         if (login.fulfilled.match(result)) {
-            navigate('/');
+            navigate('/dashboard');
         }
     };
 
@@ -47,7 +47,7 @@ const LoginPage = () => {
         const otpString = otp.join('');
         const result = await dispatch(loginWithPhone({ phone, otp: otpString }));
         if (loginWithPhone.fulfilled.match(result)) {
-            navigate('/');
+            navigate('/dashboard');
         }
     };
 
@@ -216,7 +216,7 @@ const LoginPage = () => {
                             onSuccess={async (credentialResponse) => {
                                 const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
                                 if (googleLogin.fulfilled.match(result)) {
-                                    navigate('/');
+                                    navigate('/dashboard');
                                 }
                             }}
                             onError={(error) => {

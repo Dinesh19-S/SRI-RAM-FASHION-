@@ -106,27 +106,7 @@ const MainLayout = () => {
         [notifications]
     );
 
-    // Page transition animation variants
-    const pageVariants = {
-        initial: {
-            opacity: 0,
-            x: 20,
-        },
-        in: {
-            opacity: 1,
-            x: 0,
-        },
-        out: {
-            opacity: 0,
-            x: -20,
-        }
-    };
-
-    const pageTransition = {
-        type: 'tween',
-        ease: 'anticipate',
-        duration: 0.7
-    };
+    // Page transition animation variants are now defined outside the component for performance
 
     const searchSuggestions = [
         { label: 'Dashboard', path: '/dashboard', keywords: ['dashboard', 'home', 'overview'] },
