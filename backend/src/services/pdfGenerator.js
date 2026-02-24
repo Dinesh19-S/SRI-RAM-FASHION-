@@ -50,7 +50,7 @@ const formatDate = (date) => {
 
 /**
  * Generate a bill PDF buffer using PDFKit.
- * The layout replicates the frontend BillTemplate design.
+ * Layout precisely matches the frontend BillTemplate.jsx + BillTemplate.css.
  * @param {Object} bill - The bill document from MongoDB
  * @returns {Promise<Buffer>} - PDF file as a buffer
  */
@@ -58,7 +58,7 @@ export const generateBillPDF = async (bill) => {
     // Load settings
     let settings = await Settings.findOne();
     if (!settings) {
-        settings = new Settings(); // use defaults
+        settings = new Settings();
     }
 
     // Company details
@@ -73,12 +73,13 @@ export const generateBillPDF = async (bill) => {
     const companyMob = settings?.company?.phone2 || '8248893759';
 
     // Bank details
-    const bankName = settings?.bank?.bankName || 'South Indian Bank';
+    const bankName = settings?.bank?.bankName || 'SOUTH INDIAN BANK';
     const bankAccount = settings?.bank?.accountNumber || '0338073000002328';
     const bankBranch = settings?.bank?.branchName || 'TIRUPUR';
     const bankIfsc = settings?.bank?.ifscCode || 'SIBL0000338';
+    const bankAccName = settings?.bank?.accountHolderName || 'SRI RAM FASHIONS';
 
-    // Tax calculations
+    // Tax calculations (match BillTemplate.jsx exactly)
     const productAmt = bill.subtotal || 0;
     const discount = bill.discountAmount || 0;
     const taxableAmt = productAmt - discount;
@@ -94,19 +95,18 @@ export const generateBillPDF = async (bill) => {
     const numBundles = bill.numOfBundles || 1;
     const items = bill.items || [];
 
-    // Page dimensions (A4 in points: 595.28 x 841.89)
-    const pageWidth = 595.28;
-    const pageHeight = 841.89;
-    const margin = 28; // ~10mm
-    const contentWidth = pageWidth - margin * 2;
+    // ===== Page Setup =====
+    // A4: 595.28 x 841.89 points. CSS uses 8mm margins on @page.
+    const pageW = 595.28;
+    const pageH = 841.89;
+    const M = 22; // ~8mm margin
+    const W = pageW - M * 2; // content width
 
-    // Create PDF
     const doc = new PDFDocument({
         size: 'A4',
-        margins: { top: margin, bottom: margin, left: margin, right: margin }
+        margins: { top: M, bottom: M, left: M, right: M }
     });
 
-    // Collect chunks into a buffer
     const chunks = [];
     doc.on('data', (chunk) => chunks.push(chunk));
     const pdfPromise = new Promise((resolve, reject) => {
@@ -114,194 +114,253 @@ export const generateBillPDF = async (bill) => {
         doc.on('error', reject);
     });
 
-    // Colors
-    const darkBlue = '#1a3d7c';
-    const black = '#000000';
-    const red = '#cc0000';
-    const gray = '#555555';
-    const lightGray = '#333333';
+    // ===== Colors (exact from CSS) =====
+    const BLUE = '#1a3d7c';     // company name, title, bank info, signature
+    const BLACK = '#000000';    // default text
+    const RED = '#cc0000';      // #c00 GST highlight, bank title
+    const GRAY_TEXT = '#222222'; // address text
+    const GRAY_BORDER = '#333333'; // border color (2px solid #333)
+    const GRAY_LIGHT = '#555555'; // consignee copy italic
+    const GRAY_TERMS = '#333333'; // terms text
 
-    // Draw outer border
-    const borderX = margin - 4;
-    const borderY = margin - 4;
-    const borderW = contentWidth + 8;
-    const borderH = pageHeight - margin * 2 + 8;
-    doc.lineWidth(2).rect(borderX, borderY, borderW, borderH).stroke(lightGray);
+    // ===== Outer border (2px solid #333) =====
+    let y = M;
+    doc.lineWidth(2).rect(M, M, W, pageH - M * 2).stroke(GRAY_BORDER);
 
-    let y = margin;
-
-    // ===== HELPER: draw horizontal line =====
-    const drawLine = (yPos, width = 1.5) => {
-        doc.lineWidth(width)
-            .moveTo(margin, yPos)
-            .lineTo(margin + contentWidth, yPos)
-            .stroke(lightGray);
+    // ===== Helper functions =====
+    const hLine = (yPos, lw = 1.5) => {
+        doc.lineWidth(lw).moveTo(M, yPos).lineTo(M + W, yPos).stroke(GRAY_BORDER);
+    };
+    const vLine = (x, y1, y2, lw = 1.5) => {
+        doc.lineWidth(lw).moveTo(x, y1).lineTo(x, y2).stroke(GRAY_BORDER);
     };
 
-    // ===== ROW 1: Company Name + GSTIN =====
-    doc.font('Helvetica-Bold').fontSize(18).fillColor(darkBlue);
-    doc.text(companyName, margin + 8, y + 4, { width: contentWidth * 0.65 });
+    // Padding constants (from CSS)
+    const PX = 16; // horizontal padding
+    const PY = 6;  // vertical padding
 
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(black);
-    doc.text(`GSTIN: ${companyGstin}`, margin + contentWidth * 0.55, y + 8, {
-        width: contentWidth * 0.45 - 8,
-        align: 'right'
+    // =============================================
+    // ROW 1: Company Name + GSTIN
+    // padding: 12px 16px 8px 16px; border-bottom: 1.5px solid #333;
+    // =============================================
+    const row1Top = y;
+    const row1PadTop = 12;
+    const row1PadBot = 8;
+
+    // Company name: 24px, weight 900, #1a3d7c, uppercase, letter-spacing 2px
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(BLUE);
+    doc.text(companyName.toUpperCase(), M + PX, row1Top + row1PadTop, {
+        width: W * 0.6,
+        characterSpacing: 1.5
     });
 
-    y += 32;
-    drawLine(y);
+    // GSTIN: 15px, weight 800, #000, letter-spacing 0.5px
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(BLACK);
+    doc.text(`GSTIN: ${companyGstin}`, M + W * 0.45, row1Top + row1PadTop + 4, {
+        width: W * 0.55 - PX,
+        align: 'right',
+        characterSpacing: 0.3
+    });
 
-    // ===== ROW 2: Address (left) + Invoice Details (right) =====
-    const row2Y = y + 4;
-    const addressWidth = contentWidth * 0.55;
-    const detailsWidth = contentWidth * 0.45;
+    const row1H = row1PadTop + 24 + row1PadBot; // ~44
+    y = row1Top + row1H;
+    hLine(y);
 
-    // Vertical divider
-    doc.lineWidth(1.5)
-        .moveTo(margin + addressWidth, y)
-        .lineTo(margin + addressWidth, y + 68)
-        .stroke(lightGray);
+    // =============================================
+    // ROW 2: Address (left, flex:1) + Invoice Details (right, 280px)
+    // border-bottom: 1.5px solid #333
+    // =============================================
+    const row2Top = y;
+    // 280px in CSS at 210mm (793.7px) → proportional PDFKit ratio
+    const invoiceDetailsW = 200; // ~280px scaled to A4 points
+    const addressW = W - invoiceDetailsW;
 
-    // Address
-    doc.font('Helvetica').fontSize(8).fillColor('#222');
-    doc.text(companyAddress1, margin + 8, row2Y + 2, { width: addressWidth - 16 });
-    doc.text(companyAddress2, margin + 8, row2Y + 14, { width: addressWidth - 16 });
-    doc.text(`State: ${companyState} (Code ${companyStateCode})`, margin + 8, row2Y + 26, { width: addressWidth - 16 });
-    doc.text(`Email: ${companyEmail}`, margin + 8, row2Y + 38, { width: addressWidth - 16 });
-    doc.text(`Mob: ${companyPhone}`, margin + 8, row2Y + 50, { width: addressWidth - 16 });
+    // Vertical divider between address and details
+    const row2H = 72;
+    vLine(M + addressW, row2Top, row2Top + row2H);
 
-    // Invoice details
-    const detailX = margin + addressWidth + 8;
-    const detailLabelW = 90;
-    const drawDetailRow = (label, value, rowY) => {
-        doc.font('Helvetica-Bold').fontSize(8.5).fillColor(black);
-        doc.text(label, detailX, rowY, { width: detailLabelW });
-        doc.text(':', detailX + detailLabelW, rowY, { width: 10 });
-        doc.font('Helvetica').fillColor(black);
-        doc.text(value || '', detailX + detailLabelW + 14, rowY, { width: detailsWidth - detailLabelW - 30 });
+    // Address: font-size 10px, line-height 1.55, color #222, padding 6px 16px
+    doc.font('Helvetica').fontSize(8).fillColor(GRAY_TEXT);
+    const addrX = M + PX;
+    let addrY = row2Top + PY + 2;
+    const addrLineH = 11;
+    doc.text(`OFF : ${companyAddress1}`, addrX, addrY, { width: addressW - PX * 2 });
+    addrY += addrLineH;
+    doc.text(`OFF : ${companyAddress2}`, addrX, addrY, { width: addressW - PX * 2 });
+    addrY += addrLineH;
+    doc.text(`State: ${companyState} (Code ${companyStateCode})`, addrX, addrY, { width: addressW - PX * 2 });
+    addrY += addrLineH;
+    doc.text(`Email: ${companyEmail}`, addrX, addrY, { width: addressW - PX * 2 });
+    addrY += addrLineH;
+    doc.text(`Mob: ${companyPhone}`, addrX, addrY, { width: addressW - PX * 2 });
+
+    // Invoice details: padding 6px 16px, label min-width 105px → ~75pt, font 11px
+    const detX = M + addressW + PX;
+    const detLabelW = 80;
+    const detSepW = 12;
+    const detValW = invoiceDetailsW - PX * 2 - detLabelW - detSepW;
+    let detY = row2Top + PY + 4;
+    const detRowH = 15;
+
+    const drawDetailRow = (label, value) => {
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(BLACK);
+        doc.text(label, detX, detY, { width: detLabelW });
+        doc.text(':', detX + detLabelW, detY, { width: detSepW, align: 'center' });
+        doc.font('Helvetica').fontSize(9).fillColor(BLACK);
+        doc.text(value || '', detX + detLabelW + detSepW, detY, { width: detValW });
+        detY += detRowH;
     };
 
-    drawDetailRow('Invoice Number', bill.billNumber || '', row2Y + 4);
-    drawDetailRow('Invoice Date', formatDate(bill.date || bill.createdAt), row2Y + 18);
-    drawDetailRow('From', bill.fromText || '', row2Y + 32);
-    drawDetailRow('To', bill.toText || '', row2Y + 46);
+    drawDetailRow('Invoice Number', bill.billNumber || '');
+    drawDetailRow('Invoice Date', formatDate(bill.date || bill.createdAt));
+    drawDetailRow('From', bill.fromText || '');
+    drawDetailRow('To', bill.toText || '');
 
-    y += 68;
-    drawLine(y);
+    y = row2Top + row2H;
+    hLine(y);
 
-    // ===== ROW 3: TAX INVOICE title =====
-    doc.font('Helvetica-Bold').fontSize(13).fillColor(darkBlue);
-    doc.text('TAX INVOICE', margin, y + 4, { width: contentWidth, align: 'center', underline: true });
-    y += 22;
-    drawLine(y);
+    // =============================================
+    // ROW 3: TAX INVOICE Title Bar
+    // text-align center, padding 5px 0, font 17px weight 900, #1a3d7c, underline, uppercase
+    // =============================================
+    const row3Top = y;
+    const row3H = 24;
+    doc.font('Helvetica-Bold').fontSize(14).fillColor(BLUE);
+    doc.text('TAX INVOICE', M, row3Top + 5, {
+        width: W,
+        align: 'center',
+        underline: true,
+        characterSpacing: 2
+    });
+    y = row3Top + row3H;
+    hLine(y);
 
-    // ===== ROW 4: Buyer / Consignee Details =====
-    const row4Y = y + 4;
-    const buyerLeftW = contentWidth * 0.55;
-    const buyerRightW = contentWidth * 0.45;
+    // =============================================
+    // ROW 4: Buyer / Consignee Section
+    // Left (flex:1, padding 6px 16px) | Right (280px, padding 6px 16px)
+    // =============================================
+    const row4Top = y;
+    const buyerRightW = invoiceDetailsW; // 280px same as invoice details
+    const buyerLeftW = W - buyerRightW;
+    const row4H = 58;
 
-    // Vertical divider
-    doc.lineWidth(1.5)
-        .moveTo(margin + buyerLeftW, y)
-        .lineTo(margin + buyerLeftW, y + 55)
-        .stroke(lightGray);
+    vLine(M + buyerLeftW, row4Top, row4Top + row4H);
 
-    // Left - Buyer info
-    doc.font('Helvetica-Oblique').fontSize(7).fillColor(gray);
-    doc.text('Consignee Copy', margin + 8, row4Y);
+    // Left - Consignee Copy (italic 9px #555)
+    doc.font('Helvetica-Oblique').fontSize(7).fillColor(GRAY_LIGHT);
+    doc.text('Consignee Copy', M + PX, row4Top + PY);
 
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(black);
-    doc.text('BUYER:', margin + 8, row4Y + 12, { continued: true, width: 60 });
-    doc.font('Helvetica-Bold').fillColor(black);
-    doc.text(`  ${(bill.customer?.name || '').toUpperCase()}`, { width: buyerLeftW - 80 });
+    // Buyer field rows: font 11.5px, label weight 800 min-width 85px
+    const bFieldX = M + PX;
+    const bLabelW = 70;
+    const bFieldFontSize = 9;
+    let bFieldY = row4Top + PY + 12;
+    const bFieldRowH = 14;
 
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(black);
-    doc.text('STATE:', margin + 8, row4Y + 26, { continued: true, width: 60 });
-    doc.font('Helvetica-Bold').fillColor(black);
-    doc.text(`  ${bill.customer?.state || 'Tamilnadu'}`, { width: buyerLeftW - 80 });
+    const drawBuyerField = (label, value) => {
+        doc.font('Helvetica-Bold').fontSize(bFieldFontSize).fillColor(BLACK);
+        doc.text(label, bFieldX, bFieldY, { width: bLabelW });
+        doc.font('Helvetica-Bold').fontSize(bFieldFontSize).fillColor(BLACK);
+        doc.text((value || '').toUpperCase(), bFieldX + bLabelW + 8, bFieldY, { width: buyerLeftW - PX * 2 - bLabelW - 8 });
+        bFieldY += bFieldRowH;
+    };
 
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(black);
-    doc.text('TRANSPORT:', margin + 8, row4Y + 40, { continued: true, width: 75 });
-    doc.font('Helvetica').fillColor(black);
-    doc.text(`  ${bill.transport || ''}`, { width: buyerLeftW - 95 });
+    drawBuyerField('BUYER:', bill.customer?.name || '');
+    drawBuyerField('STATE:', bill.customer?.state || 'Tamilnadu');
 
-    // Right - MOB, GSTIN, CODE
-    const bDetailX = margin + buyerLeftW + 8;
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(black);
-    doc.text('MOB:', bDetailX, row4Y + 8, { width: 50 });
-    doc.font('Helvetica').text(bill.customer?.phone || companyMob, bDetailX + 50, row4Y + 8, { width: buyerRightW - 60 });
+    // Transport - value is normal weight
+    doc.font('Helvetica-Bold').fontSize(bFieldFontSize).fillColor(BLACK);
+    doc.text('TRANSPORT:', bFieldX, bFieldY, { width: bLabelW });
+    doc.font('Helvetica').fontSize(bFieldFontSize).fillColor(BLACK);
+    doc.text((bill.transport || '').toUpperCase(), bFieldX + bLabelW + 8, bFieldY, { width: buyerLeftW - PX * 2 - bLabelW - 8 });
 
-    doc.font('Helvetica-Bold').text('GSTIN:', bDetailX, row4Y + 22, { width: 50 });
-    doc.font('Helvetica').text(bill.customer?.gstin || '', bDetailX + 50, row4Y + 22, { width: buyerRightW - 60 });
+    // Right side - MOB, GSTIN, CODE (same layout as invoice details)
+    const bRightX = M + buyerLeftW + PX;
+    const bRLabelW = 50;
+    let bRightY = row4Top + PY + 8;
+    const bRRowH = 15;
 
-    doc.font('Helvetica-Bold').text('CODE:', bDetailX, row4Y + 36, { width: 50 });
-    doc.font('Helvetica').text(bill.customer?.stateCode || '33', bDetailX + 50, row4Y + 36, { width: buyerRightW - 60 });
+    const drawBuyerRight = (label, value) => {
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(BLACK);
+        doc.text(label, bRightX, bRightY, { width: bRLabelW });
+        doc.font('Helvetica').fontSize(9).fillColor(BLACK);
+        doc.text(value || '', bRightX + bRLabelW, bRightY, { width: buyerRightW - PX * 2 - bRLabelW });
+        bRightY += bRRowH;
+    };
 
-    y += 55;
-    drawLine(y);
+    drawBuyerRight('MOB:', bill.customer?.phone || companyMob);
+    drawBuyerRight('GSTIN:', bill.customer?.gstin || '');
+    drawBuyerRight('CODE:', bill.customer?.stateCode || '33');
 
-    // ===== ROW 5: Items Table =====
-    const colWidths = [
-        contentWidth * 0.05,   // S.No
-        contentWidth * 0.20,   // Product
-        contentWidth * 0.09,   // HSN
-        contentWidth * 0.10,   // Sizes
-        contentWidth * 0.10,   // Rate/Piece
-        contentWidth * 0.08,   // Pcs in Pack
-        contentWidth * 0.11,   // Rate/Pack
-        contentWidth * 0.10,   // No of Packs
-        contentWidth * 0.12    // Amount (adjusted to fill)
-    ];
-    // Fix: ensure last col fills remainder
-    colWidths[8] = contentWidth - colWidths.slice(0, 8).reduce((a, b) => a + b, 0);
+    y = row4Top + row4H;
+    hLine(y);
+
+    // =============================================
+    // ROW 5: Items Table
+    // Column widths from CSS: 5%, 18%, 9%, 10%, 10%, 8%, 11%, 9%, 12%
+    // th: padding 5px 4px, font 10px weight 800, border 1px #333
+    // td: padding 4px 5px, font 11px, center, border-left/right 1px #333
+    // empty row: height 22px
+    // =============================================
+    const colPct = [0.05, 0.18, 0.09, 0.10, 0.10, 0.08, 0.11, 0.09, 0.12];
+    // Ensure they total 0.92 → last column gets remainder
+    const colSum = colPct.slice(0, 8).reduce((a, b) => a + b, 0);
+    colPct[8] = 1 - colSum;
+    const colW = colPct.map(p => W * p);
 
     const headers = ['S.No', 'Product', 'HSN\nCode', 'Sizes/\nPieces', 'Rate Per\nPiece', 'Pcs in\nPack', 'Rate Per\nPack', 'No Of\nPacks', 'Amount\nRs.'];
 
     // Table header
-    let tableY = y;
-    const headerH = 24;
-    let colX = margin;
+    let tY = y;
+    const thH = 26; // header height
+    let tX = M;
 
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(black);
-    for (let i = 0; i < headers.length; i++) {
-        // Draw cell border
+    // Draw header cells
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(BLACK);
+    for (let i = 0; i < 9; i++) {
+        // Cell border (1px solid #333, no top border since we have hLine)
         doc.lineWidth(1)
-            .rect(colX, tableY, colWidths[i], headerH)
-            .stroke(lightGray);
+            .rect(tX, tY, colW[i], thH)
+            .stroke(GRAY_BORDER);
 
-        // Draw text centered
-        doc.text(headers[i], colX + 2, tableY + 3, {
-            width: colWidths[i] - 4,
+        doc.text(headers[i], tX + 3, tY + 4, {
+            width: colW[i] - 6,
             align: 'center',
             lineGap: 0
         });
-        colX += colWidths[i];
+        tX += colW[i];
     }
+    tY += thH;
 
-    tableY += headerH;
-
-    // Table rows
-    const rowH = 18;
+    // Data rows
+    const dataRowH = 18;  // normal row ~px mapping
+    const emptyRowH = 18; // empty rows: 22px CSS → ~18pt
     const minRows = 10;
     const totalRows = Math.max(items.length, minRows);
 
-    doc.font('Helvetica').fontSize(8).fillColor(black);
-
     for (let r = 0; r < totalRows; r++) {
-        colX = margin;
+        tX = M;
         const item = items[r];
+        const rH = item ? dataRowH : emptyRowH;
 
-        for (let c = 0; c < colWidths.length; c++) {
-            // Draw cell side borders
+        for (let c = 0; c < 9; c++) {
+            // Left & right borders
             doc.lineWidth(1)
-                .moveTo(colX, tableY)
-                .lineTo(colX, tableY + rowH)
-                .stroke(lightGray);
+                .moveTo(tX, tY)
+                .lineTo(tX, tY + rH)
+                .stroke(GRAY_BORDER);
+            if (c === 8) {
+                doc.moveTo(tX + colW[c], tY)
+                    .lineTo(tX + colW[c], tY + rH)
+                    .stroke(GRAY_BORDER);
+            }
 
-            if (c === colWidths.length - 1) {
-                doc.moveTo(colX + colWidths[c], tableY)
-                    .lineTo(colX + colWidths[c], tableY + rowH)
-                    .stroke(lightGray);
+            // Bottom border only on last row
+            if (r === totalRows - 1) {
+                doc.lineWidth(1)
+                    .moveTo(tX, tY + rH)
+                    .lineTo(tX + colW[c], tY + rH)
+                    .stroke(GRAY_BORDER);
             }
 
             if (item) {
@@ -310,10 +369,11 @@ export const generateBillPDF = async (bill) => {
                 const amount = item.total || (ratePerPack * noOfPacks);
 
                 let cellText = '';
-                const align = c === 1 ? 'left' : 'center';
+                let align = 'center';
+
                 switch (c) {
                     case 0: cellText = `${r + 1}`; break;
-                    case 1: cellText = item.productName || item.name || ''; break;
+                    case 1: cellText = item.productName || item.name || ''; align = 'left'; break;
                     case 2: cellText = item.hsnCode || item.hsn || ''; break;
                     case 3: cellText = item.sizesOrPieces || ''; break;
                     case 4: cellText = item.ratePerPiece ? `${item.ratePerPiece}` : ''; break;
@@ -323,148 +383,197 @@ export const generateBillPDF = async (bill) => {
                     case 8: cellText = `${amount}`; break;
                 }
 
-                doc.text(cellText, colX + 2, tableY + 4, {
-                    width: colWidths[c] - 4,
-                    align,
-                    lineGap: 0
-                });
+                if (cellText) {
+                    doc.font('Helvetica').fontSize(8.5).fillColor(BLACK);
+                    const textPad = (c === 1) ? 7 : 3; // product column has extra left padding
+                    doc.text(cellText, tX + textPad, tY + 4, {
+                        width: colW[c] - textPad - 3,
+                        align,
+                        lineGap: 0
+                    });
+                }
             }
 
-            colX += colWidths[c];
+            tX += colW[c];
         }
-
-        tableY += rowH;
+        tY += rH;
     }
 
-    // Bottom border of table
-    drawLine(tableY, 2);
-    y = tableY;
+    y = tY;
+    hLine(y, 2); // border-top: 2px solid #333 on summary
 
-    // ===== ROW 6: Summary Section (3 columns) =====
-    const summaryH = 100;
-    const sumLeftW = contentWidth * 0.38;
-    const sumMidW = contentWidth * 0.25;
-    const sumRightW = contentWidth - sumLeftW - sumMidW;
+    // =============================================
+    // ROW 6: Summary (3-column)
+    // Left flex:1.2 | Middle flex:0.8 | Right flex:1
+    // min-height: 110px → ~82pt
+    // =============================================
+    const sumTotalFlex = 1.2 + 0.8 + 1.0;
+    const sumLeftW = W * (1.2 / sumTotalFlex);
+    const sumMidW = W * (0.8 / sumTotalFlex);
+    const sumRightW = W * (1.0 / sumTotalFlex);
+    const sumH = 90; // ~110px
 
     // Vertical dividers
-    doc.lineWidth(1.5)
-        .moveTo(margin + sumLeftW, y)
-        .lineTo(margin + sumLeftW, y + summaryH)
-        .stroke(lightGray);
-    doc.lineWidth(1.5)
-        .moveTo(margin + sumLeftW + sumMidW, y)
-        .lineTo(margin + sumLeftW + sumMidW, y + summaryH)
-        .stroke(lightGray);
+    vLine(M + sumLeftW, y, y + sumH);
+    vLine(M + sumLeftW + sumMidW, y, y + sumH);
 
-    // Left column
-    const sumLX = margin + 8;
-    const sumLY = y + 8;
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(black);
-    doc.text('Total Packs', sumLX, sumLY, { width: 70 });
-    doc.text(':', sumLX + 70, sumLY, { width: 10 });
-    doc.font('Helvetica-Bold').text(`${totalPacks}`, sumLX + 82, sumLY, { width: sumLeftW - 100 });
+    // ----- Left column: Total Packs / Bill Amount / In Words -----
+    // padding: 10px 14px, gap 4px, font 11px, label weight 800 min-width 85px
+    const sLX = M + 14;
+    let sLY = y + 10;
+    const sLabelW = 68;
+    const sSepW = 12;
+    const sRowGap = 16;
 
-    doc.font('Helvetica-Bold').text('Bill Amount', sumLX, sumLY + 16, { width: 70 });
-    doc.text(':', sumLX + 70, sumLY + 16, { width: 10 });
-    doc.font('Helvetica-Bold').text(`${totalAmt}`, sumLX + 82, sumLY + 16, { width: sumLeftW - 100 });
-
-    doc.font('Helvetica-Bold').text('In words', sumLX, sumLY + 32, { width: 70 });
-    doc.text(':', sumLX + 70, sumLY + 32, { width: 10 });
-    doc.font('Helvetica').fontSize(7.5);
-    doc.text(`Rupees ${numberToWords(totalAmt)} Only`, sumLX + 82, sumLY + 32, { width: sumLeftW - 100 });
-
-    // Middle column - Bundles + GST
-    const sumMX = margin + sumLeftW + 8;
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(black);
-    doc.text('NUM OF BUNDLES :', sumMX, y + 10, { width: sumMidW - 40 });
-    doc.fontSize(11).text(`${numBundles}`, sumMX + sumMidW - 40, y + 8, { width: 30, align: 'right' });
-
-    // GST Box
-    const gstBoxY = y + 55;
-    const gstBoxW = sumMidW - 16;
-    doc.lineWidth(2).rect(sumMX, gstBoxY, gstBoxW, 28).stroke(red);
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(red);
-    doc.text('TOTAL GST', sumMX + 4, gstBoxY + 8, { width: gstBoxW * 0.6 });
-    doc.fontSize(12).text(`${totalGst.toFixed(0)}`, sumMX + gstBoxW * 0.5, gstBoxY + 6, { width: gstBoxW * 0.45, align: 'right' });
-
-    // Right column - Tax breakdown
-    const sumRX = margin + sumLeftW + sumMidW + 8;
-    const taxRowH = 12;
-    let taxY = y + 6;
-
-    const drawTaxRow = (label, value, isBold, isRed, isTotal) => {
-        const font = isBold ? 'Helvetica-Bold' : 'Helvetica';
-        const color = isRed ? red : black;
-        doc.font(font).fontSize(isTotal ? 9 : 8).fillColor(color);
-        doc.text(label, sumRX, taxY, { width: sumRightW * 0.55 });
-        doc.text(value, sumRX + sumRightW * 0.55, taxY, { width: sumRightW * 0.4 - 16, align: 'right' });
-
-        if (isTotal) {
-            doc.lineWidth(1.5)
-                .moveTo(sumRX - 4, taxY - 2)
-                .lineTo(sumRX + sumRightW - 16, taxY - 2)
-                .stroke(black);
+    const drawSummaryField = (label, value, isWords = false) => {
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(BLACK);
+        doc.text(label, sLX, sLY, { width: sLabelW });
+        doc.text(':', sLX + sLabelW, sLY, { width: sSepW, align: 'center' });
+        if (isWords) {
+            doc.font('Helvetica-Bold').fontSize(8).fillColor(BLACK);
+            doc.text(value, sLX + sLabelW + sSepW + 2, sLY, { width: sumLeftW - 14 * 2 - sLabelW - sSepW - 4 });
+        } else {
+            doc.font('Helvetica-Bold').fontSize(9).fillColor(BLACK);
+            doc.text(value, sLX + sLabelW + sSepW + 2, sLY, { width: sumLeftW - 14 * 2 - sLabelW - sSepW - 4 });
         }
-        taxY += taxRowH;
+        sLY += sRowGap;
     };
 
-    drawTaxRow('Product Amt', productAmt.toFixed(2), false, false, false);
-    drawTaxRow('Discount', discount.toFixed(0), false, false, false);
-    drawTaxRow('Taxable Amt', taxableAmt.toFixed(2), false, false, false);
-    drawTaxRow(`CGST @ ${cgstRate}%`, cgstAmt.toFixed(2), true, true, false);
-    drawTaxRow(`SGST @ ${sgstRate}%`, sgstAmt.toFixed(2), true, true, false);
-    drawTaxRow('Round Off', roundOff.toFixed(2), false, false, false);
-    taxY += 2;
-    drawTaxRow('Total Amt', `${totalAmt}`, true, false, true);
+    drawSummaryField('Total Packs', `${totalPacks}`);
+    drawSummaryField('Bill Amount', `${totalAmt}`);
+    drawSummaryField('In words', `Rupees ${numberToWords(totalAmt)} Only`, true);
 
-    y += summaryH;
-    drawLine(y, 1.5);
+    // ----- Middle column: Bundles + GST Box -----
+    // padding: 10px 12px, bundles label 10.5px weight 800, value 14px weight 800
+    const sMX = M + sumLeftW + 12;
+    const sMW = sumMidW - 24;
 
-    // ===== ROW 7: Footer - Terms, Bank, Certification =====
-    const footerLeftW = contentWidth * 0.55;
+    // NUM OF BUNDLES
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(BLACK);
+    doc.text('NUM OF BUNDLES :', sMX, y + 10, { width: sMW * 0.7 });
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(BLACK);
+    doc.text(`${numBundles}`, sMX + sMW * 0.7, y + 8, { width: sMW * 0.3, align: 'right' });
+
+    // GST Box: border 2px solid #c00, padding 6px 10px
+    const gstBoxY = y + sumH - 38;
+    const gstBoxH = 26;
+    doc.lineWidth(2).rect(sMX, gstBoxY, sMW, gstBoxH).stroke(RED);
+    doc.font('Helvetica-Bold').fontSize(9.5).fillColor(RED);
+    doc.text('TOTAL GST', sMX + 8, gstBoxY + 7, { width: sMW * 0.5 });
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(RED);
+    doc.text(`${totalGst.toFixed(0)}`, sMX + sMW * 0.5, gstBoxY + 5, { width: sMW * 0.45, align: 'right' });
+
+    // ----- Right column: Tax Breakdown -----
+    // padding: 6px 14px, font 11px, gap 1px
+    const sRX = M + sumLeftW + sumMidW + 14;
+    const sRW = sumRightW - 28;
+    const taxFontSize = 9;
+    const taxRowH = 11;
+    let txY = y + 6;
+
+    const drawTaxRow = (label, value, isHighlight = false, isTotal = false) => {
+        if (isTotal) {
+            // border-top: 1.5px solid #000, margin-top 3px, padding-top 4px
+            txY += 3;
+            doc.lineWidth(1.5)
+                .moveTo(sRX - 4, txY)
+                .lineTo(sRX + sRW + 4, txY)
+                .stroke(BLACK);
+            txY += 4;
+        }
+
+        const color = isHighlight ? RED : BLACK;
+        const fontSize = isTotal ? 10 : taxFontSize;
+        const fontWeight = (isHighlight || isTotal) ? 'Helvetica-Bold' : 'Helvetica';
+
+        doc.font(fontWeight).fontSize(fontSize).fillColor(color);
+        doc.text(label, sRX, txY, { width: sRW * 0.55 });
+        doc.font('Helvetica-Bold').fontSize(fontSize).fillColor(color);
+        doc.text(value, sRX + sRW * 0.55, txY, { width: sRW * 0.45, align: 'right' });
+        txY += taxRowH;
+    };
+
+    drawTaxRow('Product Amt', productAmt.toFixed(2));
+    drawTaxRow('Discount', discount.toFixed(0));
+    drawTaxRow('Taxable Amt', taxableAmt.toFixed(2));
+    drawTaxRow(`CGST @ ${cgstRate}%`, cgstAmt.toFixed(2), true);
+    drawTaxRow(`SGST @ ${sgstRate}%`, sgstAmt.toFixed(2), true);
+    drawTaxRow('Round Off', roundOff.toFixed(2));
+    drawTaxRow('Total Amt', `${totalAmt}`, false, true);
+
+    y += sumH;
+    hLine(y, 1.5); // border-bottom: 1.5px solid #333
+
+    // =============================================
+    // ROW 7: Footer (Terms + Bank | Certification)
+    // Left flex:1.2 | Right flex:1
+    // min-height: 100px → ~75pt
+    // =============================================
+    const footFlex = 1.2 + 1.0;
+    const footLeftW = W * (1.2 / footFlex);
+    const footRightW = W * (1.0 / footFlex);
+    const footH = 95;
 
     // Vertical divider
-    doc.lineWidth(1.5)
-        .moveTo(margin + footerLeftW, y)
-        .lineTo(margin + footerLeftW, y + 90)
-        .stroke(lightGray);
+    vLine(M + footLeftW, y, y + footH);
 
-    // Terms
-    const footLX = margin + 8;
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(darkBlue);
-    doc.text('Terms And Conditions', footLX, y + 6, { underline: true });
+    // ----- Left: Terms + Bank -----
+    // padding: 8px 14px, gap 6px
+    const fLX = M + 14;
 
-    doc.font('Helvetica').fontSize(6.5).fillColor(lightGray);
-    doc.text(`Subject to Tirupur Jurisdiction.\nPayment by Cheque/DD only, payable at Tirupur.\nCheques made in favour of ${companyName} to be sent to Tirunelveli Address\nAll disputes are subjected to Tirunelveli Jurisdiction`, footLX, y + 18, { width: footerLeftW - 24, lineGap: 1 });
+    // Terms title: weight 800, 11px, #1a3d7c, underline
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(BLUE);
+    doc.text('Terms And Conditions', fLX, y + 8, { underline: true });
 
-    // Bank box
-    const bankBoxY = y + 55;
-    doc.lineWidth(1.5).rect(footLX, bankBoxY, footerLeftW - 24, 30).stroke('#d4a017');
-    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(red);
-    doc.text('Bank Details:', footLX + 4, bankBoxY + 4, { underline: true });
-    doc.font('Helvetica-Bold').fontSize(7).fillColor(darkBlue);
-    doc.text(`${bankName}, Account: ${bankAccount}`, footLX + 4, bankBoxY + 14, { width: footerLeftW - 32 });
-    doc.text(`Branch: ${bankBranch}, IFSC: ${bankIfsc}`, footLX + 4, bankBoxY + 22, { width: footerLeftW - 32 });
+    // Terms text: 8.5px, line-height 1.5, #333
+    doc.font('Helvetica').fontSize(7).fillColor(GRAY_TERMS);
+    doc.text(
+        `Subject to Tirupur Jurisdiction.\nPayment by Cheque/DD only, payable at Tirupur.\nCheques made in favour of ${companyName} to be sent to Tirunelveli Address\nAll disputes are subjected to Tirunelveli Jurisdiction`,
+        fLX, y + 20,
+        { width: footLeftW - 28, lineGap: 1.5 }
+    );
 
-    // Right - Certification + Signature
-    const footRX = margin + footerLeftW + 8;
-    const footRightW = contentWidth - footerLeftW - 16;
+    // Bank box: background #fffbe6, border 1.5px solid #d4a017, padding 6px 10px
+    const bankBoxY = y + 54;
+    const bankBoxW = footLeftW - 28;
+    const bankBoxH = 34;
 
-    doc.font('Helvetica-Oblique').fontSize(8.5).fillColor(lightGray);
-    doc.text('Certified that above particulars are true\nand correct', footRX, y + 16, {
-        width: footRightW,
-        align: 'center'
+    // Yellow background
+    doc.rect(fLX, bankBoxY, bankBoxW, bankBoxH).fill('#fffbe6');
+    // Border
+    doc.lineWidth(1.5).rect(fLX, bankBoxY, bankBoxW, bankBoxH).stroke('#d4a017');
+
+    // Bank title: weight 800, 10px, #c00, underline
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(RED);
+    doc.text('Bank Details:', fLX + 8, bankBoxY + 5, { underline: true });
+
+    // Bank info: 9px, weight 700, #1a3d7c, line-height 1.5
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor(BLUE);
+    doc.text(`ACC NAME: ${bankAccName}    BANK: ${bankName}`, fLX + 8, bankBoxY + 16, { width: bankBoxW - 16 });
+    doc.text(`ACC NUM: ${bankAccount}    BRANCH: ${bankBranch}    IFSC: ${bankIfsc}`, fLX + 8, bankBoxY + 25, { width: bankBoxW - 16 });
+
+    // ----- Right: Certification + Signature -----
+    // padding: 10px 14px, centered, gap 12px
+    const fRX = M + footLeftW + 14;
+    const fRW = footRightW - 28;
+
+    // Certified: 11px, italic, #333
+    doc.font('Helvetica-Oblique').fontSize(9).fillColor(GRAY_TERMS);
+    doc.text('Certified that above particulars are true\nand correct', fRX, y + 18, {
+        width: fRW,
+        align: 'center',
+        lineGap: 2
     });
 
-    doc.font('Helvetica-Bold').fontSize(10).fillColor(darkBlue);
-    doc.text(`For ${companyName}`, footRX, y + 60, {
-        width: footRightW,
+    // Signature: weight 800, 13px, #1a3d7c
+    doc.font('Helvetica-Bold').fontSize(10.5).fillColor(BLUE);
+    doc.text(`For ${companyName}`, fRX, y + 65, {
+        width: fRW,
         align: 'center'
     });
 
     // Finalize
     doc.end();
-
     return pdfPromise;
 };
 
