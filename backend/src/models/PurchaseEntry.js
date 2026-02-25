@@ -2,13 +2,13 @@ import mongoose from 'mongoose';
 
 const purchaseEntryItemSchema = new mongoose.Schema({
     particular: { type: String, required: true },
+    hsnCode: { type: String, default: '' },
     size: { type: String, default: '' },
-    quantity: { type: Number, required: true, min: 0 },
-    rate: { type: Number, required: true, min: 0 },
+    ratePerPiece: { type: Number, default: 0 },
+    pcsInPack: { type: Number, default: 1 },
+    ratePerPack: { type: Number, required: true, min: 0 },
+    noOfPacks: { type: Number, required: true, min: 0 },
     amount: { type: Number, required: true },
-    cgst: { type: Number, default: 0 },
-    sgst: { type: Number, default: 0 },
-    igst: { type: Number, default: 0 },
     total: { type: Number, required: true }
 });
 
@@ -30,10 +30,6 @@ const purchaseEntrySchema = new mongoose.Schema({
     },
     items: [purchaseEntryItemSchema],
     subtotal: { type: Number, default: 0 },
-    totalCgst: { type: Number, default: 0 },
-    totalSgst: { type: Number, default: 0 },
-    totalIgst: { type: Number, default: 0 },
-    totalTax: { type: Number, default: 0 },
     grandTotal: { type: Number, default: 0 },
     notes: { type: String },
     status: {

@@ -85,37 +85,25 @@ router.post('/', async (req, res) => {
 
         // Calculate totals
         let subtotal = 0;
-        let totalCgst = 0;
-        let totalSgst = 0;
-        let totalIgst = 0;
 
         const processedItems = items.map(item => {
-            const amount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
-            const cgstAmount = (amount * (parseFloat(item.cgst) || 0)) / 100;
-            const sgstAmount = (amount * (parseFloat(item.sgst) || 0)) / 100;
-            const igstAmount = (amount * (parseFloat(item.igst) || 0)) / 100;
-            const total = amount + cgstAmount + sgstAmount + igstAmount;
-
+            const amount = (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
             subtotal += amount;
-            totalCgst += cgstAmount;
-            totalSgst += sgstAmount;
-            totalIgst += igstAmount;
 
             return {
                 particular: item.particular,
+                hsnCode: item.hsnCode || '',
                 size: item.size || '',
-                quantity: parseFloat(item.quantity) || 0,
-                rate: parseFloat(item.rate) || 0,
+                ratePerPiece: parseFloat(item.ratePerPiece) || 0,
+                pcsInPack: parseFloat(item.pcsInPack) || 1,
+                ratePerPack: parseFloat(item.ratePerPack) || 0,
+                noOfPacks: parseFloat(item.noOfPacks) || 0,
                 amount,
-                cgst: parseFloat(item.cgst) || 0,
-                sgst: parseFloat(item.sgst) || 0,
-                igst: parseFloat(item.igst) || 0,
-                total
+                total: amount
             };
         });
 
-        const totalTax = totalCgst + totalSgst + totalIgst;
-        const grandTotal = subtotal + totalTax;
+        const grandTotal = subtotal;
 
         const entry = new PurchaseEntry({
             invoiceNumber,
@@ -128,10 +116,6 @@ router.post('/', async (req, res) => {
             },
             items: processedItems,
             subtotal,
-            totalCgst,
-            totalSgst,
-            totalIgst,
-            totalTax,
             grandTotal,
             notes
         });
@@ -144,31 +128,26 @@ router.post('/', async (req, res) => {
         let billTotalTax = 0;
 
         for (const item of entry.items) {
-            const itemSubtotal = item.quantity * item.rate;
-            const itemCgstAmount = (itemSubtotal * (item.cgst || 0)) / 100;
-            const itemSgstAmount = (itemSubtotal * (item.sgst || 0)) / 100;
-            const itemIgstAmount = (itemSubtotal * (item.igst || 0)) / 100;
-            const gstAmount = itemCgstAmount + itemSgstAmount + itemIgstAmount;
-            const gstRate = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+            const itemAmount = (item.ratePerPack || 0) * (item.noOfPacks || 0);
 
             const billItem = {
                 productName: item.particular,
                 sizesOrPieces: item.size || '',
-                quantity: item.quantity,
-                price: item.rate,
-                ratePerPiece: item.rate,
-                pcsInPack: 1,
-                ratePerPack: item.rate,
-                noOfPacks: item.quantity,
-                gstRate: gstRate,
-                gstAmount: gstAmount,
+                quantity: item.noOfPacks || 0,
+                price: item.ratePerPack || 0,
+                ratePerPiece: item.ratePerPiece || 0,
+                pcsInPack: item.pcsInPack || 1,
+                ratePerPack: item.ratePerPack || 0,
+                noOfPacks: item.noOfPacks || 0,
+                hsnCode: item.hsnCode || '',
+                gstRate: 0,
+                gstAmount: 0,
                 discount: 0,
-                total: itemSubtotal + gstAmount
+                total: itemAmount
             };
 
             billItems.push(billItem);
-            billSubtotal += itemSubtotal;
-            billTotalTax += gstAmount;
+            billSubtotal += itemAmount;
         }
 
         // Increase stock for items that match products by name
@@ -176,14 +155,14 @@ router.post('/', async (req, res) => {
             const product = await Product.findOne({ name: { $regex: new RegExp(`^${item.particular}$`, 'i') } });
             if (product) {
                 const previousStock = product.stock;
-                product.stock += item.quantity;
+                product.stock += (item.noOfPacks || 0);
                 await product.save();
 
                 // Record stock movement
                 await new StockMovement({
                     product: product._id,
                     type: 'in',
-                    quantity: item.quantity,
+                    quantity: item.noOfPacks || 0,
                     previousStock: previousStock,
                     newStock: product.stock,
                     reason: `Purchased - Purchase Entry #${entry.invoiceNumber}`
@@ -191,11 +170,11 @@ router.post('/', async (req, res) => {
             }
         }
 
-        const billCgst = billTotalTax / 2;
-        const billSgst = billTotalTax / 2;
-        const billGrandTotal = Math.round(billSubtotal + billTotalTax);
-        const billRoundOff = billGrandTotal - (billSubtotal + billTotalTax);
-        const totalPacks = entry.items.reduce((sum, item) => sum + item.quantity, 0);
+        const billCgst = 0;
+        const billSgst = 0;
+        const billGrandTotal = Math.round(billSubtotal);
+        const billRoundOff = billGrandTotal - billSubtotal;
+        const totalPacks = entry.items.reduce((sum, item) => sum + (item.noOfPacks || 0), 0);
 
         const bill = new Bill({
             billNumber: await generatePurchaseBillNumber(),
@@ -256,46 +235,30 @@ router.put('/:id', async (req, res) => {
 
         if (items && items.length > 0) {
             let subtotal = 0;
-            let totalCgst = 0;
-            let totalSgst = 0;
-            let totalIgst = 0;
 
             const processedItems = items.map(item => {
-                const amount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
-                const cgstAmount = (amount * (parseFloat(item.cgst) || 0)) / 100;
-                const sgstAmount = (amount * (parseFloat(item.sgst) || 0)) / 100;
-                const igstAmount = (amount * (parseFloat(item.igst) || 0)) / 100;
-                const total = amount + cgstAmount + sgstAmount + igstAmount;
-
+                const amount = (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
                 subtotal += amount;
-                totalCgst += cgstAmount;
-                totalSgst += sgstAmount;
-                totalIgst += igstAmount;
 
                 return {
                     particular: item.particular,
+                    hsnCode: item.hsnCode || '',
                     size: item.size || '',
-                    quantity: parseFloat(item.quantity) || 0,
-                    rate: parseFloat(item.rate) || 0,
+                    ratePerPiece: parseFloat(item.ratePerPiece) || 0,
+                    pcsInPack: parseFloat(item.pcsInPack) || 1,
+                    ratePerPack: parseFloat(item.ratePerPack) || 0,
+                    noOfPacks: parseFloat(item.noOfPacks) || 0,
                     amount,
-                    cgst: parseFloat(item.cgst) || 0,
-                    sgst: parseFloat(item.sgst) || 0,
-                    igst: parseFloat(item.igst) || 0,
-                    total
+                    total: amount
                 };
             });
 
-            const totalTax = totalCgst + totalSgst + totalIgst;
-            const grandTotal = subtotal + totalTax;
+            const grandTotal = subtotal;
 
             updateData = {
                 ...updateData,
                 items: processedItems,
                 subtotal,
-                totalCgst,
-                totalSgst,
-                totalIgst,
-                totalTax,
                 grandTotal
             };
         }

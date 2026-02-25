@@ -31,7 +31,7 @@ const PurchaseEntryPage = () => {
     });
 
     const [items, setItems] = useState([
-        { id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }
+        { id: 1, particular: '', hsnCode: '', size: '', ratePerPiece: '', pcsInPack: '', ratePerPack: '', noOfPacks: '' }
     ]);
 
     useEffect(() => {
@@ -100,7 +100,7 @@ const PurchaseEntryPage = () => {
             date: new Date().toISOString().split('T')[0],
             invNo: ''
         });
-        setItems([{ id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
+        setItems([{ id: 1, particular: '', hsnCode: '', size: '', ratePerPiece: '', pcsInPack: '', ratePerPack: '', noOfPacks: '' }]);
         setIsEditing(false);
         setSelectedEntry(null);
     };
@@ -109,12 +109,12 @@ const PurchaseEntryPage = () => {
         setItems([...items, {
             id: items.length + 1,
             particular: '',
+            hsnCode: '',
             size: '',
-            quantity: '',
-            rate: '',
-            cgst: '',
-            sgst: '',
-            igst: ''
+            ratePerPiece: '',
+            pcsInPack: '',
+            ratePerPack: '',
+            noOfPacks: ''
         }]);
     };
 
@@ -125,17 +125,21 @@ const PurchaseEntryPage = () => {
     };
 
     const handleItemChange = (id, field, value) => {
-        setItems(items.map(item =>
-            item.id === id ? { ...item, [field]: value } : item
-        ));
+        setItems(items.map(item => {
+            if (item.id !== id) return item;
+            const updated = { ...item, [field]: value };
+            // Auto-calculate ratePerPack when ratePerPiece or pcsInPack changes
+            if (field === 'ratePerPiece' || field === 'pcsInPack') {
+                const rpp = parseFloat(field === 'ratePerPiece' ? value : updated.ratePerPiece) || 0;
+                const pcs = parseFloat(field === 'pcsInPack' ? value : updated.pcsInPack) || 1;
+                updated.ratePerPack = (rpp * pcs).toString();
+            }
+            return updated;
+        }));
     };
 
     const calculateItemTotal = (item) => {
-        const amount = (parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0);
-        const cgst = (amount * (parseFloat(item.cgst) || 0)) / 100;
-        const sgst = (amount * (parseFloat(item.sgst) || 0)) / 100;
-        const igst = (amount * (parseFloat(item.igst) || 0)) / 100;
-        return amount + cgst + sgst + igst;
+        return (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
     };
 
     const handleSave = async () => {
@@ -149,9 +153,9 @@ const PurchaseEntryPage = () => {
             return;
         }
 
-        const validItems = items.filter(item => item.particular && item.quantity && item.rate);
+        const validItems = items.filter(item => item.particular && item.ratePerPack && item.noOfPacks);
         if (validItems.length === 0) {
-            toast.warning('Please add at least one item with particulars, quantity and rate');
+            toast.warning('Please add at least one item with particulars, rate per pack and no. of packs');
             return;
         }
 
@@ -163,12 +167,12 @@ const PurchaseEntryPage = () => {
                 invoiceNumber: newPurchase.invNo,
                 items: validItems.map(item => ({
                     particular: item.particular,
+                    hsnCode: item.hsnCode || '',
                     size: item.size,
-                    quantity: parseFloat(item.quantity) || 0,
-                    rate: parseFloat(item.rate) || 0,
-                    cgst: parseFloat(item.cgst) || 0,
-                    sgst: parseFloat(item.sgst) || 0,
-                    igst: parseFloat(item.igst) || 0
+                    ratePerPiece: parseFloat(item.ratePerPiece) || 0,
+                    pcsInPack: parseFloat(item.pcsInPack) || 1,
+                    ratePerPack: parseFloat(item.ratePerPack) || 0,
+                    noOfPacks: parseFloat(item.noOfPacks) || 0
                 }))
             };
 
@@ -202,13 +206,13 @@ const PurchaseEntryPage = () => {
         setItems(entry.items?.map((item, index) => ({
             id: index + 1,
             particular: item.particular || '',
+            hsnCode: item.hsnCode || '',
             size: item.size || '',
-            quantity: item.quantity?.toString() || '',
-            rate: item.rate?.toString() || '',
-            cgst: item.cgst?.toString() || '',
-            sgst: item.sgst?.toString() || '',
-            igst: item.igst?.toString() || ''
-        })) || [{ id: 1, particular: '', size: '', quantity: '', rate: '', cgst: '', sgst: '', igst: '' }]);
+            ratePerPiece: item.ratePerPiece?.toString() || '',
+            pcsInPack: item.pcsInPack?.toString() || '',
+            ratePerPack: item.ratePerPack?.toString() || '',
+            noOfPacks: item.noOfPacks?.toString() || ''
+        })) || [{ id: 1, particular: '', hsnCode: '', size: '', ratePerPiece: '', pcsInPack: '', ratePerPack: '', noOfPacks: '' }]);
         setSelectedEntry(entry);
         setIsEditing(true);
         setShowNewEntry(true);
@@ -304,14 +308,13 @@ const PurchaseEntryPage = () => {
                                 <tr className="bg-gray-100 border-b-2 border-gray-300">
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700">S No</th>
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700">Particulars *</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Size</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Quantity *</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Rate *</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Amount</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">CGST %</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">SGST %</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">IGST %</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Total</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">HSN Code</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Sizes / Pieces</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Rate Per Piece</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Pcs in Pack</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Rate Per Pack *</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">No Of Packs *</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Amount Rs.</th>
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700"></th>
                                 </tr>
                             </thead>
@@ -326,6 +329,15 @@ const PurchaseEntryPage = () => {
                                                 placeholder="Item name"
                                                 value={item.particular}
                                                 onChange={(e) => handleItemChange(item.id, 'particular', e.target.value)}
+                                            />
+                                        </td>
+                                        <td className="p-3">
+                                            <input
+                                                type="text"
+                                                className="form-input w-24"
+                                                placeholder="HSN"
+                                                value={item.hsnCode}
+                                                onChange={(e) => handleItemChange(item.id, 'hsnCode', e.target.value)}
                                             />
                                         </td>
                                         <td className="p-3">
@@ -345,10 +357,19 @@ const PurchaseEntryPage = () => {
                                         <td className="p-3">
                                             <input
                                                 type="number"
+                                                className="form-input w-24"
+                                                placeholder="Rate"
+                                                value={item.ratePerPiece}
+                                                onChange={(e) => handleItemChange(item.id, 'ratePerPiece', e.target.value)}
+                                            />
+                                        </td>
+                                        <td className="p-3">
+                                            <input
+                                                type="number"
                                                 className="form-input w-20"
-                                                placeholder="Qty"
-                                                value={item.quantity}
-                                                onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)}
+                                                placeholder="Pcs"
+                                                value={item.pcsInPack}
+                                                onChange={(e) => handleItemChange(item.id, 'pcsInPack', e.target.value)}
                                             />
                                         </td>
                                         <td className="p-3">
@@ -356,38 +377,17 @@ const PurchaseEntryPage = () => {
                                                 type="number"
                                                 className="form-input w-24"
                                                 placeholder="Rate"
-                                                value={item.rate}
-                                                onChange={(e) => handleItemChange(item.id, 'rate', e.target.value)}
-                                            />
-                                        </td>
-                                        <td className="p-3 text-sm font-semibold text-gray-900">
-                                            ₹{((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)).toFixed(2)}
-                                        </td>
-                                        <td className="p-3">
-                                            <input
-                                                type="number"
-                                                className="form-input w-16"
-                                                placeholder="%"
-                                                value={item.cgst}
-                                                onChange={(e) => handleItemChange(item.id, 'cgst', e.target.value)}
+                                                value={item.ratePerPack}
+                                                onChange={(e) => handleItemChange(item.id, 'ratePerPack', e.target.value)}
                                             />
                                         </td>
                                         <td className="p-3">
                                             <input
                                                 type="number"
-                                                className="form-input w-16"
-                                                placeholder="%"
-                                                value={item.sgst}
-                                                onChange={(e) => handleItemChange(item.id, 'sgst', e.target.value)}
-                                            />
-                                        </td>
-                                        <td className="p-3">
-                                            <input
-                                                type="number"
-                                                className="form-input w-16"
-                                                placeholder="%"
-                                                value={item.igst}
-                                                onChange={(e) => handleItemChange(item.id, 'igst', e.target.value)}
+                                                className="form-input w-20"
+                                                placeholder="Packs"
+                                                value={item.noOfPacks}
+                                                onChange={(e) => handleItemChange(item.id, 'noOfPacks', e.target.value)}
                                             />
                                         </td>
                                         <td className="p-3 text-sm font-bold text-gray-900">
@@ -558,7 +558,7 @@ const PurchaseEntryPage = () => {
                                         <td className="p-4 text-sm font-medium text-gray-900">{formatDate(purchase.date)}</td>
                                         <td className="p-4 text-sm font-semibold" style={{ color: '#1e40af' }}>{purchase.invoiceNumber}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{purchase.supplier?.name || '-'}</td>
-                                        <td className="p-4 text-sm font-medium text-gray-900">{purchase.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0}</td>
+                                        <td className="p-4 text-sm font-medium text-gray-900">{purchase.items?.reduce((sum, item) => sum + (item.noOfPacks || 0), 0) || 0}</td>
                                         <td className="p-4 text-sm font-bold text-green-600">₹{(purchase.grandTotal || 0).toLocaleString()}</td>
                                         <td className="p-4">
                                             <div className="flex gap-2">
@@ -646,19 +646,25 @@ const PurchaseEntryPage = () => {
                                 <thead>
                                     <tr className="bg-gray-100">
                                         <th className="p-2 text-left">Particular</th>
+                                        <th className="p-2 text-left">HSN Code</th>
                                         <th className="p-2 text-left">Size</th>
-                                        <th className="p-2 text-right">Qty</th>
-                                        <th className="p-2 text-right">Rate</th>
-                                        <th className="p-2 text-right">Total</th>
+                                        <th className="p-2 text-right">Rate/Piece</th>
+                                        <th className="p-2 text-right">Pcs/Pack</th>
+                                        <th className="p-2 text-right">Rate/Pack</th>
+                                        <th className="p-2 text-right">No. Packs</th>
+                                        <th className="p-2 text-right">Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {selectedEntry.items?.map((item, i) => (
                                         <tr key={i} className="border-b">
                                             <td className="p-2">{item.particular}</td>
+                                            <td className="p-2">{item.hsnCode || '-'}</td>
                                             <td className="p-2">{item.size || '-'}</td>
-                                            <td className="p-2 text-right">{item.quantity}</td>
-                                            <td className="p-2 text-right">₹{item.rate}</td>
+                                            <td className="p-2 text-right">₹{item.ratePerPiece || 0}</td>
+                                            <td className="p-2 text-right">{item.pcsInPack || 1}</td>
+                                            <td className="p-2 text-right">₹{item.ratePerPack || 0}</td>
+                                            <td className="p-2 text-right">{item.noOfPacks || 0}</td>
                                             <td className="p-2 text-right">₹{item.total?.toFixed(2)}</td>
                                         </tr>
                                     ))}
