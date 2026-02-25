@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Scale, Search, X, Printer, FileSpreadsheet, Mail } from 'lucide-react';
 import DateRangeFilter from '../components/reports/DateRangeFilter';
 import ReportHeader from '../components/reports/ReportHeader';
-import { exportToExcel } from '../utils/exportToExcel';
+import { exportToExcelStyled } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
 import { reportsAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
@@ -64,32 +64,29 @@ const AuditorPurchasePage = () => {
             return;
         }
 
-        const exportData = reportData.map(row => ({
-            'Company Name': row.companyName,
-            'GSTIN': row.gstin,
-            'Date': row.date,
-            'Invoice No': row.invNo,
-            'Taxable Amount': row.taxableAmount,
-            'CGST': row.cgst,
-            'SGST': row.sgst,
-            'IGST': row.igst,
-            'Total': row.total
-        }));
+        const columns = [
+            { key: 'companyName', header: 'Company Name', width: 28, align: 'left' },
+            { key: 'gstin', header: 'GSTIN', width: 22, align: 'left' },
+            { key: 'date', header: 'Date', width: 14, align: 'left' },
+            { key: 'invNo', header: 'Inv No', width: 14, align: 'left' },
+            { key: 'taxableAmount', header: 'Taxable Amount', width: 18, align: 'right' },
+            { key: 'cgst', header: 'CGST', width: 12, align: 'right' },
+            { key: 'sgst', header: 'SGST', width: 12, align: 'right' },
+            { key: 'igst', header: 'IGST', width: 12, align: 'right' },
+            { key: 'total', header: 'Total', width: 16, align: 'right' }
+        ];
 
-        // Add totals row
-        exportData.push({
-            'Company Name': 'Total',
-            'GSTIN': '',
-            'Date': '',
-            'Invoice No': '',
-            'Taxable Amount': totals.taxableAmount,
-            'CGST': totals.cgst,
-            'SGST': totals.sgst,
-            'IGST': totals.igst,
-            'Total': totals.total
+        exportToExcelStyled({
+            title: 'Purchase Report',
+            businessName: 'Sri Ram Fashions',
+            fromDate,
+            toDate,
+            columns,
+            data: reportData,
+            totals,
+            filename: 'auditor_purchase_report',
+            sheetName: 'Purchase Report'
         });
-
-        exportToExcel(exportData, 'auditor_purchase_report');
     };
 
     const handlePrint = () => {

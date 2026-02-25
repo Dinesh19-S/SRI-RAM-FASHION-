@@ -23,10 +23,11 @@ const numberToWords = (num) => {
 // Get all bills
 router.get('/', async (req, res) => {
     try {
-        const { status, startDate, endDate, search, page = 1, limit = 20 } = req.query;
+        const { status, startDate, endDate, search, billType, page = 1, limit = 20 } = req.query;
 
         const query = {};
         if (status) query.paymentStatus = status;
+        if (billType) query.billType = billType;
         if (startDate && endDate) {
             query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
         }
@@ -34,7 +35,8 @@ router.get('/', async (req, res) => {
             query.$or = [
                 { billNumber: { $regex: search, $options: 'i' } },
                 { 'customer.name': { $regex: search, $options: 'i' } },
-                { 'customer.phone': { $regex: search, $options: 'i' } }
+                { 'customer.phone': { $regex: search, $options: 'i' } },
+                { partyName: { $regex: search, $options: 'i' } }
             ];
         }
 
@@ -160,6 +162,8 @@ router.post('/', async (req, res) => {
 
         const bill = new Bill({
             billNumber: generateBillNumber(),
+            billType: 'DIRECT',
+            partyName: customer?.name || '',
             customer,
             transport,
             fromText: fromDate || '',

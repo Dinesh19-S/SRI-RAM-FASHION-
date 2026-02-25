@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, TrendingUp, X, Printer, FileSpreadsheet, Mail, FileText } from 'lucide-react';
 import DateRangeFilter from '../components/reports/DateRangeFilter';
 import ReportHeader from '../components/reports/ReportHeader';
-import { exportToExcel } from '../utils/exportToExcel';
+import { exportToExcelStyled } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
 import { reportsAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
@@ -51,17 +51,39 @@ const SalesReportsPage = () => {
             return;
         }
 
-        const exportData = reportData.map(row => ({
-            'S.No': row.sno,
-            'Date': formatDate(row.date),
-            'Invoice No': row.invNo,
-            'Item': row.item,
-            'Rate': row.rate,
-            'Quantity': row.qty,
-            'Total': row.rate * row.qty
+        const columns = [
+            { key: 'sno', header: 'S.No', width: 8, align: 'left' },
+            { key: 'date', header: 'Date', width: 14, align: 'left' },
+            { key: 'invNo', header: 'Invoice No', width: 16, align: 'left' },
+            { key: 'item', header: 'Item', width: 28, align: 'left' },
+            { key: 'rate', header: 'Rate', width: 14, align: 'right' },
+            { key: 'qty', header: 'Quantity', width: 12, align: 'right' },
+            { key: 'total', header: 'Total', width: 16, align: 'right' }
+        ];
+
+        const formattedData = reportData.map(row => ({
+            ...row,
+            date: formatDate(row.date),
+            total: row.rate * row.qty
         }));
 
-        exportToExcel(exportData, 'sales_report');
+        const grandTotals = {
+            rate: formattedData.reduce((sum, r) => sum + (r.rate || 0), 0),
+            qty: formattedData.reduce((sum, r) => sum + (r.qty || 0), 0),
+            total: formattedData.reduce((sum, r) => sum + (r.total || 0), 0)
+        };
+
+        exportToExcelStyled({
+            title: 'Sales Report',
+            businessName: 'Sri Ram Fashions',
+            fromDate,
+            toDate,
+            columns,
+            data: formattedData,
+            totals: grandTotals,
+            filename: 'sales_report',
+            sheetName: 'Sales Report'
+        });
     };
 
     const handlePrint = () => {

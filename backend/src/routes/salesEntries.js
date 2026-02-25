@@ -3,6 +3,7 @@ import SalesEntry from '../models/SalesEntry.js';
 import Bill from '../models/Bill.js';
 import Product from '../models/Product.js';
 import StockMovement from '../models/StockMovement.js';
+import Customer from '../models/Customer.js';
 
 const router = express.Router();
 
@@ -77,7 +78,13 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new sales entry
+// Generate SALES bill number (SAL-0001 format)
+const generateSalesBillNumber = async () => {
+    const count = await Bill.countDocuments({ billType: 'SALES' });
+    return `SAL-${(count + 1).toString().padStart(4, '0')}`;
+};
+
+// Create new sales entry + auto-generate SALES bill
 router.post('/', async (req, res) => {
     try {
         const { customer, date, invoiceNumber, items, notes } = req.body;
@@ -118,7 +125,7 @@ router.post('/', async (req, res) => {
         const grandTotal = subtotal + totalTax;
 
         const entry = new SalesEntry({
-            invoiceNumber: invoiceNumber || undefined, // Will be auto-generated if not provided
+            invoiceNumber: invoiceNumber || undefined,
             date: date || new Date(),
             customer: {
                 name: customer.name || customer,
@@ -137,7 +144,111 @@ router.post('/', async (req, res) => {
         });
 
         await entry.save();
-        res.status(201).json({ success: true, data: entry });
+
+        // === Auto-generate SALES bill ===
+        // Look up customer email from database
+        const customerRecord = await Customer.findOne({ companyName: { $regex: new RegExp(`^${entry.customer.name}$`, 'i') } });
+        const customerEmail = customerRecord?.email || '';
+
+        const billItems = [];
+        let billSubtotal = 0;
+        let billTotalTax = 0;
+
+        for (const item of entry.items) {
+            const itemSubtotal = item.quantity * item.rate;
+            const itemCgstAmount = (itemSubtotal * (item.cgst || 0)) / 100;
+            const itemSgstAmount = (itemSubtotal * (item.sgst || 0)) / 100;
+            const itemIgstAmount = (itemSubtotal * (item.igst || 0)) / 100;
+            const gstAmount = itemCgstAmount + itemSgstAmount + itemIgstAmount;
+            const gstRate = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+
+            const billItem = {
+                productName: item.particular,
+                sizesOrPieces: item.size || '',
+                quantity: item.quantity,
+                price: item.rate,
+                ratePerPiece: item.rate,
+                pcsInPack: 1,
+                ratePerPack: item.rate,
+                noOfPacks: item.quantity,
+                gstRate: gstRate,
+                gstAmount: gstAmount,
+                discount: 0,
+                total: itemSubtotal + gstAmount
+            };
+
+            // If item has a product reference, link it and deduct stock
+            if (item.product) {
+                const product = await Product.findById(item.product);
+                if (product) {
+                    billItem.product = product._id;
+                    billItem.sku = product.sku;
+                    billItem.hsn = product.hsn;
+                    billItem.hsnCode = product.hsn;
+                    billItem.mrp = product.mrp;
+
+                    // Deduct stock
+                    const previousStock = product.stock;
+                    product.stock = Math.max(0, product.stock - item.quantity);
+                    await product.save();
+
+                    // Record stock movement
+                    await new StockMovement({
+                        product: product._id,
+                        type: 'out',
+                        quantity: item.quantity,
+                        previousStock: previousStock,
+                        newStock: product.stock,
+                        reason: `Sold - Sales Entry #${entry.invoiceNumber}`
+                    }).save();
+                }
+            }
+
+            billItems.push(billItem);
+            billSubtotal += itemSubtotal;
+            billTotalTax += gstAmount;
+        }
+
+        const billCgst = billTotalTax / 2;
+        const billSgst = billTotalTax / 2;
+        const billGrandTotal = Math.round(billSubtotal + billTotalTax);
+        const billRoundOff = billGrandTotal - (billSubtotal + billTotalTax);
+        const totalPacks = entry.items.reduce((sum, item) => sum + item.quantity, 0);
+
+        const bill = new Bill({
+            billNumber: await generateSalesBillNumber(),
+            billType: 'SALES',
+            partyName: entry.customer.name,
+            date: entry.date,
+            customer: {
+                name: entry.customer.name,
+                phone: entry.customer.mobile || '',
+                address: entry.customer.address || '',
+                gstin: entry.customer.gstin || '',
+                email: customerEmail,
+                state: 'Tamilnadu',
+                stateCode: '33'
+            },
+            items: billItems,
+            subtotal: billSubtotal,
+            discountAmount: 0,
+            taxableAmount: billSubtotal,
+            cgst: billCgst,
+            sgst: billSgst,
+            totalTax: billTotalTax,
+            grandTotal: billGrandTotal,
+            roundOff: billRoundOff,
+            totalPacks,
+            numOfBundles: 1,
+            amountInWords: numberToWords(billGrandTotal),
+            paymentMethod: 'cash',
+            paymentStatus: 'paid',
+            notes: `Auto-generated from Sales Entry #${entry.invoiceNumber}`
+        });
+
+        await bill.save();
+
+        res.status(201).json({ success: true, data: entry, bill: bill });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -303,14 +414,21 @@ router.post('/:id/generate-bill', async (req, res) => {
 
         const totalPacks = entry.items.reduce((sum, item) => sum + item.quantity, 0);
 
+        // Look up customer email
+        const custRecord = await Customer.findOne({ companyName: { $regex: new RegExp(`^${entry.customer.name}$`, 'i') } });
+        const custEmail = custRecord?.email || '';
+
         const bill = new Bill({
-            billNumber: generateBillNumber(),
+            billNumber: await generateSalesBillNumber(),
+            billType: 'SALES',
+            partyName: entry.customer.name,
             date: entry.date,
             customer: {
                 name: entry.customer.name,
                 phone: entry.customer.mobile || '',
                 address: entry.customer.address || '',
                 gstin: entry.customer.gstin || '',
+                email: custEmail,
                 state: 'Tamilnadu',
                 stateCode: '33'
             },

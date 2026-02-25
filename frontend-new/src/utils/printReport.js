@@ -1,5 +1,6 @@
 /**
  * Trigger browser print dialog for a specific report element
+ * Generates A4-sized, professionally styled print layout
  * @param {string} elementId - ID of element to print (prints whole page if not provided)
  */
 export const printReport = (elementId = null) => {
@@ -37,15 +38,16 @@ export const printReport = (elementId = null) => {
     ${linkTags}
     ${styleTags}
     <style>
-        /* A4 Portrait - full-fit */
+        /* ===== A4 Page Setup ===== */
         @page {
             size: A4;
-            margin: 10mm;
+            margin: 12mm 10mm;
         }
 
         @media print {
             html, body {
                 width: 210mm;
+                min-height: 297mm;
                 margin: 0 !important;
                 padding: 0 !important;
                 -webkit-print-color-adjust: exact !important;
@@ -60,26 +62,28 @@ export const printReport = (elementId = null) => {
             padding: 10mm;
             margin: 0 auto;
             width: 210mm;
-            font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 10.5px;
-            line-height: 1.4;
+            font-family: 'Segoe UI', 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 11px;
+            line-height: 1.5;
             color: #111;
         }
 
-        /* Hide buttons / non-print elements */
-        button, .btn, .no-print { display: none !important; }
+        /* Hide interactive elements */
+        button, .btn, .no-print, input, select { display: none !important; }
 
-        /* ---- Table: stretch to full width ---- */
+        /* ===== Table Styling: full-width A4 ===== */
         table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            font-size: 10px;
+            font-size: 10.5px;
+            border: 1px solid #d1d5db;
+            margin-top: 8px;
         }
 
         th, td {
-            padding: 5px 8px;
-            border: 1px solid #ccc;
+            padding: 7px 10px;
+            border: 1px solid #e5e7eb;
             word-wrap: break-word;
             overflow: hidden;
         }
@@ -88,10 +92,10 @@ export const printReport = (elementId = null) => {
             font-weight: 700;
             font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            background-color: #e5e7eb;
-            color: #1f2937;
-            border-bottom: 2px solid #374151;
+            letter-spacing: 0.4px;
+            background-color: #f0f4ff !important;
+            color: #1e40af;
+            border-bottom: 2px solid #3b82f6;
             text-align: center;
         }
 
@@ -104,19 +108,21 @@ export const printReport = (elementId = null) => {
 
         /* Zebra striping */
         tbody tr:nth-child(even) {
-            background-color: #fafafa;
+            background-color: #f9fafb !important;
         }
 
         tbody tr:hover { background: transparent; }
 
         /* Totals row */
-        tbody tr:last-child td {
+        tbody tr:last-child td,
+        tfoot tr td {
             font-weight: 700;
             border-top: 2px solid #374151;
-            background-color: #f3f4f6;
+            background-color: #eef2ff !important;
+            font-size: 11px;
         }
 
-        /* ---- Report Header ---- */
+        /* ===== Report Header ===== */
         .text-center { text-align: center; }
         .mb-6 { margin-bottom: 20px; }
         .mb-1 { margin-bottom: 3px; }
@@ -124,14 +130,16 @@ export const printReport = (elementId = null) => {
         .mt-1 { margin-top: 3px; }
 
         h2 {
-            font-size: 16px; font-weight: 700;
+            font-size: 18px; font-weight: 800;
             margin: 0 0 2px; color: #111;
+            text-align: center;
         }
         h3 {
-            font-size: 13px; font-weight: 600;
-            margin: 0 0 6px; color: #374151;
+            font-size: 14px; font-weight: 700;
+            margin: 0 0 6px; color: #1e40af;
+            text-align: center;
         }
-        p  { font-size: 10px; color: #555; margin: 0 0 3px; }
+        p  { font-size: 11px; color: #555; margin: 0 0 3px; }
 
         .font-bold { font-weight: 700; }
         .font-semibold { font-weight: 600; }
@@ -141,10 +149,23 @@ export const printReport = (elementId = null) => {
         thead { display: table-header-group; }
         tr { page-break-inside: avoid; }
         .overflow-x-auto { overflow: visible; }
+
+        /* ===== Print Footer ===== */
+        .print-footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            font-size: 9px;
+            color: #9ca3af;
+        }
     </style>
 </head>
 <body>
     ${element.innerHTML}
+    <div class="print-footer">
+        © ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved. | Generated on ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+    </div>
 </body>
 </html>`;
 

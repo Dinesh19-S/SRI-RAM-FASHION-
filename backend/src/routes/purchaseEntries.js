@@ -1,7 +1,21 @@
 import express from 'express';
 import PurchaseEntry from '../models/PurchaseEntry.js';
+import Bill from '../models/Bill.js';
+import Product from '../models/Product.js';
+import StockMovement from '../models/StockMovement.js';
 
 const router = express.Router();
+
+// Generate PURCHASE bill number (PUR-0001 format)
+const generatePurchaseBillNumber = async () => {
+    const count = await Bill.countDocuments({ billType: 'PURCHASE' });
+    return `PUR-${(count + 1).toString().padStart(4, '0')}`;
+};
+
+// Number to words for Indian currency
+const numberToWords = (num) => {
+    return `Rupees ${Math.floor(num)} Only`;
+};
 
 // Get all purchase entries with filters and pagination
 router.get('/', async (req, res) => {
@@ -60,7 +74,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new purchase entry
+// Create new purchase entry + auto-generate PURCHASE bill
 router.post('/', async (req, res) => {
     try {
         const { supplier, date, invoiceNumber, items, notes } = req.body;
@@ -123,7 +137,99 @@ router.post('/', async (req, res) => {
         });
 
         await entry.save();
-        res.status(201).json({ success: true, data: entry });
+
+        // === Auto-generate PURCHASE bill ===
+        const billItems = [];
+        let billSubtotal = 0;
+        let billTotalTax = 0;
+
+        for (const item of entry.items) {
+            const itemSubtotal = item.quantity * item.rate;
+            const itemCgstAmount = (itemSubtotal * (item.cgst || 0)) / 100;
+            const itemSgstAmount = (itemSubtotal * (item.sgst || 0)) / 100;
+            const itemIgstAmount = (itemSubtotal * (item.igst || 0)) / 100;
+            const gstAmount = itemCgstAmount + itemSgstAmount + itemIgstAmount;
+            const gstRate = (item.cgst || 0) + (item.sgst || 0) + (item.igst || 0);
+
+            const billItem = {
+                productName: item.particular,
+                sizesOrPieces: item.size || '',
+                quantity: item.quantity,
+                price: item.rate,
+                ratePerPiece: item.rate,
+                pcsInPack: 1,
+                ratePerPack: item.rate,
+                noOfPacks: item.quantity,
+                gstRate: gstRate,
+                gstAmount: gstAmount,
+                discount: 0,
+                total: itemSubtotal + gstAmount
+            };
+
+            billItems.push(billItem);
+            billSubtotal += itemSubtotal;
+            billTotalTax += gstAmount;
+        }
+
+        // Increase stock for items that match products by name
+        for (const item of entry.items) {
+            const product = await Product.findOne({ name: { $regex: new RegExp(`^${item.particular}$`, 'i') } });
+            if (product) {
+                const previousStock = product.stock;
+                product.stock += item.quantity;
+                await product.save();
+
+                // Record stock movement
+                await new StockMovement({
+                    product: product._id,
+                    type: 'in',
+                    quantity: item.quantity,
+                    previousStock: previousStock,
+                    newStock: product.stock,
+                    reason: `Purchased - Purchase Entry #${entry.invoiceNumber}`
+                }).save();
+            }
+        }
+
+        const billCgst = billTotalTax / 2;
+        const billSgst = billTotalTax / 2;
+        const billGrandTotal = Math.round(billSubtotal + billTotalTax);
+        const billRoundOff = billGrandTotal - (billSubtotal + billTotalTax);
+        const totalPacks = entry.items.reduce((sum, item) => sum + item.quantity, 0);
+
+        const bill = new Bill({
+            billNumber: await generatePurchaseBillNumber(),
+            billType: 'PURCHASE',
+            partyName: entry.supplier.name,
+            date: entry.date,
+            customer: {
+                name: entry.supplier.name,
+                phone: entry.supplier.mobile || '',
+                address: entry.supplier.address || '',
+                gstin: entry.supplier.gstin || '',
+                state: 'Tamilnadu',
+                stateCode: '33'
+            },
+            items: billItems,
+            subtotal: billSubtotal,
+            discountAmount: 0,
+            taxableAmount: billSubtotal,
+            cgst: billCgst,
+            sgst: billSgst,
+            totalTax: billTotalTax,
+            grandTotal: billGrandTotal,
+            roundOff: billRoundOff,
+            totalPacks,
+            numOfBundles: 1,
+            amountInWords: numberToWords(billGrandTotal),
+            paymentMethod: 'cash',
+            paymentStatus: 'paid',
+            notes: `Auto-generated from Purchase Entry #${entry.invoiceNumber}`
+        });
+
+        await bill.save();
+
+        res.status(201).json({ success: true, data: entry, bill: bill });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

@@ -33,7 +33,7 @@ const HomePage = () => {
         },
         {
             icon: FileText,
-            title: 'A4 Reports',
+            title: 'Reports',
             text: 'Purchase, sales, and stock reports formatted for A4 printing and audit.',
             colorClass: 'home-feature-icon-reports'
         },
@@ -45,7 +45,7 @@ const HomePage = () => {
         },
         {
             icon: Truck,
-            title: 'Supplier Management',
+            title: 'Supplier Records',
             text: 'Track suppliers, purchase entries, and outstanding payments.',
             colorClass: 'home-feature-icon-suppliers'
         },
@@ -65,24 +65,7 @@ const HomePage = () => {
                     <img src={logoImage} alt="Sri Ram Fashions" className="home-navbar-logo" />
                     <span className="home-navbar-name">Sri Ram Fashions</span>
                 </div>
-                <div className="home-navbar-actions">
-                    {isAuthenticated ? (
-                        <Link to="/dashboard" className="home-nav-btn home-nav-btn-solid">
-                            <LayoutDashboard size={16} />
-                            Dashboard
-                        </Link>
-                    ) : (
-                        <>
-                            <Link to="/login" className="home-nav-btn home-nav-btn-outline">
-                                Sign In
-                            </Link>
-                            <Link to="/register" className="home-nav-btn home-nav-btn-solid">
-                                Get Started
-                                <ArrowRight size={14} />
-                            </Link>
-                        </>
-                    )}
-                </div>
+
             </nav>
 
             {/* ===== HERO ===== */}
@@ -95,8 +78,8 @@ const HomePage = () => {
 
                     <h1 className="home-hero-title">
                         Smart Billing &{' '}
-                        <span className="home-hero-title-accent">Clean Inventory</span>
-                        {' '}for Your Business
+                        <span className="home-hero-title-accent">Inventory</span>
+                        {' '}for your Business
                     </h1>
 
                     <p className="home-hero-subtitle">

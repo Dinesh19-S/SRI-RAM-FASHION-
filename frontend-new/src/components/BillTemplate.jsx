@@ -132,15 +132,19 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
 
                 {/* ===== ROW 3: TAX INVOICE Title ===== */}
                 <div className="ti-title-row">
-                    <span className="ti-title-text">TAX INVOICE</span>
+                    <span className="ti-title-text">
+                        {bill.billType === 'SALES' ? 'GST TAX INVOICE - SALES' :
+                            bill.billType === 'PURCHASE' ? 'GST PURCHASE BILL' :
+                                'TAX INVOICE'}
+                    </span>
                 </div>
 
                 {/* ===== ROW 4: Consignee / Buyer Details ===== */}
                 <div className="ti-buyer-row">
                     <div className="ti-buyer-left">
-                        <div className="ti-buyer-heading">Consignee Copy</div>
+                        <div className="ti-buyer-heading">{bill.billType === 'PURCHASE' ? 'Supplier Copy' : 'Consignee Copy'}</div>
                         <div className="ti-buyer-field">
-                            <span className="ti-buyer-label">BUYER:</span>
+                            <span className="ti-buyer-label">{bill.billType === 'PURCHASE' ? 'SUPPLIER:' : 'BUYER:'}</span>
                             <span className="ti-buyer-value">{bill.customer?.name || ''}</span>
                         </div>
                         <div className="ti-buyer-field">

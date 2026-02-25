@@ -115,6 +115,12 @@ const billSchema = new mongoose.Schema({
         default: 'pending'
     },
     notes: String,
+    billType: {
+        type: String,
+        enum: ['SALES', 'PURCHASE', 'DIRECT'],
+        default: 'DIRECT'
+    },
+    partyName: String,
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

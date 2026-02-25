@@ -394,14 +394,14 @@ export const sendPasswordResetEmail = async (email, resetCode) => {
   return sendEmail(email, subject, html);
 };
 
-// Email report function
+// Email report function – A4-ready, professionally styled
 export const sendReportEmail = async (data, options, recipientEmails) => {
   const { title, fromDate, toDate, type } = options;
-  const subject = `Report: ${title} - ${new Date().toLocaleDateString('en-IN')}`;
+  const subject = `📄 ${title} | Sri Ram Fashions – ${new Date().toLocaleDateString('en-IN')}`;
 
   const reportData = Array.isArray(data) ? data : [];
   const formatNumber = (value) => Number(value || 0).toLocaleString('en-IN');
-  const formatMoney = (value) => `Rs ${formatNumber(value)}`;
+  const formatMoney = (value) => `₹ ${formatNumber(value)}`;
   const formatDateValue = (value) => {
     if (!value) return '';
     const parsed = new Date(value);
@@ -409,7 +409,7 @@ export const sendReportEmail = async (data, options, recipientEmails) => {
   };
 
   const periodText = fromDate && toDate
-    ? `Period: ${fromDate} to ${toDate}`
+    ? `From: ${fromDate}  |  To: ${toDate}`
     : fromDate
       ? `From: ${fromDate}`
       : toDate
@@ -417,51 +417,55 @@ export const sendReportEmail = async (data, options, recipientEmails) => {
         : `Date: ${new Date().toLocaleDateString('en-IN')}`;
 
   let headers = [];
+  let alignments = [];
   let rowsHtml = '';
   let totalsRowHtml = '';
 
   if (type === 'stock') {
-    headers = ['S.No', 'Item', 'Size', 'Qty', 'Rate', 'Total'];
-    rowsHtml = reportData.map(row => {
+    headers = ['S.No', 'Item', 'Size', 'Quantity', 'Rate', 'Total'];
+    alignments = ['left', 'left', 'left', 'right', 'right', 'right'];
+
+    rowsHtml = reportData.map((row, i) => {
       const lineTotal = Number(row.total || (Number(row.rate || 0) * Number(row.qty || 0)));
-      return `
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.sno ?? ''}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.item ?? ''}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.size ?? ''}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(row.qty)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.rate)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatMoney(lineTotal)}</td>
-        </tr>
-      `;
+      const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
+      return `<tr style="background:${bg};">
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.sno ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.item ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.size ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatNumber(row.qty)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(row.rate)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatMoney(lineTotal)}</td>
+      </tr>`;
     }).join('');
 
-    const grandTotal = reportData.reduce((sum, row) => {
-      const lineTotal = Number(row.total || (Number(row.rate || 0) * Number(row.qty || 0)));
-      return sum + lineTotal;
-    }, 0);
+    const totQty = reportData.reduce((s, r) => s + Number(r.qty || 0), 0);
+    const grandTotal = reportData.reduce((s, r) => s + Number(r.total || (Number(r.rate || 0) * Number(r.qty || 0))), 0);
 
-    totalsRowHtml = `
-      <tr class="total-row">
-        <td colspan="5" style="padding: 12px 10px; text-align: right;">Grand Total:</td>
-        <td style="padding: 12px 10px; text-align: right; color: #1e40af; font-size: 16px;">${formatMoney(grandTotal)}</td>
-      </tr>
-    `;
+    totalsRowHtml = `<tr style="background:#eef2ff;font-weight:700;border-top:2px solid #374151;">
+      <td colspan="3" style="padding:12px;font-size:14px;">GRAND TOTAL</td>
+      <td style="padding:12px;text-align:right;font-size:14px;">${formatNumber(totQty)}</td>
+      <td style="padding:12px;text-align:right;font-size:14px;"></td>
+      <td style="padding:12px;text-align:right;font-size:15px;color:#1e40af;">${formatMoney(grandTotal)}</td>
+    </tr>`;
+
   } else if (type === 'auditor-sales' || type === 'auditor-purchase') {
-    headers = ['Company Name', 'GSTIN', 'Date', 'Invoice No', 'Taxable Amount', 'CGST', 'SGST', 'IGST', 'Total'];
-    rowsHtml = reportData.map(row => `
-      <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.companyName ?? ''}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.gstin ?? ''}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${formatDateValue(row.date)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.invNo ?? ''}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.taxableAmount)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.cgst)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.sgst)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.igst)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatMoney(row.total)}</td>
-      </tr>
-    `).join('');
+    headers = ['Company Name', 'GSTIN', 'Date', 'Inv No', 'Taxable Amt', 'CGST', 'SGST', 'IGST', 'Total'];
+    alignments = ['left', 'left', 'left', 'left', 'right', 'right', 'right', 'right', 'right'];
+
+    rowsHtml = reportData.map((row, i) => {
+      const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
+      return `<tr style="background:${bg};">
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.companyName ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-family:monospace;font-size:12px;">${row.gstin ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${formatDateValue(row.date)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.invNo ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(row.taxableAmount)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(row.cgst)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(row.sgst)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(row.igst)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatMoney(row.total)}</td>
+      </tr>`;
+    }).join('');
 
     const totals = reportData.reduce((acc, row) => ({
       taxableAmount: acc.taxableAmount + Number(row.taxableAmount || 0),
@@ -471,106 +475,86 @@ export const sendReportEmail = async (data, options, recipientEmails) => {
       total: acc.total + Number(row.total || 0)
     }), { taxableAmount: 0, cgst: 0, sgst: 0, igst: 0, total: 0 });
 
-    totalsRowHtml = `
-      <tr class="total-row">
-        <td colspan="4" style="padding: 12px 10px;">Total</td>
-        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.taxableAmount)}</td>
-        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.cgst)}</td>
-        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.sgst)}</td>
-        <td style="padding: 12px 10px; text-align: right;">${formatMoney(totals.igst)}</td>
-        <td style="padding: 12px 10px; text-align: right; color: #1e40af; font-size: 16px;">${formatMoney(totals.total)}</td>
-      </tr>
-    `;
-  } else {
-    headers = type === 'purchase'
-      ? ['S.No', 'Date', 'Invoice No', 'Item', 'Rate', 'Qty', 'Total']
-      : ['S.No', 'Date', 'Inv No', 'Item', 'Rate', 'Qty', 'Total'];
+    totalsRowHtml = `<tr style="background:#eef2ff;font-weight:700;border-top:2px solid #374151;">
+      <td colspan="4" style="padding:12px;font-size:14px;">GRAND TOTAL</td>
+      <td style="padding:12px;text-align:right;font-size:14px;">${formatMoney(totals.taxableAmount)}</td>
+      <td style="padding:12px;text-align:right;font-size:14px;">${formatMoney(totals.cgst)}</td>
+      <td style="padding:12px;text-align:right;font-size:14px;">${formatMoney(totals.sgst)}</td>
+      <td style="padding:12px;text-align:right;font-size:14px;">${formatMoney(totals.igst)}</td>
+      <td style="padding:12px;text-align:right;font-size:15px;color:#1e40af;">${formatMoney(totals.total)}</td>
+    </tr>`;
 
-    rowsHtml = reportData.map(row => {
+  } else {
+    headers = ['S.No', 'Date', 'Invoice No', 'Item', 'Rate', 'Qty', 'Total'];
+    alignments = ['left', 'left', 'left', 'left', 'right', 'right', 'right'];
+
+    rowsHtml = reportData.map((row, i) => {
       const lineTotal = Number(row.rate || 0) * Number(row.qty || 0);
-      return `
-        <tr>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.sno ?? ''}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${formatDateValue(row.date)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.invNo ?? ''}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">${row.item ?? ''}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatMoney(row.rate)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatNumber(row.qty)}</td>
-          <td style="padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatMoney(lineTotal)}</td>
-        </tr>
-      `;
+      const bg = i % 2 === 0 ? '#ffffff' : '#f9fafb';
+      return `<tr style="background:${bg};">
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.sno ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${formatDateValue(row.date)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.invNo ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${row.item ?? ''}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(row.rate)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatNumber(row.qty)}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatMoney(lineTotal)}</td>
+      </tr>`;
     }).join('');
 
-    const grandTotal = reportData.reduce((sum, row) => sum + (Number(row.rate || 0) * Number(row.qty || 0)), 0);
-    totalsRowHtml = `
-      <tr class="total-row">
-        <td colspan="6" style="padding: 12px 10px; text-align: right;">Grand Total:</td>
-        <td style="padding: 12px 10px; text-align: right; color: #1e40af; font-size: 16px;">${formatMoney(grandTotal)}</td>
-      </tr>
-    `;
+    const totQty = reportData.reduce((s, r) => s + Number(r.qty || 0), 0);
+    const grandTotal = reportData.reduce((s, r) => s + (Number(r.rate || 0) * Number(r.qty || 0)), 0);
+
+    totalsRowHtml = `<tr style="background:#eef2ff;font-weight:700;border-top:2px solid #374151;">
+      <td colspan="5" style="padding:12px;font-size:14px;">GRAND TOTAL</td>
+      <td style="padding:12px;text-align:right;font-size:14px;">${formatNumber(totQty)}</td>
+      <td style="padding:12px;text-align:right;font-size:15px;color:#1e40af;">${formatMoney(grandTotal)}</td>
+    </tr>`;
   }
 
   if (!rowsHtml) {
-    rowsHtml = `
-      <tr>
-        <td colspan="${headers.length || 1}" style="padding: 16px 10px; text-align: center; color: #6b7280;">
-          No data available for this report.
-        </td>
-      </tr>
-    `;
+    rowsHtml = `<tr><td colspan="${headers.length || 1}" style="padding:24px;text-align:center;color:#6b7280;font-style:italic;">No data available for this report.</td></tr>`;
     totalsRowHtml = '';
   }
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f3f4f6; }
-        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 12px 12px 0 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-        .footer { background: #1f2937; color: #9ca3af; padding: 15px; text-align: center; border-radius: 0 0 12px 12px; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background-color: #f9fafb; color: #4b5563; font-weight: bold; padding: 12px 10px; border-bottom: 2px solid #e5e7eb; text-align: left; font-size: 13px; text-transform: uppercase; }
-        td { font-size: 14px; }
-        .total-row { background-color: #f3f4f6; font-weight: bold; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1 style="margin: 0; font-size: 24px;">${title}</h1>
-          <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">${periodText}</p>
-        </div>
-        <div class="content">
-          <p style="margin-top: 0; color: #6b7280;">Hello,</p>
-          <p>Please find the requested <strong>${title}</strong> details below:</p>
-          
-          <table>
-            <thead>
-              <tr>
-                ${headers.map(h => `<th>${h}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${rowsHtml}
-            </tbody>
-            ${totalsRowHtml ? `<tfoot>${totalsRowHtml}</tfoot>` : ''}
-          </table>
-        </div>
-        <div class="footer">
-          <p>Copyright ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  const thCells = headers.map((h, idx) => {
+    const align = alignments[idx] || 'left';
+    return `<th style="padding:12px;text-align:${align};font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#374151;background:#f0f4ff;border-bottom:2px solid #3b82f6;font-weight:700;">${h}</th>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>${title} - Sri Ram Fashions</title></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:'Segoe UI',Arial,Helvetica,sans-serif;line-height:1.5;color:#1f2937;">
+  <div style="max-width:794px;margin:20px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:28px 32px;text-align:center;">
+      <h1 style="margin:0;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:1px;">Sri Ram Fashions</h1>
+      <p style="margin:6px 0 0;font-size:10px;text-transform:uppercase;letter-spacing:3px;color:rgba(255,255,255,0.7);">Business Management System</p>
+    </div>
+    <div style="background:#f0f4ff;padding:16px 32px;border-bottom:1px solid #dbeafe;text-align:center;">
+      <h2 style="margin:0;font-size:18px;font-weight:700;color:#1e40af;">${title}</h2>
+      <p style="margin:4px 0 0;font-size:13px;color:#6b7280;">${periodText}</p>
+    </div>
+    <div style="padding:24px 24px 32px;">
+      <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;" cellpadding="0" cellspacing="0">
+        <thead><tr>${thCells}</tr></thead>
+        <tbody>${rowsHtml}</tbody>
+        ${totalsRowHtml ? `<tfoot>${totalsRowHtml}</tfoot>` : ''}
+      </table>
+      <p style="margin:20px 0 0;font-size:11px;color:#9ca3af;text-align:center;">This report was auto-generated by Sri Ram Fashions Business Management System.</p>
+    </div>
+    <div style="background:#1f2937;padding:16px 32px;text-align:center;">
+      <p style="margin:0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} Sri Ram Fashions. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`;
 
   const emails = Array.isArray(recipientEmails) ? recipientEmails : [recipientEmails];
   const responses = await Promise.all(emails.map(email => sendEmail(email, subject, html)));
   return responses;
 };
+
 // Generic notification email
 export const sendNotification = async (to, subject, message) => {
   const html = `

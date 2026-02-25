@@ -30,6 +30,7 @@ const BillingPage = () => {
     const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [billTypeFilter, setBillTypeFilter] = useState('all');
     const [customer, setCustomer] = useState({
         name: '',
         phone: '',
@@ -234,13 +235,14 @@ const BillingPage = () => {
     };
 
     const handleEmailBill = async () => {
-        if (!emailTo || !emailBill) {
-            toast.warning('Please enter an email address');
+        const trimmedEmail = emailTo?.trim();
+        if (!trimmedEmail || !emailBill) {
+            toast.warning('Please enter a valid email address');
             return;
         }
         setIsSendingEmail(true);
         try {
-            const response = await emailAPI.sendBill(emailBill._id, emailTo);
+            const response = await emailAPI.sendBill(emailBill._id, trimmedEmail);
             if (response.data.success) {
                 toast.success(response.data.message || 'Bill emailed successfully!');
                 setShowEmailModal(false);
@@ -271,8 +273,10 @@ const BillingPage = () => {
         const matchesSearch =
             bill.billNumber?.toLowerCase().includes(searchLower) ||
             bill.customer?.name?.toLowerCase().includes(searchLower) ||
+            bill.partyName?.toLowerCase().includes(searchLower) ||
             billDate.includes(searchQuery);
-        return matchesSearch && (filterStatus === 'all' || bill.paymentStatus === filterStatus);
+        const matchesType = billTypeFilter === 'all' || bill.billType === billTypeFilter;
+        return matchesSearch && matchesType && (filterStatus === 'all' || bill.paymentStatus === filterStatus);
     });
 
     return (
@@ -302,6 +306,18 @@ const BillingPage = () => {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
+                    <div className="flex gap-2 flex-wrap">
+                        {[{ key: 'all', label: 'All' }, { key: 'SALES', label: 'Sales' }, { key: 'PURCHASE', label: 'Purchase' }, { key: 'DIRECT', label: 'Direct' }].map(f => (
+                            <button
+                                key={f.key}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${billTypeFilter === f.key ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                style={billTypeFilter === f.key ? { backgroundColor: f.key === 'SALES' ? '#16a34a' : f.key === 'PURCHASE' ? '#2563eb' : f.key === 'DIRECT' ? '#6b7280' : '#7c3aed' } : {}}
+                                onClick={() => setBillTypeFilter(f.key)}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -312,13 +328,21 @@ const BillingPage = () => {
                     <div className="text-center py-12 text-gray-500"><FileText size={48} className="mx-auto mb-2 opacity-50" /><p>No bills found</p></div>
                 ) : (
                     <table className="table">
-                        <thead><tr className="bg-gray-50"><th>Bill No</th><th>Date</th><th>Customer</th><th>Amount</th><th className="text-right">Actions</th></tr></thead>
+                        <thead><tr className="bg-gray-50"><th>Bill No</th><th>Type</th><th>Date</th><th>Party</th><th>Amount</th><th className="text-right">Actions</th></tr></thead>
                         <tbody>
                             {filteredBills.map((bill) => (
                                 <tr key={bill._id}>
                                     <td className="font-medium" style={{ color: '#1e40af' }}>{bill.billNumber}</td>
+                                    <td>
+                                        <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{
+                                            backgroundColor: bill.billType === 'SALES' ? '#dcfce7' : bill.billType === 'PURCHASE' ? '#dbeafe' : '#f3f4f6',
+                                            color: bill.billType === 'SALES' ? '#15803d' : bill.billType === 'PURCHASE' ? '#1d4ed8' : '#4b5563'
+                                        }}>
+                                            {bill.billType || 'DIRECT'}
+                                        </span>
+                                    </td>
                                     <td>{(() => { const d = new Date(bill.date || bill.createdAt); return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`; })()}</td>
-                                    <td><div><p className="font-medium">{bill.customer?.name}</p><p className="text-xs text-gray-500">{bill.customer?.phone}</p></div></td>
+                                    <td><div><p className="font-medium">{bill.partyName || bill.customer?.name}</p><p className="text-xs text-gray-500">{bill.customer?.phone}</p></div></td>
                                     <td className="font-semibold">{formatCurrency(bill.grandTotal)}</td>
                                     <td>
                                         <div className="flex justify-end gap-2">
@@ -369,6 +393,18 @@ const BillingPage = () => {
                         <div className="modal-header">
                             <h3 className="text-lg font-semibold text-gray-900">Bill Preview - {selectedBill.billNumber}</h3>
                             <div className="flex gap-2">
+                                <button
+                                    className="btn btn-sm"
+                                    style={{ backgroundColor: '#1e40af', color: 'white' }}
+                                    onClick={() => {
+                                        setEmailBill(selectedBill);
+                                        setEmailTo(selectedBill.customer?.email || '');
+                                        setShowPreviewModal(false);
+                                        setShowEmailModal(true);
+                                    }}
+                                >
+                                    <Mail size={16} />Email
+                                </button>
                                 <button className="btn btn-primary btn-sm" onClick={handlePrintBill}><Download size={16} />Download PDF</button>
                                 <button className="btn btn-ghost btn-icon" onClick={() => setShowPreviewModal(false)}><X size={20} /></button>
                             </div>

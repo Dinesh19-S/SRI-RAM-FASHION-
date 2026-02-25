@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Package, X, Printer, Search, FileSpreadsheet, Mail } from 'lucide-react';
 import ReportHeader from '../components/reports/ReportHeader';
-import { exportToExcel } from '../utils/exportToExcel';
+import { exportToExcelStyled } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
 import { reportsAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
@@ -37,16 +37,30 @@ const StockReportsPage = () => {
             return;
         }
 
-        const exportData = reportData.map(row => ({
-            'S.No': row.sno,
-            'Item': row.item,
-            'Size': row.size,
-            'Quantity': row.qty,
-            'Rate': row.rate,
-            'Total': row.total
-        }));
+        const columns = [
+            { key: 'sno', header: 'S.No', width: 8, align: 'left' },
+            { key: 'item', header: 'Item', width: 28, align: 'left' },
+            { key: 'size', header: 'Size', width: 10, align: 'left' },
+            { key: 'qty', header: 'Quantity', width: 12, align: 'right' },
+            { key: 'rate', header: 'Rate', width: 14, align: 'right' },
+            { key: 'total', header: 'Total', width: 16, align: 'right' }
+        ];
 
-        exportToExcel(exportData, 'stock_report');
+        const grandTotals = {
+            qty: reportData.reduce((sum, r) => sum + (r.qty || 0), 0),
+            rate: reportData.reduce((sum, r) => sum + (r.rate || 0), 0),
+            total: reportData.reduce((sum, r) => sum + (r.total || 0), 0)
+        };
+
+        exportToExcelStyled({
+            title: 'Stock Report',
+            businessName: 'Sri Ram Fashions',
+            columns,
+            data: reportData,
+            totals: grandTotals,
+            filename: 'stock_report',
+            sheetName: 'Stock Report'
+        });
     };
 
     const handlePrint = () => {

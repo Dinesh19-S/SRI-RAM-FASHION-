@@ -115,11 +115,86 @@ const InventoryPage = () => {
                 <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="stats-card"><div className="p-3 rounded-xl" style={{ backgroundColor: '#dbeafe', color: '#1e40af' }}><Package size={24} /></div><div><p className="text-sm text-gray-500">Total Products</p><p className="text-xl font-bold text-gray-900">{stats.totalProducts}</p></div></div>
-                <div className="stats-card"><div className="p-3 rounded-xl bg-blue-100 text-blue-600"><Box size={24} /></div><div><p className="text-sm text-gray-500">Total Stock</p><p className="text-xl font-bold text-gray-900">{stats.totalStock}</p></div></div>
-                <div className="stats-card"><div className="p-3 rounded-xl bg-red-100 text-red-600"><AlertTriangle size={24} /></div><div><p className="text-sm text-gray-500">Low Stock</p><p className="text-xl font-bold text-gray-900">{stats.lowStock}</p></div></div>
-                <div className="stats-card"><div className="p-3 rounded-xl bg-green-100 text-green-600"><TrendingUp size={24} /></div><div><p className="text-sm text-gray-500">Inventory Value</p><p className="text-xl font-bold text-gray-900">{formatCurrency(stats.inventoryValue)}</p></div></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* Total Products */}
+                <div
+                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
+                    style={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        boxShadow: '0 10px 30px -5px rgba(102, 126, 234, 0.4)',
+                    }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
+                    <div className="relative z-1 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
+                            <Package size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Products</p>
+                            <p className="text-2xl font-bold text-white mt-0.5">{stats.totalProducts}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Total Stock */}
+                <div
+                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
+                    style={{
+                        background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)',
+                        boxShadow: '0 10px 30px -5px rgba(14, 165, 233, 0.4)',
+                    }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
+                    <div className="relative z-1 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
+                            <Box size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Stock</p>
+                            <p className="text-2xl font-bold text-white mt-0.5">{stats.totalStock.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Low Stock */}
+                <div
+                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
+                    style={{
+                        background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+                        boxShadow: '0 10px 30px -5px rgba(244, 63, 94, 0.4)',
+                    }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
+                    <div className="relative z-1 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
+                            <AlertTriangle size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Low Stock</p>
+                            <p className="text-2xl font-bold text-white mt-0.5">{stats.lowStock}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Inventory Value */}
+                <div
+                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
+                    style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        boxShadow: '0 10px 30px -5px rgba(16, 185, 129, 0.4)',
+                    }}
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
+                    <div className="relative z-1 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
+                            <TrendingUp size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Inventory Value</p>
+                            <p className="text-2xl font-bold text-white mt-0.5">{formatCurrency(stats.inventoryValue)}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {products.length > 0 && (
