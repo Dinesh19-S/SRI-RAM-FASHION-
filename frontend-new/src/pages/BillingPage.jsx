@@ -296,27 +296,41 @@ const BillingPage = () => {
             </div>
 
             <div className="card py-4">
-                <div className="flex items-center gap-3">
-                    <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
-                        <input
-                            type="text"
-                            className="form-input py-2 text-sm w-full"
-                            placeholder="Search by Bill No, Customer, or Date..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                        {[{ key: 'all', label: 'All' }, { key: 'SALES', label: 'Sales' }, { key: 'PURCHASE', label: 'Purchase' }, { key: 'DIRECT', label: 'Direct' }].map(f => (
-                            <button
-                                key={f.key}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${billTypeFilter === f.key ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                style={billTypeFilter === f.key ? { backgroundColor: f.key === 'SALES' ? '#16a34a' : f.key === 'PURCHASE' ? '#2563eb' : f.key === 'DIRECT' ? '#6b7280' : '#7c3aed' } : {}}
-                                onClick={() => setBillTypeFilter(f.key)}
-                            >
-                                {f.label}
-                            </button>
-                        ))}
+                <div className="flex flex-col gap-4">
+                    <input
+                        type="text"
+                        className="form-input py-2 text-sm w-full"
+                        placeholder="Search by Bill No, Customer, or Date..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    <div className="flex gap-4 flex-wrap items-center">
+                        <div className="flex gap-2 flex-wrap items-center">
+                            <span className="text-xs font-semibold text-gray-600 uppercase">Type:</span>
+                            {[{ key: 'all', label: 'All' }, { key: 'SALES', label: 'Sales' }, { key: 'PURCHASE', label: 'Purchase' }, { key: 'DIRECT', label: 'Direct' }].map(f => (
+                                <button
+                                    key={f.key}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${billTypeFilter === f.key ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                    style={billTypeFilter === f.key ? { backgroundColor: f.key === 'SALES' ? '#16a34a' : f.key === 'PURCHASE' ? '#2563eb' : f.key === 'DIRECT' ? '#6b7280' : '#7c3aed' } : {}}
+                                    onClick={() => setBillTypeFilter(f.key)}
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="flex gap-2 flex-wrap items-center">
+                            <span className="text-xs font-semibold text-gray-600 uppercase">Status:</span>
+                            {[{ key: 'all', label: 'All' }, { key: 'paid', label: 'Paid' }, { key: 'pending', label: 'Pending' }, { key: 'partial', label: 'Partial' }, { key: 'cancel', label: 'Cancel' }].map(f => (
+                                <button
+                                    key={f.key}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterStatus === f.key ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                    style={filterStatus === f.key ? { backgroundColor: f.key === 'paid' ? '#16a34a' : f.key === 'pending' ? '#f59e0b' : f.key === 'partial' ? '#3b82f6' : f.key === 'cancel' ? '#ef4444' : '#7c3aed' } : {}}
+                                    onClick={() => setFilterStatus(f.key)}
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -328,7 +342,7 @@ const BillingPage = () => {
                     <div className="text-center py-12 text-gray-500"><FileText size={48} className="mx-auto mb-2 opacity-50" /><p>No bills found</p></div>
                 ) : (
                     <table className="table">
-                        <thead><tr className="bg-gray-50"><th>Bill No</th><th>Type</th><th>Date</th><th>Party</th><th>Amount</th><th className="text-right">Actions</th></tr></thead>
+                        <thead><tr className="bg-gray-50"><th>Bill No</th><th>Type</th><th>Date</th><th>Party</th><th>Amount</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
                         <tbody>
                             {filteredBills.map((bill) => (
                                 <tr key={bill._id}>
@@ -344,6 +358,14 @@ const BillingPage = () => {
                                     <td>{(() => { const d = new Date(bill.date || bill.createdAt); return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`; })()}</td>
                                     <td><div><p className="font-medium">{bill.partyName || bill.customer?.name}</p><p className="text-xs text-gray-500">{bill.customer?.phone}</p></div></td>
                                     <td className="font-semibold">{formatCurrency(bill.grandTotal)}</td>
+                                    <td>
+                                        <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{
+                                            backgroundColor: bill.paymentStatus === 'paid' ? '#dcfce7' : bill.paymentStatus === 'pending' ? '#fef3c7' : bill.paymentStatus === 'partial' ? '#dbeafe' : '#fee2e2',
+                                            color: bill.paymentStatus === 'paid' ? '#15803d' : bill.paymentStatus === 'pending' ? '#92400e' : bill.paymentStatus === 'partial' ? '#1d4ed8' : '#991b1b'
+                                        }}>
+                                            {bill.paymentStatus ? bill.paymentStatus.charAt(0).toUpperCase() + bill.paymentStatus.slice(1) : 'Pending'}
+                                        </span>
+                                    </td>
                                     <td>
                                         <div className="flex justify-end gap-2">
                                             <button
