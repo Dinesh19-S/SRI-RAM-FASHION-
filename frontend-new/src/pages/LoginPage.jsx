@@ -4,6 +4,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { login, sendOTP, loginWithPhone, clearError, googleLogin, forgotPassword, resetPassword } from '../store/slices/authSlice';
 import { Eye, EyeOff, X, CheckCircle, ArrowRight } from 'lucide-react';
+import sriRamLogo from '../assets/logo.jpg';
+
+const isElectron = typeof window !== 'undefined' && (window.location.protocol === 'file:' || navigator.userAgent.includes('Electron'));
 
 const LoginPage = () => {
     const dispatch = useDispatch();
@@ -137,7 +140,7 @@ const LoginPage = () => {
             <div className="relative z-2 bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl border border-gray-100 text-center">
                 <div className="mb-8">
                     <img
-                        src="/assets/sri-ram-logo.png"
+                        src={sriRamLogo}
                         alt="Sri Ram Fashions Logo"
                         className="mx-auto mb-4"
                         style={{ width: '120px', height: 'auto', borderRadius: '12px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
@@ -203,36 +206,38 @@ const LoginPage = () => {
                     </button>
                 </form>
 
-                <div className="flex items-center my-6">
-                    <div className="flex-1 border-t border-gray-300"></div>
-                    <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
-                    <div className="flex-1 border-t border-gray-300"></div>
-                </div>
+                {!isElectron && (
+                    <>
+                        <div className="flex items-center my-6">
+                            <div className="flex-1 border-t border-gray-300"></div>
+                            <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
+                            <div className="flex-1 border-t border-gray-300"></div>
+                        </div>
 
-                {/* Social Buttons */}
-                <div className="space-y-3">
-                    <div className="flex justify-center w-full">
-                        <GoogleLogin
-                            onSuccess={async (credentialResponse) => {
-                                const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
-                                if (googleLogin.fulfilled.match(result)) {
-                                    navigate('/dashboard');
-                                }
-                            }}
-                            onError={(error) => {
-                                // Google popup failed before reaching backend
-                                // This error happens BEFORE contacting the backend - it means the Google popup itself failed
-                                dispatch(clearError());
-                            }}
-                            theme="outline"
-                            size="large"
-                            width="340"
-                            shape="rectangular"
-                            text="continue_with"
-                            logo_alignment="center"
-                        />
-                    </div>
-                </div>
+                        {/* Social Buttons */}
+                        <div className="space-y-3">
+                            <div className="flex justify-center w-full">
+                                <GoogleLogin
+                                    onSuccess={async (credentialResponse) => {
+                                        const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
+                                        if (googleLogin.fulfilled.match(result)) {
+                                            navigate('/dashboard');
+                                        }
+                                    }}
+                                    onError={(error) => {
+                                        dispatch(clearError());
+                                    }}
+                                    theme="outline"
+                                    size="large"
+                                    width="340"
+                                    shape="rectangular"
+                                    text="continue_with"
+                                    logo_alignment="center"
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
 
                 <div className="mt-8 text-center text-sm text-gray-700 font-medium">
                     Don't have an account? <Link to="/register" className="font-bold text-blue-700 hover:text-blue-900 hover:underline ml-1">Sign Up</Link>

@@ -4,6 +4,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { register, clearError, googleLogin } from '../store/slices/authSlice';
 import { Mail, Lock, Phone, Eye, EyeOff, ArrowRight, User, CheckCircle, XCircle } from 'lucide-react';
+import sriRamLogo from '../assets/logo.jpg';
+
+const isElectron = typeof window !== 'undefined' && (window.location.protocol === 'file:' || navigator.userAgent.includes('Electron'));
 
 const RegisterPage = () => {
     const dispatch = useDispatch();
@@ -123,7 +126,7 @@ const RegisterPage = () => {
             <div className="relative z-2 bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl text-center border border-gray-100">
                 <div className="mb-8">
                     <img
-                        src="/assets/sri-ram-logo.png"
+                        src={sriRamLogo}
                         alt="Sri Ram Fashions Logo"
                         className="mx-auto mb-4"
                         style={{ width: '120px', height: 'auto', borderRadius: '12px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
@@ -264,34 +267,38 @@ const RegisterPage = () => {
                     </button>
                 </form>
 
-                <div className="flex items-center my-6">
-                    <div className="flex-1 border-t border-gray-300"></div>
-                    <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
-                    <div className="flex-1 border-t border-gray-300"></div>
-                </div>
+                {!isElectron && (
+                    <>
+                        <div className="flex items-center my-6">
+                            <div className="flex-1 border-t border-gray-300"></div>
+                            <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
+                            <div className="flex-1 border-t border-gray-300"></div>
+                        </div>
 
-                {/* Social Buttons */}
-                <div className="space-y-3">
-                    <div className="flex justify-center w-full">
-                        <GoogleLogin
-                            onSuccess={async (credentialResponse) => {
-                                const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
-                                if (googleLogin.fulfilled.match(result)) {
-                                    navigate('/dashboard');
-                                }
-                            }}
-                            onError={(error) => {
-                                dispatch(clearError());
-                            }}
-                            theme="outline"
-                            size="large"
-                            width="340"
-                            shape="rectangular"
-                            text="signup_with"
-                            logo_alignment="center"
-                        />
-                    </div>
-                </div>
+                        {/* Social Buttons */}
+                        <div className="space-y-3">
+                            <div className="flex justify-center w-full">
+                                <GoogleLogin
+                                    onSuccess={async (credentialResponse) => {
+                                        const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
+                                        if (googleLogin.fulfilled.match(result)) {
+                                            navigate('/dashboard');
+                                        }
+                                    }}
+                                    onError={(error) => {
+                                        dispatch(clearError());
+                                    }}
+                                    theme="outline"
+                                    size="large"
+                                    width="340"
+                                    shape="rectangular"
+                                    text="signup_with"
+                                    logo_alignment="center"
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
 
                 <div className="mt-8 text-center text-gray-700 text-sm font-medium">
                     Already have an account? <Link to="/login" className="font-bold text-blue-700 hover:text-blue-900 hover:underline ml-1">Sign In</Link>
