@@ -4,7 +4,7 @@ import axios from 'axios';
 // - Production: Use Render backend
 // - Development: Use localhost backend
 const API_URL = import.meta.env.PROD
-    ? 'https://sri-ram-fashion.onrender.com/api'
+    ? 'https://sri-ram-fashion-backend.onrender.com/api'
     : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
 // Create axios instance

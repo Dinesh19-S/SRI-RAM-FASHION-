@@ -41,8 +41,8 @@ const allowedOrigins = [
 
 const corsOptions = {
     origin: (origin, callback) => {
-        // Allow requests from Electron/file://, localhost dev, and whitelisted web origins
-        if (!origin || origin === 'file://' || origin?.startsWith('capacitor://') || allowedOrigins.includes(origin)) {
+        // Allow requests from Electron/file://, localhost dev, Capacitor, Vercel, and whitelisted web origins
+        if (!origin || origin === 'file://' || origin?.startsWith('capacitor://') || origin?.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
         return callback(new Error(`CORS blocked for origin: ${origin}`));
