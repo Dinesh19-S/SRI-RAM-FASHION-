@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Search, Edit, Trash2, Download, X, Save } from 'lucide-react';
+import { Mail, Phone, Plus, Search, Pencil, Trash2, Download, X, Save, Building2 } from 'lucide-react';
 import { customersAPI } from '../services/api';
 import { useToast } from '../components/common';
+
+const avatarBg = ['bg-amber-500', 'bg-slate-500', 'bg-emerald-500', 'bg-blue-500', 'bg-rose-500', 'bg-indigo-500', 'bg-cyan-500', 'bg-violet-500'];
 
 const CustomerEntryPage = () => {
     const toast = useToast();
@@ -143,7 +145,6 @@ const CustomerEntryPage = () => {
     };
 
     const handleDownload = (customer) => {
-        // Create customer data text content
         const content = `
 CUSTOMER DETAILS
 ================
@@ -160,7 +161,6 @@ Place of Supply: ${customer.placeOfSupply || '-'}
 Generated on: ${new Date().toLocaleString('en-IN')}
         `.trim();
 
-        // Create blob and download
         const blob = new Blob([content], { type: 'text/plain' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -176,109 +176,109 @@ Generated on: ${new Date().toLocaleString('en-IN')}
         <div className="space-y-6 animate-fade-in">
             {/* Page Header */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center">
-                        <Users className="text-pink-600" size={20} />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Customer Entry</h1>
+                <div className="flex flex-col gap-1">
+                    <p className="text-sm text-gray-600">Manage your customer database</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
                 </div>
-                <button
-                    className="btn btn-primary"
-                    onClick={() => handleOpenModal()}
-                >
-                    <Plus size={16} />
-                    New Customer
-                </button>
-            </div>
-
-            {/* Search Section */}
-            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex flex-wrap items-end gap-3">
-                    <div className="shrink-0 w-64">
-                        <label className="form-label">Company Name</label>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Enter company name"
+                            placeholder="Search customers..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            className="form-input"
+                            className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                         />
                     </div>
-
                     <button
-                        onClick={handleSearch}
-                        disabled={isLoading}
                         className="btn btn-primary"
+                        onClick={() => handleOpenModal()}
                     >
-                        <Search size={16} />
-                        Search
-                    </button>
-                    <button
-                        onClick={() => { setSearchQuery(''); fetchCustomers(); }}
-                        className="btn btn-ghost"
-                    >
-                        <X size={16} />
-                        Clear
+                        <Plus size={16} />
+                        New Customer
                     </button>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="card p-0 overflow-hidden">
+            <div className="bg-white border rounded-2xl shadow-sm overflow-hidden" style={{ borderColor: 'var(--border-soft)' }}>
                 <div className="overflow-x-auto">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>S No</th>
-                                <th>Company Name</th>
-                                <th>Mobile</th>
-                                <th>Email</th>
-                                <th>GSTIN</th>
-                                <th className="text-right">Actions</th>
+                    <table className="w-full">
+                        <thead style={{ backgroundColor: '#dbeafe' }} className="text-left">
+                            <tr className="text-xs uppercase tracking-wide text-blue-900">
+                                <th className="px-6 py-3">Customer</th>
+                                <th className="px-6 py-3">Contact Info</th>
+                                <th className="px-6 py-3">GSTIN</th>
+                                <th className="px-6 py-3">State</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="6" className="py-8 text-center">
+                                    <td colSpan="5" className="py-8 text-center">
                                         <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }}></div>
                                     </td>
                                 </tr>
                             ) : customers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="py-8 text-center text-gray-500">
-                                        No customers found. Click "NEW CUSTOMER" to add one.
+                                    <td colSpan="5" className="py-8 text-center text-gray-500">
+                                        No customers found. Click &quot;New Customer&quot; to add one.
                                     </td>
                                 </tr>
                             ) : (
                                 customers.map((customer, index) => (
-                                    <tr key={customer._id}>
-                                        <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                                        <td className="text-blue-600 font-medium">{customer.companyName}</td>
-                                        <td>{customer.mobile}</td>
-                                        <td>{customer.email || '-'}</td>
-                                        <td className="font-mono">{customer.gstin || '-'}</td>
-                                        <td>
-                                            <div className="flex justify-end gap-2">
+                                    <tr key={customer._id} className="border-b last:border-b-0 hover:bg-[#eff6ff]" style={{ borderColor: 'var(--border-soft)' }}>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center font-bold ${avatarBg[index % avatarBg.length]}`}>
+                                                    {(customer.companyName || '?').charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-900">{customer.companyName}</p>
+                                                    <p className="text-xs text-gray-500">{customer.placeOfSupply || customer.state || 'Tamilnadu'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col text-sm text-gray-700 gap-1">
+                                                {customer.email && (
+                                                    <span className="flex items-center gap-2 text-gray-800"><Mail size={14} /> {customer.email}</span>
+                                                )}
+                                                <span className="flex items-center gap-2 text-gray-800"><Phone size={14} /> {customer.mobile}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm font-mono text-gray-800">{customer.gstin || '-'}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
+                                                <Building2 size={16} className="text-gray-500" />
+                                                {customer.state || 'Tamilnadu'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     className="action-btn action-btn-green"
                                                     onClick={() => handleDownload(customer)}
-                                                    title="Download"
+                                                    aria-label="Download customer"
                                                 >
                                                     <Download size={16} />
                                                 </button>
                                                 <button
                                                     className="action-btn action-btn-blue"
                                                     onClick={() => handleOpenModal(customer)}
-                                                    title="Edit"
+                                                    aria-label="Edit customer"
                                                 >
-                                                    <Edit size={16} />
+                                                    <Pencil size={16} />
                                                 </button>
                                                 <button
                                                     className="action-btn action-btn-red"
                                                     onClick={() => handleDeleteClick(customer)}
-                                                    title="Delete"
+                                                    aria-label="Delete customer"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -293,7 +293,7 @@ Generated on: ${new Date().toLocaleString('en-IN')}
 
                 {/* Pagination */}
                 {pagination.pages > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+                    <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50" style={{ borderColor: 'var(--border-soft)' }}>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => handlePageChange(pagination.page - 1)}

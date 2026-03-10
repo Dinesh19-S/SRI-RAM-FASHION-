@@ -77,9 +77,8 @@ const HomePage = () => {
                     </div>
 
                     <h1 className="home-hero-title">
-                        Smart Billing &{' '}
-                        <span className="home-hero-title-accent">Inventory</span>
-                        {' '}for your Business
+                        SRI RAM{' '}
+                        <span className="home-hero-title-accent">FASHIONS</span>
                     </h1>
 
                     <p className="home-hero-subtitle">

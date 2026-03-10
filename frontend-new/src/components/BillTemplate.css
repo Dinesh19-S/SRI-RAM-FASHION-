@@ -39,6 +39,15 @@
     color: #1a3d7c;
     letter-spacing: 2px;
     text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ti-company-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
 }
 
 .ti-gstin-header {
@@ -169,11 +178,19 @@
 /* ============================================
    ROW 5: Items Table
    ============================================ */
+/* Container stretches to fill remaining A4 page space */
+.ti-table-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 .ti-items-table {
     width: 100%;
+    height: 100%;
     border-collapse: collapse;
     font-size: 11px;
-    flex: 1;
 }
 
 .ti-items-table thead {
@@ -206,7 +223,7 @@
 }
 
 .ti-items-table tbody tr:last-child td {
-    border-bottom: 1px solid #333;
+    border-bottom: 1.5px solid #333;
 }
 
 .ti-text-left {
@@ -219,60 +236,33 @@
 }
 
 /* Column widths */
-.ti-col-sno {
-    width: 5%;
-}
-
-.ti-col-product {
-    width: 18%;
-}
-
-.ti-col-hsn {
-    width: 9%;
-}
-
-.ti-col-sizes {
-    width: 10%;
-}
-
-.ti-col-ratepc {
-    width: 10%;
-}
-
-.ti-col-pcsinpk {
-    width: 8%;
-}
-
-.ti-col-ratepk {
-    width: 11%;
-}
-
-.ti-col-nopacks {
-    width: 9%;
-}
-
-.ti-col-amount {
-    width: 12%;
-}
+.ti-col-sno { width: 5%; }
+.ti-col-product { width: 18%; }
+.ti-col-hsn { width: 9%; }
+.ti-col-sizes { width: 10%; }
+.ti-col-ratepc { width: 10%; }
+.ti-col-pcsinpk { width: 8%; }
+.ti-col-ratepk { width: 11%; }
+.ti-col-nopacks { width: 9%; }
+.ti-col-amount { width: 12%; }
 
 /* ============================================
    ROW 6: Summary (3-column bottom section)
    ============================================ */
 .ti-summary-row {
     display: flex;
-    border-top: 2px solid #333;
     border-bottom: 1.5px solid #333;
-    min-height: 110px;
+    min-height: 96px;
 }
 
 /* -- Left column: Total Packs / Bill Amount / In Words -- */
 .ti-summary-left {
     flex: 1.2;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-right: 1.5px solid #333;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
 .ti-summary-field {
@@ -310,7 +300,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 10px 12px;
+    padding: 8px 10px;
 }
 
 .ti-bundles-box {
@@ -355,7 +345,7 @@
 /* -- Right column: Tax Breakdown -- */
 .ti-summary-right {
     flex: 1;
-    padding: 6px 14px;
+    padding: 6px 12px;
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -403,16 +393,16 @@
    ============================================ */
 .ti-footer-row {
     display: flex;
-    min-height: 100px;
+    min-height: 90px;
 }
 
 .ti-footer-left {
     flex: 1.2;
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-right: 1.5px solid #333;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .ti-terms-title {
@@ -424,16 +414,16 @@
 }
 
 .ti-terms-text {
-    font-size: 8.5px;
-    line-height: 1.5;
+    font-size: 8px;
+    line-height: 1.4;
     color: #333;
 }
 
 .ti-bank-box {
     background: #fffbe6;
     border: 1.5px solid #d4a017;
-    padding: 6px 10px;
-    margin-top: 4px;
+    padding: 5px 8px;
+    margin-top: 2px;
 }
 
 .ti-bank-title {
@@ -446,21 +436,21 @@
 }
 
 .ti-bank-info {
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: 700;
     color: #1a3d7c;
-    line-height: 1.5;
+    line-height: 1.35;
 }
 
 .ti-footer-right {
     flex: 1;
-    padding: 10px 14px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    gap: 12px;
+    gap: 8px;
 }
 
 .ti-certified {

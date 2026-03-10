@@ -1,6 +1,14 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('electron', {
-    // Expose specific methods here if needed
-    // ping: () => ipcRenderer.invoke('ping'),
+// Expose safe APIs to the renderer process
+contextBridge.exposeInMainWorld('electronAPI', {
+    // App info
+    isElectron: true,
+    platform: process.platform,
+
+    // Print the current page
+    print: () => ipcRenderer.invoke('print'),
+
+    // App version
+    getVersion: () => ipcRenderer.invoke('get-version'),
 });

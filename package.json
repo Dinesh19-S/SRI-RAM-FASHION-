@@ -1,7 +1,7 @@
 {
     "name": "sri-ram-fashion-app",
     "version": "1.0.0",
-    "description": "Sri Ram Fashion App - Backend API",
+    "description": "Sri Ram Fashions App - Backend API",
     "scripts": {
         "start": "cd backend && npm start",
         "build": "cd backend && npm install",

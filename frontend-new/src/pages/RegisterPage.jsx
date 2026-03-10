@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { register, clearError } from '../store/slices/authSlice';
+import { GoogleLogin } from '@react-oauth/google';
+import { register, clearError, googleLogin } from '../store/slices/authSlice';
 import { Mail, Lock, Phone, Eye, EyeOff, ArrowRight, User, CheckCircle, XCircle } from 'lucide-react';
 
 const RegisterPage = () => {
@@ -120,8 +121,16 @@ const RegisterPage = () => {
 
             {/* Register Card */}
             <div className="relative z-2 bg-white p-10 w-full max-w-[480px] rounded-2xl shadow-2xl text-center border border-gray-100">
-                <h2 className="font-serif text-3xl text-black mb-2 font-bold tracking-tight">SRI RAM FASHIONS</h2>
-                <p className="text-sm text-gray-700 mb-8 font-bold">Create your account</p>
+                <div className="mb-8">
+                    <img
+                        src="/assets/sri-ram-logo.png"
+                        alt="Sri Ram Fashions Logo"
+                        className="mx-auto mb-4"
+                        style={{ width: '120px', height: 'auto', borderRadius: '12px', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))' }}
+                    />
+                    <h2 className="font-serif text-3xl text-black mb-2 font-bold tracking-tight">SRI RAM FASHIONS</h2>
+                    <p className="text-sm text-gray-700 font-bold">Create your account</p>
+                </div>
 
                 {error && (
                     <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm flex items-center gap-2 text-left font-medium">
@@ -254,6 +263,35 @@ const RegisterPage = () => {
                         )}
                     </button>
                 </form>
+
+                <div className="flex items-center my-6">
+                    <div className="flex-1 border-t border-gray-300"></div>
+                    <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
+                    <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+
+                {/* Social Buttons */}
+                <div className="space-y-3">
+                    <div className="flex justify-center w-full">
+                        <GoogleLogin
+                            onSuccess={async (credentialResponse) => {
+                                const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
+                                if (googleLogin.fulfilled.match(result)) {
+                                    navigate('/dashboard');
+                                }
+                            }}
+                            onError={(error) => {
+                                dispatch(clearError());
+                            }}
+                            theme="outline"
+                            size="large"
+                            width="340"
+                            shape="rectangular"
+                            text="signup_with"
+                            logo_alignment="center"
+                        />
+                    </div>
+                </div>
 
                 <div className="mt-8 text-center text-gray-700 text-sm font-medium">
                     Already have an account? <Link to="/login" className="font-bold text-blue-700 hover:text-blue-900 hover:underline ml-1">Sign In</Link>

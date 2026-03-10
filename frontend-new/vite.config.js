@@ -1,11 +1,14 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    entries: ['src/**/*.{js,jsx,ts,tsx}'],
+  },
   build: {
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -32,6 +35,10 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
       }
+    },
+    watch: {
+      // Don't watch build output directories
+      ignored: ['**/android/**', '**/ios/**', '**/dist/**', '**/node_modules/**']
     }
   }
 })

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Truck, Plus, Search, Edit, Trash2, X, Save } from 'lucide-react';
+import { Mail, Phone, Plus, Search, Pencil, Trash2, Download, X, Save, Building2 } from 'lucide-react';
 import { suppliersAPI } from '../services/api';
 import { useToast } from '../components/common';
+
+const avatarBg = ['bg-emerald-500', 'bg-amber-500', 'bg-slate-500', 'bg-blue-500', 'bg-rose-500', 'bg-indigo-500', 'bg-cyan-500', 'bg-violet-500'];
 
 const SupplierEntryPage = () => {
     const toast = useToast();
@@ -93,7 +95,7 @@ const SupplierEntryPage = () => {
 
     const handleSave = async () => {
         if (!formData.companyName || !formData.mobile) {
-            toast.warning('Please fill Company Name and Phone No');
+            toast.warning('Please fill Company Name and Mobile');
             return;
         }
         try {
@@ -120,10 +122,10 @@ const SupplierEntryPage = () => {
     const handleDelete = async () => {
         try {
             await suppliersAPI.delete(selectedSupplier._id);
-            toast.success('Supplier deleted successfully');
             setShowDeleteConfirm(false);
             setSelectedSupplier(null);
             fetchSuppliers();
+            toast.success('Supplier deleted successfully');
         } catch (error) {
             toast.error('Error deleting supplier: ' + (error.response?.data?.message || error.message));
         }
@@ -139,106 +141,140 @@ const SupplierEntryPage = () => {
         setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }));
     };
 
+    const handleDownload = (supplier) => {
+        const content = `
+SUPPLIER DETAILS
+================
+
+Company Name: ${supplier.companyName || '-'}
+GSTIN: ${supplier.gstin || '-'}
+State: ${supplier.state || '-'}
+Mobile: ${supplier.mobile || '-'}
+Alternate No: ${supplier.alternateNo || '-'}
+Email: ${supplier.email || '-'}
+Address: ${supplier.address || '-'}
+
+Generated on: ${new Date().toLocaleString('en-IN')}
+        `.trim();
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${supplier.companyName.replace(/[^a-z0-9]/gi, '_')}_details.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Page Header */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Truck className="text-green-600" size={20} />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Supplier Entry</h1>
+                <div className="flex flex-col gap-1">
+                    <p className="text-sm text-gray-600">Manage your supplier database</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Suppliers</h1>
                 </div>
-                <button
-                    className="btn btn-primary"
-                    onClick={() => handleOpenModal()}
-                >
-                    <Plus size={16} />
-                    New Supplier
-                </button>
-            </div>
-
-            {/* Search Section */}
-            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-                <div className="flex flex-wrap items-end gap-3">
-                    <div className="shrink-0 w-64">
-                        <label className="form-label">Name / Mobile</label>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Enter name or mobile"
+                            placeholder="Search suppliers..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                            className="form-input"
+                            className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                         />
                     </div>
-
                     <button
-                        onClick={handleSearch}
-                        disabled={isLoading}
                         className="btn btn-primary"
+                        onClick={() => handleOpenModal()}
                     >
-                        <Search size={16} />
-                        Search
-                    </button>
-                    <button
-                        onClick={() => { setSearchQuery(''); fetchSuppliers(); }}
-                        className="btn btn-ghost"
-                    >
-                        <X size={16} />
-                        Clear
+                        <Plus size={16} />
+                        New Supplier
                     </button>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="card p-0 overflow-hidden">
+            <div className="bg-white border rounded-2xl shadow-sm overflow-hidden" style={{ borderColor: 'var(--border-soft)' }}>
                 <div className="overflow-x-auto">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>S.No</th>
-                                <th>Company Name</th>
-                                <th>Mobile</th>
-                                <th>Email</th>
-                                <th>GSTIN</th>
-                                <th className="text-right">Actions</th>
+                    <table className="w-full">
+                        <thead style={{ backgroundColor: '#dbeafe' }} className="text-left">
+                            <tr className="text-xs uppercase tracking-wide text-blue-900">
+                                <th className="px-6 py-3">Supplier</th>
+                                <th className="px-6 py-3">Contact Info</th>
+                                <th className="px-6 py-3">GSTIN</th>
+                                <th className="px-6 py-3">State</th>
+                                <th className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="6" className="py-8 text-center">
+                                    <td colSpan="5" className="py-8 text-center">
                                         <div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }}></div>
                                     </td>
                                 </tr>
                             ) : suppliers.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="py-8 text-center text-gray-500">
-                                        No suppliers found. Click "NEW SUPPLIER" to add one.
+                                    <td colSpan="5" className="py-8 text-center text-gray-500">
+                                        No suppliers found. Click &quot;New Supplier&quot; to add one.
                                     </td>
                                 </tr>
                             ) : (
                                 suppliers.map((supplier, index) => (
-                                    <tr key={supplier._id}>
-                                        <td>{(pagination.page - 1) * pagination.limit + index + 1}</td>
-                                        <td className="text-blue-600 font-medium">{supplier.companyName}</td>
-                                        <td>{supplier.mobile}</td>
-                                        <td>{supplier.email || '-'}</td>
-                                        <td className="font-mono">{supplier.gstin || '-'}</td>
-                                        <td>
-                                            <div className="flex justify-end gap-2">
+                                    <tr key={supplier._id} className="border-b last:border-b-0 hover:bg-[#eff6ff]" style={{ borderColor: 'var(--border-soft)' }}>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center font-bold ${avatarBg[index % avatarBg.length]}`}>
+                                                    {(supplier.companyName || '?').charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-900">{supplier.companyName}</p>
+                                                    <p className="text-xs text-gray-500">{supplier.address || supplier.state || 'Tamilnadu'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col text-sm text-gray-700 gap-1">
+                                                {supplier.email && (
+                                                    <span className="flex items-center gap-2 text-gray-800"><Mail size={14} /> {supplier.email}</span>
+                                                )}
+                                                <span className="flex items-center gap-2 text-gray-800"><Phone size={14} /> {supplier.mobile}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm font-mono text-gray-800">{supplier.gstin || '-'}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-800">
+                                                <Building2 size={16} className="text-gray-500" />
+                                                {supplier.state || 'Tamilnadu'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    className="action-btn action-btn-green"
+                                                    onClick={() => handleDownload(supplier)}
+                                                    aria-label="Download supplier"
+                                                >
+                                                    <Download size={16} />
+                                                </button>
                                                 <button
                                                     className="action-btn action-btn-blue"
                                                     onClick={() => handleOpenModal(supplier)}
-                                                    title="Edit"
+                                                    aria-label="Edit supplier"
                                                 >
-                                                    <Edit size={16} />
+                                                    <Pencil size={16} />
                                                 </button>
                                                 <button
                                                     className="action-btn action-btn-red"
                                                     onClick={() => handleDeleteClick(supplier)}
-                                                    title="Delete"
+                                                    aria-label="Delete supplier"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
@@ -253,7 +289,7 @@ const SupplierEntryPage = () => {
 
                 {/* Pagination */}
                 {pagination.pages > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+                    <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50" style={{ borderColor: 'var(--border-soft)' }}>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => handlePageChange(pagination.page - 1)}
@@ -309,7 +345,7 @@ const SupplierEntryPage = () => {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
                                 <input
                                     type="text"
                                     name="companyName"
@@ -332,28 +368,20 @@ const SupplierEntryPage = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
-                                    <select
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                    <input
+                                        type="text"
                                         name="state"
                                         value={formData.state}
                                         onChange={handleInputChange}
                                         className="form-input w-full"
-                                    >
-                                        <option value="Tamilnadu">Tamilnadu</option>
-                                        <option value="Kerala">Kerala</option>
-                                        <option value="Karnataka">Karnataka</option>
-                                        <option value="Andhra Pradesh">Andhra Pradesh</option>
-                                        <option value="Telangana">Telangana</option>
-                                        <option value="Maharashtra">Maharashtra</option>
-                                        <option value="Gujarat">Gujarat</option>
-                                        <option value="Delhi">Delhi</option>
-                                        <option value="Other">Other</option>
-                                    </select>
+                                        placeholder="State"
+                                    />
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone No</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone No *</label>
                                     <input
                                         type="text"
                                         name="mobile"

@@ -1,8 +1,42 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X } from 'lucide-react';
+import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X, Printer } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
-import { purchaseEntriesAPI, suppliersAPI } from '../services/api';
+import { purchaseEntriesAPI, suppliersAPI, settingsAPI } from '../services/api';
 import { useToast } from '../components/common';
+import BillTemplate from '../components/BillTemplate';
+
+// Common textile/fabric HSN codes
+const TEXTILE_HSN_CODES = [
+    { code: '5402', description: 'Synthetic filament yarn (Lycra/Spandex)' },
+    { code: '5407', description: 'Woven fabrics of synthetic filament yarn' },
+    { code: '5408', description: 'Woven fabrics of artificial filament yarn' },
+    { code: '5512', description: 'Woven fabrics of synthetic staple fibres (>=85%)' },
+    { code: '5513', description: 'Woven fabrics of synthetic staple fibres (<85%)' },
+    { code: '5514', description: 'Woven fabrics of synthetic staple fibres (twill)' },
+    { code: '5515', description: 'Woven fabrics of synthetic staple fibres (other)' },
+    { code: '5516', description: 'Woven fabrics of artificial staple fibres' },
+    { code: '6001', description: 'Pile fabrics (knitted/crocheted)' },
+    { code: '6004', description: 'Knitted fabrics (>30cm, elastomeric yarn)' },
+    { code: '6005', description: 'Warp knit fabrics' },
+    { code: '6006', description: 'Knitted/crocheted fabrics (other)' },
+    { code: '6101', description: 'Mens overcoats (knitted/crocheted)' },
+    { code: '6104', description: 'Womens suits (knitted/crocheted)' },
+    { code: '6105', description: 'Mens shirts (knitted/crocheted)' },
+    { code: '6106', description: 'Womens blouses (knitted/crocheted)' },
+    { code: '6109', description: 'T-shirts, singlets (knitted/crocheted)' },
+    { code: '6110', description: 'Jerseys, pullovers, cardigans' },
+    { code: '6115', description: 'Hosiery (stockings, socks)' },
+    { code: '6116', description: 'Gloves (knitted/crocheted)' },
+];
+
+// Common fabric colors
+const FABRIC_COLORS = [
+    'Red', 'Blue', 'Black', 'White', 'Green', 'Yellow', 'Orange', 'Purple',
+    'Pink', 'Brown', 'Grey', 'Navy Blue', 'Maroon', 'Cream', 'Beige',
+    'Sky Blue', 'Olive', 'Turquoise', 'Magenta', 'Peach', 'Lavender',
+    'Burgundy', 'Teal', 'Coral', 'Mint', 'Rust', 'Ivory', 'Charcoal',
+    'Multi Color', 'Printed'
+];
 
 const PurchaseEntryPage = () => {
     const toast = useToast();
@@ -24,6 +58,9 @@ const PurchaseEntryPage = () => {
     const [selectedEntry, setSelectedEntry] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
+    const [showBillModal, setShowBillModal] = useState(false);
+    const [billData, setBillData] = useState(null);
+    const [settings, setSettings] = useState(null);
     const [newPurchase, setNewPurchase] = useState({
         supplier: '',
         date: new Date().toISOString().split('T')[0],
@@ -31,12 +68,13 @@ const PurchaseEntryPage = () => {
     });
 
     const [items, setItems] = useState([
-        { id: 1, particular: '', hsnCode: '', size: '', ratePerPiece: '', pcsInPack: '', ratePerPack: '', noOfPacks: '' }
+        { id: 1, particular: '', hsnCode: '', designColor: '', weightKg: '', ratePerKg: '' }
     ]);
 
     useEffect(() => {
         fetchPurchases();
         fetchSuppliers();
+        fetchSettings();
     }, [pagination.page, pagination.limit]);
 
     const fetchPurchases = async () => {
@@ -74,6 +112,15 @@ const PurchaseEntryPage = () => {
         }
     };
 
+    const fetchSettings = async () => {
+        try {
+            const response = await settingsAPI.get();
+            setSettings(response.data.data || response.data);
+        } catch (error) {
+            console.error('Error fetching settings:', error);
+        }
+    };
+
     const handleSearch = () => {
         setPagination(prev => ({ ...prev, page: 1 }));
         fetchPurchases();
@@ -100,7 +147,7 @@ const PurchaseEntryPage = () => {
             date: new Date().toISOString().split('T')[0],
             invNo: ''
         });
-        setItems([{ id: 1, particular: '', hsnCode: '', size: '', ratePerPiece: '', pcsInPack: '', ratePerPack: '', noOfPacks: '' }]);
+        setItems([{ id: 1, particular: '', hsnCode: '', designColor: '', weightKg: '', ratePerKg: '' }]);
         setIsEditing(false);
         setSelectedEntry(null);
     };
@@ -110,11 +157,9 @@ const PurchaseEntryPage = () => {
             id: items.length + 1,
             particular: '',
             hsnCode: '',
-            size: '',
-            ratePerPiece: '',
-            pcsInPack: '',
-            ratePerPack: '',
-            noOfPacks: ''
+            designColor: '',
+            weightKg: '',
+            ratePerKg: ''
         }]);
     };
 
@@ -127,19 +172,12 @@ const PurchaseEntryPage = () => {
     const handleItemChange = (id, field, value) => {
         setItems(items.map(item => {
             if (item.id !== id) return item;
-            const updated = { ...item, [field]: value };
-            // Auto-calculate ratePerPack when ratePerPiece or pcsInPack changes
-            if (field === 'ratePerPiece' || field === 'pcsInPack') {
-                const rpp = parseFloat(field === 'ratePerPiece' ? value : updated.ratePerPiece) || 0;
-                const pcs = parseFloat(field === 'pcsInPack' ? value : updated.pcsInPack) || 1;
-                updated.ratePerPack = (rpp * pcs).toString();
-            }
-            return updated;
+            return { ...item, [field]: value };
         }));
     };
 
     const calculateItemTotal = (item) => {
-        return (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
+        return (parseFloat(item.weightKg) || 0) * (parseFloat(item.ratePerKg) || 0);
     };
 
     const handleSave = async () => {
@@ -153,9 +191,16 @@ const PurchaseEntryPage = () => {
             return;
         }
 
-        const validItems = items.filter(item => item.particular && item.ratePerPack && item.noOfPacks);
+        const validItems = items.filter(item => item.particular && item.weightKg && item.ratePerKg);
         if (validItems.length === 0) {
-            toast.warning('Please add at least one item with particulars, rate per pack and no. of packs');
+            toast.warning('Please add at least one item with particulars, weight and rate per kg');
+            return;
+        }
+
+        // Warn about potentially invalid HSN codes
+        const invalidHsnItems = validItems.filter(item => item.hsnCode && item.hsnCode.length < 4);
+        if (invalidHsnItems.length > 0) {
+            toast.warning('Some items have HSN codes shorter than 4 digits. Please verify HSN codes are correct.');
             return;
         }
 
@@ -168,18 +213,18 @@ const PurchaseEntryPage = () => {
                 items: validItems.map(item => ({
                     particular: item.particular,
                     hsnCode: item.hsnCode || '',
-                    size: item.size,
-                    ratePerPiece: parseFloat(item.ratePerPiece) || 0,
-                    pcsInPack: parseFloat(item.pcsInPack) || 1,
-                    ratePerPack: parseFloat(item.ratePerPack) || 0,
-                    noOfPacks: parseFloat(item.noOfPacks) || 0
+                    designColor: item.designColor || '',
+                    weightKg: parseFloat(item.weightKg) || 0,
+                    ratePerKg: parseFloat(item.ratePerKg) || 0
                 }))
             };
 
             if (isEditing && selectedEntry) {
                 await purchaseEntriesAPI.update(selectedEntry._id, entryData);
+                toast.success('Purchase entry updated successfully');
             } else {
                 await purchaseEntriesAPI.create(entryData);
+                toast.success('Purchase entry saved successfully');
             }
 
             setShowNewEntry(false);
@@ -207,12 +252,10 @@ const PurchaseEntryPage = () => {
             id: index + 1,
             particular: item.particular || '',
             hsnCode: item.hsnCode || '',
-            size: item.size || '',
-            ratePerPiece: item.ratePerPiece?.toString() || '',
-            pcsInPack: item.pcsInPack?.toString() || '',
-            ratePerPack: item.ratePerPack?.toString() || '',
-            noOfPacks: item.noOfPacks?.toString() || ''
-        })) || [{ id: 1, particular: '', hsnCode: '', size: '', ratePerPiece: '', pcsInPack: '', ratePerPack: '', noOfPacks: '' }]);
+            designColor: item.designColor || '',
+            weightKg: item.weightKg?.toString() || '',
+            ratePerKg: item.ratePerKg?.toString() || ''
+        })) || [{ id: 1, particular: '', hsnCode: '', designColor: '', weightKg: '', ratePerKg: '' }]);
         setSelectedEntry(entry);
         setIsEditing(true);
         setShowNewEntry(true);
@@ -223,9 +266,69 @@ const PurchaseEntryPage = () => {
         setShowDeleteConfirm(true);
     };
 
+    const handleGenerateBill = (entry) => {
+        const totalWeight = entry.items?.reduce((sum, item) => sum + (item.weightKg || 0), 0) || 0;
+        const bill = {
+            billNumber: `PUR-${entry.invoiceNumber}`,
+            billType: 'PURCHASE',
+            date: entry.date,
+            customer: {
+                name: entry.supplier?.name || '',
+                phone: entry.supplier?.mobile || '',
+                address: entry.supplier?.address || '',
+                gstin: entry.supplier?.gstin || '',
+                state: 'Tamilnadu',
+                stateCode: '33'
+            },
+            items: entry.items?.map(item => ({
+                productName: item.particular,
+                hsnCode: item.hsnCode || '',
+                sizesOrPieces: item.designColor || '',
+                weightKg: item.weightKg || 0,
+                ratePerKg: item.ratePerKg || 0,
+                quantity: item.weightKg || 0,
+                price: item.ratePerKg || 0,
+                total: item.total || (item.weightKg || 0) * (item.ratePerKg || 0)
+            })) || [],
+            subtotal: entry.grandTotal || 0,
+            discountAmount: 0,
+            totalPacks: totalWeight,
+            numOfBundles: 1,
+            roundOff: 0,
+            grandTotal: entry.grandTotal || 0
+        };
+        setBillData(bill);
+        setShowBillModal(true);
+    };
+
+    const handlePrintBill = () => {
+        const printContent = document.getElementById('purchase-bill-template');
+        if (!printContent) return;
+        const printWindow = window.open('', '_blank');
+        const billCSS = document.querySelector('link[href*="BillTemplate"]');
+        const cssLink = billCSS ? billCSS.href : '';
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Purchase Bill</title>
+                <link rel="stylesheet" href="${cssLink}" />
+                <style>
+                    @page { size: A4; margin: 0; }
+                    body { margin: 0; padding: 0; }
+                    .bill-template-tax { width: 210mm; min-height: 297mm; margin: 0 auto; }
+                </style>
+            </head>
+            <body>${printContent.innerHTML}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); }, 500);
+    };
+
     const handleDelete = async () => {
         try {
             await purchaseEntriesAPI.delete(selectedEntry._id);
+            toast.success('Purchase entry deleted successfully');
             setShowDeleteConfirm(false);
             setSelectedEntry(null);
             fetchPurchases();
@@ -300,22 +403,20 @@ const PurchaseEntryPage = () => {
 
                 {/* New Purchase Entry Table */}
                 <div className="card">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Purchase Items</h2>
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">Fabric Items</h2>
 
                     <div className="overflow-x-auto">
                         <table className="w-full border-collapse">
                             <thead>
                                 <tr className="bg-gray-100 border-b-2 border-gray-300">
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">S No</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700" style={{ width: '60px' }}>S No</th>
                                     <th className="p-3 text-left text-sm font-semibold text-gray-700">Particulars *</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">HSN Code</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Sizes / Pieces</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Rate Per Piece</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Pcs in Pack</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Rate Per Pack *</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">No Of Packs *</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700">Amount Rs.</th>
-                                    <th className="p-3 text-left text-sm font-semibold text-gray-700"></th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700" style={{ width: '120px' }}>HSN Code</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700" style={{ width: '160px' }}>Design / Color</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700" style={{ width: '120px' }}>Weight (KG) *</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700" style={{ width: '140px' }}>Rate Per KG *</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700" style={{ width: '130px' }}>Amount Rs.</th>
+                                    <th className="p-3 text-left text-sm font-semibold text-gray-700" style={{ width: '80px' }}></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -326,7 +427,7 @@ const PurchaseEntryPage = () => {
                                             <input
                                                 type="text"
                                                 className="form-input w-full"
-                                                placeholder="Item name"
+                                                placeholder="Fabric name"
                                                 value={item.particular}
                                                 onChange={(e) => handleItemChange(item.id, 'particular', e.target.value)}
                                             />
@@ -334,60 +435,45 @@ const PurchaseEntryPage = () => {
                                         <td className="p-3">
                                             <input
                                                 type="text"
-                                                className="form-input w-24"
-                                                placeholder="HSN"
+                                                className="form-input w-full"
+                                                placeholder="HSN Code"
                                                 value={item.hsnCode}
                                                 onChange={(e) => handleItemChange(item.id, 'hsnCode', e.target.value)}
+                                                list="hsn-code-list"
                                             />
                                         </td>
                                         <td className="p-3">
                                             <select
-                                                className="form-input w-24"
-                                                value={item.size}
-                                                onChange={(e) => handleItemChange(item.id, 'size', e.target.value)}
+                                                className="form-input w-full"
+                                                value={item.designColor}
+                                                onChange={(e) => handleItemChange(item.id, 'designColor', e.target.value)}
                                             >
-                                                <option value="">Size</option>
-                                                <option value="S">S</option>
-                                                <option value="M">M</option>
-                                                <option value="L">L</option>
-                                                <option value="XL">XL</option>
-                                                <option value="XXL">XXL</option>
+                                                <option value="">-- Select Color --</option>
+                                                {FABRIC_COLORS.map(color => (
+                                                    <option key={color} value={color}>{color}</option>
+                                                ))}
                                             </select>
                                         </td>
                                         <td className="p-3">
                                             <input
                                                 type="number"
-                                                className="form-input w-24"
-                                                placeholder="Rate"
-                                                value={item.ratePerPiece}
-                                                onChange={(e) => handleItemChange(item.id, 'ratePerPiece', e.target.value)}
+                                                className="form-input w-full"
+                                                placeholder="Weight"
+                                                value={item.weightKg}
+                                                onChange={(e) => handleItemChange(item.id, 'weightKg', e.target.value)}
+                                                min="0"
+                                                step="0.01"
                                             />
                                         </td>
                                         <td className="p-3">
                                             <input
                                                 type="number"
-                                                className="form-input w-20"
-                                                placeholder="Pcs"
-                                                value={item.pcsInPack}
-                                                onChange={(e) => handleItemChange(item.id, 'pcsInPack', e.target.value)}
-                                            />
-                                        </td>
-                                        <td className="p-3">
-                                            <input
-                                                type="number"
-                                                className="form-input w-24"
-                                                placeholder="Rate"
-                                                value={item.ratePerPack}
-                                                onChange={(e) => handleItemChange(item.id, 'ratePerPack', e.target.value)}
-                                            />
-                                        </td>
-                                        <td className="p-3">
-                                            <input
-                                                type="number"
-                                                className="form-input w-20"
-                                                placeholder="Packs"
-                                                value={item.noOfPacks}
-                                                onChange={(e) => handleItemChange(item.id, 'noOfPacks', e.target.value)}
+                                                className="form-input w-full"
+                                                placeholder="Rate/KG"
+                                                value={item.ratePerKg}
+                                                onChange={(e) => handleItemChange(item.id, 'ratePerKg', e.target.value)}
+                                                min="0"
+                                                step="0.01"
                                             />
                                         </td>
                                         <td className="p-3 text-sm font-bold text-gray-900">
@@ -417,6 +503,12 @@ const PurchaseEntryPage = () => {
                                 ))}
                             </tbody>
                         </table>
+                        {/* HSN Code datalist */}
+                        <datalist id="hsn-code-list">
+                            {TEXTILE_HSN_CODES.map(hsn => (
+                                <option key={hsn.code} value={hsn.code}>{hsn.code} - {hsn.description}</option>
+                            ))}
+                        </datalist>
                     </div>
 
                     {/* Grand Total */}
@@ -536,7 +628,7 @@ const PurchaseEntryPage = () => {
                                 <th className="text-left p-4 text-sm font-bold text-gray-900">Date</th>
                                 <th className="text-left p-4 text-sm font-bold text-gray-900">InvNo</th>
                                 <th className="text-left p-4 text-sm font-bold text-gray-900">Company Name</th>
-                                <th className="text-left p-4 text-sm font-bold text-gray-900">Qty</th>
+                                <th className="text-left p-4 text-sm font-bold text-gray-900">Total Weight (KG)</th>
                                 <th className="text-left p-4 text-sm font-bold text-gray-900">Amount</th>
                                 <th className="text-left p-4 text-sm font-bold text-gray-900">Actions</th>
                             </tr>
@@ -558,7 +650,9 @@ const PurchaseEntryPage = () => {
                                         <td className="p-4 text-sm font-medium text-gray-900">{formatDate(purchase.date)}</td>
                                         <td className="p-4 text-sm font-semibold" style={{ color: '#1e40af' }}>{purchase.invoiceNumber}</td>
                                         <td className="p-4 text-sm font-medium text-gray-900">{purchase.supplier?.name || '-'}</td>
-                                        <td className="p-4 text-sm font-medium text-gray-900">{purchase.items?.reduce((sum, item) => sum + (item.noOfPacks || 0), 0) || 0}</td>
+                                        <td className="p-4 text-sm font-medium text-gray-900">
+                                            {purchase.items?.reduce((sum, item) => sum + (item.weightKg || 0), 0).toFixed(2) || '0'} kg
+                                        </td>
                                         <td className="p-4 text-sm font-bold text-green-600">₹{(purchase.grandTotal || 0).toLocaleString()}</td>
                                         <td className="p-4">
                                             <div className="flex gap-2">
@@ -582,6 +676,14 @@ const PurchaseEntryPage = () => {
                                                     onClick={() => handleDeleteClick(purchase)}
                                                 >
                                                     <Trash2 size={18} />
+                                                </button>
+                                                <button
+                                                    className="action-btn"
+                                                    title="Generate Bill"
+                                                    style={{ backgroundColor: '#7c3aed', color: 'white' }}
+                                                    onClick={() => handleGenerateBill(purchase)}
+                                                >
+                                                    <FileText size={18} />
                                                 </button>
                                             </div>
                                         </td>
@@ -641,17 +743,15 @@ const PurchaseEntryPage = () => {
                                 <div><span className="text-gray-500">Supplier:</span> <span className="font-semibold">{selectedEntry.supplier?.name}</span></div>
                                 <div><span className="text-gray-500">Total:</span> <span className="font-semibold text-green-600">₹{selectedEntry.grandTotal?.toLocaleString()}</span></div>
                             </div>
-                            <h4 className="font-semibold mb-2">Items</h4>
+                            <h4 className="font-semibold mb-2">Fabric Items</h4>
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-gray-100">
                                         <th className="p-2 text-left">Particular</th>
                                         <th className="p-2 text-left">HSN Code</th>
-                                        <th className="p-2 text-left">Size</th>
-                                        <th className="p-2 text-right">Rate/Piece</th>
-                                        <th className="p-2 text-right">Pcs/Pack</th>
-                                        <th className="p-2 text-right">Rate/Pack</th>
-                                        <th className="p-2 text-right">No. Packs</th>
+                                        <th className="p-2 text-left">Design/Color</th>
+                                        <th className="p-2 text-right">Weight (KG)</th>
+                                        <th className="p-2 text-right">Rate/KG</th>
                                         <th className="p-2 text-right">Amount</th>
                                     </tr>
                                 </thead>
@@ -660,16 +760,18 @@ const PurchaseEntryPage = () => {
                                         <tr key={i} className="border-b">
                                             <td className="p-2">{item.particular}</td>
                                             <td className="p-2">{item.hsnCode || '-'}</td>
-                                            <td className="p-2">{item.size || '-'}</td>
-                                            <td className="p-2 text-right">₹{item.ratePerPiece || 0}</td>
-                                            <td className="p-2 text-right">{item.pcsInPack || 1}</td>
-                                            <td className="p-2 text-right">₹{item.ratePerPack || 0}</td>
-                                            <td className="p-2 text-right">{item.noOfPacks || 0}</td>
+                                            <td className="p-2">{item.designColor || '-'}</td>
+                                            <td className="p-2 text-right">{item.weightKg || 0} kg</td>
+                                            <td className="p-2 text-right">₹{item.ratePerKg || 0}</td>
                                             <td className="p-2 text-right">₹{item.total?.toFixed(2)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                            <div className="mt-4 text-right">
+                                <span className="text-gray-500">Total Weight: </span>
+                                <span className="font-semibold">{selectedEntry.items?.reduce((sum, item) => sum + (item.weightKg || 0), 0).toFixed(2)} kg</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -701,6 +803,32 @@ const PurchaseEntryPage = () => {
                                     Delete
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bill Preview Modal */}
+            {showBillModal && billData && (
+                <div className="modal-overlay" onClick={() => setShowBillModal(false)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="px-6 py-4 flex justify-between items-center" style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' }}>
+                            <h3 className="text-lg font-semibold text-white">Purchase Bill Preview</h3>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handlePrintBill}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    <Printer size={16} />
+                                    Print
+                                </button>
+                                <button onClick={() => setShowBillModal(false)} className="text-white hover:text-gray-200">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[80vh]" id="purchase-bill-template">
+                            <BillTemplate bill={billData} settings={settings} />
                         </div>
                     </div>
                 </div>

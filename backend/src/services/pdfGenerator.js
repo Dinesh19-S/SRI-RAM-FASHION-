@@ -1,4 +1,6 @@
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
 import Settings from '../models/Settings.js';
 
 // Convert number to words in Indian format
@@ -67,7 +69,7 @@ export const generateBillPDF = async (bill) => {
     const companyAddress2 = settings?.company?.address2 || '81 K, Madurai Raod, SankerNager, Tirunelveli Dt. 627357';
     const companyState = settings?.company?.state || 'Tamilnadu';
     const companyStateCode = settings?.company?.stateCode || '33';
-    const companyEmail = settings?.company?.email || 'sriramfashionserp@gmail.com';
+    const companyEmail = settings?.company?.email || 'sriramfashionstrp@gmail.com';
     const companyPhone = settings?.company?.phone || '9080573831';
     const companyMob = settings?.company?.phone2 || '8248893759';
 
@@ -107,8 +109,8 @@ export const generateBillPDF = async (bill) => {
     const row3H = 22;   // TAX INVOICE title
     const row4H = 56;   // Buyer / Consignee
     const thH = 26;     // Table header row
-    const row6H = 90;   // Summary section
-    const row7H = 95;   // Footer (terms + bank + certification)
+    const row6H = 80;   // Summary section
+    const row7H = 85;   // Footer (terms + bank + certification)
 
     const fixedH = row1H + row2H + row3H + row4H + thH + row6H + row7H;
     const tableBodyH = H - fixedH; // Remaining height for table data rows
@@ -152,12 +154,43 @@ export const generateBillPDF = async (bill) => {
     const PX = 16;
     const PY = 6;
 
+    // Resolve lotus logo (settings logo -> local asset fallback)
+    const resolveLogo = () => {
+        const logoValue = settings?.company?.logo;
+        if (logoValue) {
+            if (logoValue.startsWith('data:')) {
+                const base64 = logoValue.split(',')[1];
+                if (base64) return Buffer.from(base64, 'base64');
+            } else {
+                return logoValue;
+            }
+        }
+        const candidates = [
+            path.resolve(process.cwd(), 'frontend-new', 'src', 'assets', 'lotus-logo.png'),
+            path.resolve(process.cwd(), '..', 'frontend-new', 'src', 'assets', 'lotus-logo.png')
+        ];
+        for (const p of candidates) {
+            if (fs.existsSync(p)) return p;
+        }
+        return null;
+    };
+    const logo = resolveLogo();
+
     // =============================================
     // ROW 1: Company Name + GSTIN
     // =============================================
+    let nameX = M + PX;
+    if (logo) {
+        try {
+            doc.image(logo, nameX, y + 3, { width: 28, height: 28 });
+            nameX += 34;
+        } catch {
+            // Ignore logo errors and continue without it
+        }
+    }
     doc.font('Helvetica-Bold').fontSize(20).fillColor(BLUE);
-    doc.text(companyName.toUpperCase(), M + PX, y + 10, {
-        width: W * 0.6,
+    doc.text(companyName.toUpperCase(), nameX, y + 10, {
+        width: W * 0.6 - (nameX - (M + PX)),
         characterSpacing: 1.5
     });
 
@@ -413,8 +446,8 @@ export const generateBillPDF = async (bill) => {
     doc.font('Helvetica-Bold').fontSize(11).fillColor(BLACK);
     doc.text(`${numBundles}`, sMX + sMW * 0.7, y + 8, { width: sMW * 0.3, align: 'right' });
 
-    const gstBoxY = y + row6H - 38;
-    const gstBoxH = 26;
+    const gstBoxY = y + row6H - 32;
+    const gstBoxH = 24;
     doc.lineWidth(2).rect(sMX, gstBoxY, sMW, gstBoxH).stroke(RED);
     doc.font('Helvetica-Bold').fontSize(9.5).fillColor(RED);
     doc.text('TOTAL GST', sMX + 8, gstBoxY + 7, { width: sMW * 0.5 });
@@ -480,31 +513,32 @@ export const generateBillPDF = async (bill) => {
     );
 
     // Bank box
-    const bankBoxY = y + 54;
+    const bankBoxY = y + 46;
     const bankBoxW = footLeftW - 28;
-    const bankBoxH = 34;
+    const bankBoxH = 30;
     doc.rect(fLX, bankBoxY, bankBoxW, bankBoxH).fill('#fffbe6');
     doc.lineWidth(1.5).rect(fLX, bankBoxY, bankBoxW, bankBoxH).stroke('#d4a017');
 
     doc.font('Helvetica-Bold').fontSize(8).fillColor(RED);
     doc.text('Bank Details:', fLX + 8, bankBoxY + 5, { underline: true });
     doc.font('Helvetica-Bold').fontSize(7.5).fillColor(BLUE);
-    doc.text(`ACC NAME: ${bankAccName}    BANK: ${bankName}`, fLX + 8, bankBoxY + 16, { width: bankBoxW - 16 });
-    doc.text(`ACC NUM: ${bankAccount}    BRANCH: ${bankBranch}    IFSC: ${bankIfsc}`, fLX + 8, bankBoxY + 25, { width: bankBoxW - 16 });
+    doc.text(`ACC NAME: ${bankAccName}`, fLX + 8, bankBoxY + 14, { width: bankBoxW - 16 });
+    doc.text(`BANK: ${bankName}`, fLX + 8, bankBoxY + 20, { width: bankBoxW - 16 });
+    doc.text(`ACC NUM: ${bankAccount}    BRANCH: ${bankBranch}    IFSC: ${bankIfsc}`, fLX + 8, bankBoxY + 26, { width: bankBoxW - 16 });
 
     // Right: Certification + Signature
     const fRX = M + footLeftW + 14;
     const fRW = footRightW - 28;
 
     doc.font('Helvetica-Oblique').fontSize(9).fillColor(GRAY_BORDER);
-    doc.text('Certified that above particulars are true\nand correct', fRX, y + 18, {
+    doc.text('Certified that above particulars are true\nand correct', fRX, y + 16, {
         width: fRW,
         align: 'center',
         lineGap: 2
     });
 
     doc.font('Helvetica-Bold').fontSize(10.5).fillColor(BLUE);
-    doc.text(`For ${companyName}`, fRX, y + 65, {
+    doc.text(`For ${companyName}`, fRX, y + 56, {
         width: fRW,
         align: 'center'
     });

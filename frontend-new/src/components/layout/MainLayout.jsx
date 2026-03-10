@@ -21,10 +21,10 @@ import {
     Store,
     Calculator,
     IndianRupee,
-    ShoppingCart,
     TrendingUp,
     Users,
-    Truck
+    Truck,
+    ShoppingBag
 } from 'lucide-react';
 
 import logoImage from '../../assets/logo.jpg';
@@ -41,31 +41,15 @@ const navigationSections = [
         items: [
             { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
             { name: 'Billing', href: '/dashboard/billing', icon: Receipt },
-            { name: 'Inventory', href: '/dashboard/inventory', icon: Package },
-        ]
-    },
-    {
-        title: 'PURCHASE',
-        items: [
             { name: 'Purchase Entry', href: '/dashboard/purchase/entry', icon: Calculator },
-
-        ]
-    },
-    {
-        title: 'SALES',
-        items: [
-            { name: 'Sales Entry', href: '/dashboard/sales/entry', icon: ShoppingCart },
-
+            { name: 'Inventory', href: '/dashboard/inventory', icon: Package },
         ]
     },
     {
         title: 'REPORTS',
         items: [
-            { name: 'Purchase Reports', href: '/dashboard/reports/purchase', icon: TrendingUp },
             { name: 'Sales Reports', href: '/dashboard/reports/sales', icon: TrendingUp },
             { name: 'Stock Reports', href: '/dashboard/reports/stock', icon: Package },
-            { name: 'Auditor Purchase', href: '/dashboard/auditor/purchase', icon: TrendingUp },
-            { name: 'Auditor Sales', href: '/dashboard/auditor/sales', icon: TrendingUp },
         ]
     },
     {
@@ -111,10 +95,6 @@ const MainLayout = () => {
     const searchSuggestions = [
         { label: 'Dashboard', path: '/dashboard', keywords: ['dashboard', 'home', 'overview'] },
         { label: 'Purchase Entry', path: '/dashboard/purchase/entry', keywords: ['purchase', 'buy', 'supplier', 'invoice'] },
-
-        { label: 'Purchase Reports', path: '/dashboard/reports/purchase', keywords: ['purchase', 'report', 'analysis'] },
-        { label: 'Sales Entry', path: '/dashboard/sales/entry', keywords: ['sales', 'sell', 'customer', 'invoice'] },
-
         { label: 'Sales Reports', path: '/dashboard/reports/sales', keywords: ['sales', 'report', 'analysis'] },
         { label: 'Billing', path: '/dashboard/billing', keywords: ['billing', 'bill', 'invoice', 'receipt'] },
         { label: 'Products', path: '/dashboard/inventory', keywords: ['inventory', 'stock', 'product', 'item'] },
@@ -249,7 +229,7 @@ const MainLayout = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen" style={{ backgroundColor: 'var(--bg-default)' }}>
             {/* Mobile Sidebar Overlay */}
             <AnimatePresence>
                 {sidebarOpen && (
@@ -267,8 +247,9 @@ const MainLayout = () => {
             <aside
                 className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
                 style={{
-                    background: 'linear-gradient(180deg, #1e3a5f 0%, #0f2744 50%, #0a1929 100%)',
-                    borderRight: '1px solid rgba(255,255,255,0.1)'
+                    background: 'linear-gradient(180deg, #0b1b36 0%, #0a1844 50%, #07112e 100%)',
+                    borderRight: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '4px 0 18px rgba(0,0,0,0.25)'
                 }}
             >
                 {/* Logo */}
@@ -292,7 +273,8 @@ const MainLayout = () => {
                         <div key={sectionIndex} className={sectionIndex > 0 ? 'mt-4' : ''}>
                             <button
                                 onClick={() => toggleSection(section.title)}
-                                className="flex items-center justify-between w-full text-xs font-bold text-blue-200/60 uppercase tracking-wider mb-2 px-3 py-1 hover:text-blue-100 transition-colors"
+                                className="flex items-center justify-between w-full text-xs font-bold text-[#e6d8c5]/70 uppercase tracking-wider mb-2 px-3 py-1 hover:text-white transition-colors"
+                                style={{ color: '#dbeafe' }}
                             >
                                 {section.title}
                                 <ChevronRight
@@ -318,8 +300,8 @@ const MainLayout = () => {
                                                 className={({ isActive }) => `
                                                     flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group
                                                     ${isActive
-                                                        ? 'bg-white/15 text-white shadow-lg'
-                                                        : 'text-blue-100/80 hover:bg-white/10 hover:text-white'}
+                                                        ? 'bg-white/10 text-white shadow-inner border border-white/10'
+                                                        : 'text-[#e0e7ff]/80 hover:bg-white/5 hover:text-white'}
                                                 `}
                                                 onClick={() => setSidebarOpen(false)}
                                             >
@@ -327,7 +309,7 @@ const MainLayout = () => {
                                                     <>
                                                         <item.icon
                                                             size={18}
-                                                            className={`transition-colors ${isActive ? 'text-cyan-300' : 'text-blue-300/60 group-hover:text-cyan-300'}`}
+                                                            className={`transition-colors ${isActive ? 'text-[#93c5fd]' : 'text-[#cbd5f5]/80 group-hover:text-[#bfdbfe]'}`}
                                                             strokeWidth={2}
                                                         />
                                                         <span className="text-sm font-medium">{item.name}</span>
@@ -346,7 +328,7 @@ const MainLayout = () => {
                 <div className="absolute bottom-0 left-0 right-0 px-3 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' }}>
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-colors"
+                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[#f2d6a2] hover:bg-white/5 hover:text-white transition-colors"
                     >
                         <LogOut size={18} />
                         <span className="text-sm font-medium">Logout</span>
@@ -357,7 +339,10 @@ const MainLayout = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all duration-300">
                 {/* Header */}
-                <header className="h-16 flex items-center justify-between px-4 lg:px-8 py-3 bg-white border-b border-gray-200 sticky top-0 z-30">
+                <header
+                    className="h-16 flex items-center justify-between px-4 lg:px-8 py-3 sticky top-0 z-30"
+                    style={{ backgroundColor: 'rgba(243, 247, 255, 0.9)', borderBottom: '1px solid var(--border-soft)', backdropFilter: 'blur(6px)' }}
+                >
                     <div className="flex items-center gap-4 flex-1">
                         <button
                             className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
@@ -367,8 +352,9 @@ const MainLayout = () => {
                         </button>
 
                         <div className="hidden md:block relative w-full max-w-md" ref={searchRef}>
-                            <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus-within:bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
-                                <Search size={18} className="text-gray-400" />
+                            <div className="flex items-center gap-3 px-4 py-2 bg-white/80 border rounded-lg focus-within:bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 transition-all"
+                                style={{ borderColor: 'var(--border-soft)' }}>
+                                <Search size={18} className="text-gray-500" />
                                 <input
                                     type="text"
                                     placeholder="Search bills, products, pages..."
@@ -389,7 +375,7 @@ const MainLayout = () => {
                                         initial={{ opacity: 0, y: 4 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: 4 }}
-                                        className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto"
+                                        className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-blue-50 py-2 z-50 max-h-64 overflow-y-auto"
                                     >
                                         {filteredSuggestions.map((suggestion, index) => (
                                             <div
@@ -397,8 +383,8 @@ const MainLayout = () => {
                                                 className={`px-4 py-2.5 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors ${index === 0 ? 'bg-blue-50/50' : ''}`}
                                                 onClick={() => handleSearchSelect(suggestion.path)}
                                             >
-                                                <Search size={16} className={index === 0 ? 'text-blue-500' : 'text-gray-400'} />
-                                                <span className={index === 0 ? 'text-blue-700 font-medium' : 'text-gray-700'}>{suggestion.label}</span>
+                                                <Search size={16} className={index === 0 ? 'text-blue-600' : 'text-gray-400'} />
+                                                <span className={index === 0 ? 'text-blue-800 font-medium' : 'text-gray-700'}>{suggestion.label}</span>
                                             </div>
                                         ))}
                                     </motion.div>
@@ -543,7 +529,7 @@ const MainLayout = () => {
                                 className="flex items-center gap-3 cursor-pointer pl-2"
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                             >
-                                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
+                                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm border-2 border-white shadow-sm">
                                     {user?.name?.charAt(0) || 'A'}
                                 </div>
                                 <div className="hidden md:block">
@@ -594,7 +580,7 @@ const MainLayout = () => {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
+                <main className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: 'var(--bg-default)' }}>
                     <Outlet />
                 </main>
             </div>

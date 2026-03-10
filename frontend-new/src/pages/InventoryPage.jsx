@@ -227,7 +227,11 @@ const InventoryPage = () => {
                             {filteredProducts.map(p => (
                                 <tr key={p._id}>
                                     <td className="font-medium">{p.name}</td><td className="text-gray-500">{p.sku}</td><td>{p.category?.name || 'N/A'}</td><td className="font-semibold">{p.stock}</td><td>{formatCurrency(p.sellingPrice)}</td>
-                                    <td><span className={`badge ${p.stock <= (p.lowStockThreshold || 5) ? 'badge-error' : 'badge-success'}`}>{p.stock <= (p.lowStockThreshold || 5) ? 'Low' : 'In Stock'}</span></td>
+                                    <td>
+                                        <span className={`badge ${p.stock <= (p.lowStockThreshold || 5) ? 'badge-error' : 'badge-success'}`}>
+                                            {p.stock <= (p.lowStockThreshold || 5) ? 'Low' : 'In Stock'} • {p.stock}
+                                        </span>
+                                    </td>
                                     <td>
                                         <div className="flex justify-end gap-2">
                                             <button

@@ -1,5 +1,6 @@
 import './ReportPrintTemplate.css';
 import { formatDate } from '../../utils/dateUtils';
+import lotusLogo from '../../assets/lotus-logo.png';
 
 /**
  * ReportPrintTemplate - A reusable component for professional report printing
@@ -53,7 +54,10 @@ const ReportPrintTemplate = ({
         <div className="report-print-template" id="report-print-template">
             {/* Header Section */}
             <div className="report-print-header">
-                <h1 className="report-company-name">{defaultCompanyInfo.name}</h1>
+                <h1 className="report-company-name">
+                    <img src={lotusLogo} alt="Logo" className="report-company-logo" />
+                    {defaultCompanyInfo.name}
+                </h1>
                 <p className="report-company-address">{defaultCompanyInfo.address1}</p>
                 <p className="report-company-address">{defaultCompanyInfo.address2}</p>
                 <p className="report-company-contact">

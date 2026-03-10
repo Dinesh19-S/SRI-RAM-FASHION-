@@ -1,4 +1,5 @@
 import './BillTemplate.css';
+import lotusLogo from '../assets/lotus-logo.png';
 
 const EmptyBillTemplate = ({ settings, forPrint = false }) => {
     const formatDate = (date) => {
@@ -19,7 +20,10 @@ const EmptyBillTemplate = ({ settings, forPrint = false }) => {
         <div className={`bill-template ${forPrint ? 'for-print' : ''}`} id="empty-bill-template">
             {/* HEADER ROW 1 - Company Name and GSTIN */}
             <div className="bill-header">
-                <div className="company-name">{settings?.company?.name || 'SRI RAM FASHIONS'}</div>
+                <div className="company-name">
+                    <img src={lotusLogo} alt="Logo" className="ti-company-logo" />
+                    {settings?.company?.name || 'SRI RAM FASHIONS'}
+                </div>
                 <div className="gstin">GSTIN: {settings?.company?.gstin || '33AZRPM4425F2ZA'}</div>
             </div>
 
@@ -163,9 +167,10 @@ const EmptyBillTemplate = ({ settings, forPrint = false }) => {
             <div className="footer-section">
                 <div className="bank-details">
                     <div className="bank-title">Bank Details</div>
-                    <div>A/C No: {settings?.company?.bankAccount || '920020000914655'}</div>
-                    <div>IFSC: {settings?.company?.bankIfsc || 'UTIB0001252'}</div>
-                    <div>Bank: {settings?.company?.bankName || 'Axis Bank, Tirupur'}</div>
+                    <div>Account Name: {settings?.bank?.accountHolderName || settings?.company?.name || 'SRI RAM FASHIONS'}</div>
+                    <div>A/C No: {settings?.bank?.accountNumber || settings?.bank?.account || settings?.company?.bankAccount || '0338073000002328'}</div>
+                    <div>IFSC: {settings?.bank?.ifscCode || settings?.bank?.ifsc || settings?.company?.bankIfsc || 'SIBL0000338'}</div>
+                    <div>Bank: {settings?.bank?.bankName || settings?.bank?.name || settings?.company?.bankName || 'SOUTH INDIAN BANK'}</div>
                 </div>
                 <div className="signature-section">
                     <div className="signature-label">For {settings?.company?.name || 'SRI RAM FASHIONS'}</div>

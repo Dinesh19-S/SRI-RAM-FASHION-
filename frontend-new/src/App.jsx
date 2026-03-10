@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from './components/layout/MainLayout';
@@ -13,12 +13,8 @@ const BillingPage = lazy(() => import('./pages/BillingPage'));
 const InventoryPage = lazy(() => import('./pages/InventoryPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const PurchaseEntryPage = lazy(() => import('./pages/PurchaseEntryPage'));
-const SalesEntryPage = lazy(() => import('./pages/SalesEntryPage'));
-const PurchaseReportsPage = lazy(() => import('./pages/PurchaseReportsPage'));
 const SalesReportsPage = lazy(() => import('./pages/SalesReportsPage'));
 const StockReportsPage = lazy(() => import('./pages/StockReportsPage'));
-const AuditorPurchasePage = lazy(() => import('./pages/AuditorPurchasePage'));
-const AuditorSalesPage = lazy(() => import('./pages/AuditorSalesPage'));
 const CustomerEntryPage = lazy(() => import('./pages/CustomerEntryPage'));
 const ItemsPage = lazy(() => import('./pages/ItemsPage'));
 const SupplierEntryPage = lazy(() => import('./pages/SupplierEntryPage'));
@@ -121,14 +117,10 @@ const AnimatedRoutes = () => {
           >
             <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
             <Route path="purchase/entry" element={<Suspense fallback={<PageLoader />}><PurchaseEntryPage /></Suspense>} />
-            <Route path="sales/entry" element={<Suspense fallback={<PageLoader />}><SalesEntryPage /></Suspense>} />
             <Route path="billing" element={<Suspense fallback={<PageLoader />}><BillingPage /></Suspense>} />
             <Route path="inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
-            <Route path="reports/purchase" element={<Suspense fallback={<PageLoader />}><PurchaseReportsPage /></Suspense>} />
             <Route path="reports/sales" element={<Suspense fallback={<PageLoader />}><SalesReportsPage /></Suspense>} />
             <Route path="reports/stock" element={<Suspense fallback={<PageLoader />}><StockReportsPage /></Suspense>} />
-            <Route path="auditor/purchase" element={<Suspense fallback={<PageLoader />}><AuditorPurchasePage /></Suspense>} />
-            <Route path="auditor/sales" element={<Suspense fallback={<PageLoader />}><AuditorSalesPage /></Suspense>} />
             <Route path="master/customers" element={<Suspense fallback={<PageLoader />}><CustomerEntryPage /></Suspense>} />
             <Route path="master/items" element={<Suspense fallback={<PageLoader />}><ItemsPage /></Suspense>} />
             <Route path="master/suppliers" element={<Suspense fallback={<PageLoader />}><SupplierEntryPage /></Suspense>} />
@@ -144,12 +136,16 @@ const AnimatedRoutes = () => {
 };
 
 function App() {
+  const RouterComponent = (window?.electronAPI?.isElectron || window.location.protocol === 'file:')
+    ? HashRouter
+    : BrowserRouter;
+
   return (
-    <BrowserRouter>
+    <RouterComponent>
       <div className="min-h-screen app-shell">
         <AnimatedRoutes />
       </div>
-    </BrowserRouter>
+    </RouterComponent>
   );
 }
 

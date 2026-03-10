@@ -6,6 +6,7 @@ import { fetchSettings } from '../store/slices/settingsSlice';
 import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users, Receipt, Mail } from 'lucide-react';
 import BillTemplate from '../components/BillTemplate';
 import { downloadInvoicePDF } from '../utils/invoiceGenerator';
+import { downloadBillPDF } from '../utils/pdfGenerator';
 import { customersAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
 
@@ -49,6 +50,46 @@ const BillingPage = () => {
     const [customerSuggestions, setCustomerSuggestions] = useState([]);
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
     const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+    const TAMIL_NADU_DISTRICTS = [
+        'Ariyalur',
+        'Chengalpattu',
+        'Chennai',
+        'Coimbatore',
+        'Cuddalore',
+        'Dharmapuri',
+        'Dindigul',
+        'Erode',
+        'Kallakurichi',
+        'Kanchipuram',
+        'Kanyakumari',
+        'Karur',
+        'Krishnagiri',
+        'Madurai',
+        'Mayiladuthurai',
+        'Nagapattinam',
+        'Namakkal',
+        'Nilgiris',
+        'Perambalur',
+        'Pudukkottai',
+        'Ramanathapuram',
+        'Ranipet',
+        'Salem',
+        'Sivaganga',
+        'Tenkasi',
+        'Thanjavur',
+        'Theni',
+        'Thoothukudi',
+        'Tiruchirappalli',
+        'Tirunelveli',
+        'Tirupattur',
+        'Tiruppur',
+        'Tiruvallur',
+        'Tiruvannamalai',
+        'Tiruvarur',
+        'Vellore',
+        'Viluppuram',
+        'Virudhunagar'
+    ];
 
     useEffect(() => {
         dispatch(fetchBills());
@@ -230,8 +271,8 @@ const BillingPage = () => {
         }
     };
 
-    const handleDownloadPDF = (bill) => {
-        downloadInvoicePDF(bill, settings);
+    const handleDownloadPDF = async (bill) => {
+        await downloadInvoicePDF(bill, settings);
     };
 
     const handleEmailBill = async () => {
@@ -258,9 +299,9 @@ const BillingPage = () => {
         }
     };
 
-    const handlePrintBill = () => {
+    const handlePrintBill = async () => {
         if (selectedBill) {
-            downloadInvoicePDF(selectedBill, settings);
+            await downloadInvoicePDF(selectedBill, settings);
         }
     };
 
@@ -442,187 +483,246 @@ const BillingPage = () => {
 
             {/* Create Bill Modal */}
             {showBillModal && (
-                <div className="modal-overlay" onClick={() => setShowBillModal(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header"><h3 className="text-lg font-semibold text-gray-900">Create New Bill</h3><button className="btn btn-ghost btn-icon" onClick={() => setShowBillModal(false)}><X size={20} /></button></div>
-                        <div className="p-4 overflow-y-auto max-h-[70vh]">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                                        <Users size={18} style={{ color: '#1e40af' }} />
-                                        Buyer Details
-                                    </h4>
+                <div className="modal-overlay p-0 items-stretch justify-center bg-transparent" onClick={() => setShowBillModal(false)}>
+                    <div className="app-shell w-full h-full max-w-none max-h-none rounded-none shadow-none overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b bg-white flex items-center justify-between sticky top-0 z-20">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                                    <Receipt size={20} style={{ color: '#1e40af' }} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">Create New Bill</h3>
+                                    <p className="text-xs text-gray-500">Fill customer details and add items to generate the invoice</p>
+                                </div>
+                            </div>
+                            <button className="btn btn-ghost btn-icon" onClick={() => setShowBillModal(false)}><X size={20} /></button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1">
+                            <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
+                                <div className="space-y-6">
+                                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <Users size={18} style={{ color: '#1e40af' }} />
+                                            <h4 className="font-semibold text-gray-900">Buyer Details</h4>
+                                        </div>
 
-                                    {/* Customer Search */}
-                                    <div className="relative">
-                                        <label className="text-xs text-gray-500 mb-1 block">Search Customer</label>
-                                        <input
-                                            className="form-input"
-                                            placeholder="Search by company name, phone, or GSTIN..."
-                                            value={customerSearch}
-                                            onChange={(e) => {
-                                                setCustomerSearch(e.target.value);
-                                                setShowCustomerDropdown(true);
-                                            }}
-                                            onFocus={() => setShowCustomerDropdown(true)}
-                                        />
-                                        {isSearchingCustomers && (
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                                <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
+                                        {/* Customer Search */}
+                                        <div className="relative">
+                                            <label className="text-xs text-gray-500 mb-1 block">Search Customer</label>
+                                            <input
+                                                className="form-input"
+                                                placeholder="Search by company name, phone, or GSTIN..."
+                                                value={customerSearch}
+                                                onChange={(e) => {
+                                                    setCustomerSearch(e.target.value);
+                                                    setShowCustomerDropdown(true);
+                                                }}
+                                                onFocus={() => setShowCustomerDropdown(true)}
+                                            />
+                                            {isSearchingCustomers && (
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                                    <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
+                                                </div>
+                                            )}
+                                            {showCustomerDropdown && customerSuggestions.length > 0 && (
+                                                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                    {customerSuggestions.map((cust) => (
+                                                        <div
+                                                            key={cust._id}
+                                                            className="px-4 py-3 cursor-pointer hover:bg-green-50 border-b border-gray-100 last:border-b-0"
+                                                            onClick={() => selectCustomer(cust)}
+                                                        >
+                                                            <p className="font-medium text-gray-900">{cust.companyName}</p>
+                                                            <p className="text-xs text-gray-500">{cust.mobile} • {cust.gstin || 'No GSTIN'}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {showCustomerDropdown && customerSearch.length >= 2 && customerSuggestions.length === 0 && !isSearchingCustomers && (
+                                                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-center text-gray-500 text-sm">
+                                                    No customers found. Fill details below.
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3 mt-4">
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">Buyer Name *</label>
+                                                <input className="form-input" placeholder="Enter buyer name" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
                                             </div>
-                                        )}
-                                        {showCustomerDropdown && customerSuggestions.length > 0 && (
-                                            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                                {customerSuggestions.map((cust) => (
-                                                    <div
-                                                        key={cust._id}
-                                                        className="px-4 py-3 cursor-pointer hover:bg-green-50 border-b border-gray-100 last:border-b-0"
-                                                        onClick={() => selectCustomer(cust)}
-                                                    >
-                                                        <p className="font-medium text-gray-900">{cust.companyName}</p>
-                                                        <p className="text-xs text-gray-500">{cust.mobile} • {cust.gstin || 'No GSTIN'}</p>
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">Phone Number *</label>
+                                                <input className="form-input" placeholder="Enter phone number" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">GSTIN</label>
+                                                <input className="form-input" placeholder="Enter GSTIN" value={customer.gstin} onChange={(e) => setCustomer({ ...customer, gstin: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">Transport</label>
+                                                <input className="form-input" placeholder="Enter transport" value={transport} onChange={(e) => setTransport(e.target.value)} />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">From</label>
+                                                <input
+                                                    className="form-input"
+                                                    list="tn-districts"
+                                                    placeholder="From (e.g., place or date)"
+                                                    value={fromDate}
+                                                    onChange={(e) => setFromDate(e.target.value)}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">To</label>
+                                                <input
+                                                    className="form-input"
+                                                    list="tn-districts"
+                                                    placeholder="To (e.g., place or date)"
+                                                    value={toDate}
+                                                    onChange={(e) => setToDate(e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+                                        <datalist id="tn-districts">
+                                            {TAMIL_NADU_DISTRICTS.map((district) => (
+                                                <option key={district} value={district} />
+                                            ))}
+                                        </datalist>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">State</label>
+                                                <input className="form-input" placeholder="State" value={customer.state} onChange={(e) => setCustomer({ ...customer, state: e.target.value })} />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs text-gray-500 mb-1 block">State Code</label>
+                                                <input className="form-input" placeholder="State Code" value={customer.stateCode} onChange={(e) => setCustomer({ ...customer, stateCode: e.target.value })} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Address (optional)</label>
+                                            <input className="form-input" placeholder="Enter address" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="font-semibold text-gray-900">Select Products</h4>
+                                            <span className="text-xs text-gray-500">{products.length} products</span>
+                                        </div>
+                                        <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                                            {products.length === 0 ? <p className="text-gray-500 text-center py-4">No products available</p> : products.map((product) => (
+                                                <div key={product._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={() => addItemToBill(product)}>
+                                                    <div><p className="font-medium text-gray-900">{product.name}</p><p className="text-sm text-gray-500">{product.sku} • HSN: {product.hsn || 'N/A'}</p></div>
+                                                    <div className="text-right"><p className="font-semibold" style={{ color: '#1e40af' }}>{formatCurrency(product.sellingPrice)}</p><button className="text-xs" style={{ color: '#1e40af' }}>+ Add</button></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-6">
+                                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="font-semibold text-gray-900">Bill Items</h4>
+                                            <span className="text-xs text-gray-500">{billItems.length} items</span>
+                                        </div>
+                                        {billItems.length === 0 ? <div className="text-center py-10 text-gray-500"><FileText size={48} className="mx-auto mb-2 opacity-50" /><p>No items added</p></div> : (
+                                            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                                                {billItems.map((item) => (
+                                                    <div key={item.uniqueId} className="p-3 bg-gray-50 rounded-lg">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div>
+                                                                <p className="font-medium text-gray-900">{item.name}</p>
+                                                                <p className="text-xs text-gray-500">HSN: {item.hsnCode || 'N/A'}</p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-semibold">{formatCurrency((item.ratePerPack || item.price) * (item.noOfPacks || item.quantity))}</p>
+                                                                <button
+                                                                    type="button"
+                                                                    className="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center"
+                                                                    title="Remove item"
+                                                                    onClick={() => updateItemQuantity(item.uniqueId, 0)}
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-5 gap-2 text-xs">
+                                                            <div>
+                                                                <label className="text-gray-500">Size</label>
+                                                                <select className="form-input text-xs p-1" value={item.sizesOrPieces || ''} onChange={(e) => updateItemField(item.uniqueId, 'sizesOrPieces', e.target.value)}>
+                                                                    <option value="">Select</option>
+                                                                    <option value="S">S</option>
+                                                                    <option value="M">M</option>
+                                                                    <option value="L">L</option>
+                                                                    <option value="XL">XL</option>
+                                                                    <option value="XXL">XXL</option>
+                                                                    <option value="XXXL">XXXL</option>
+                                                                    <option value="28">28</option>
+                                                                    <option value="30">30</option>
+                                                                    <option value="32">32</option>
+                                                                    <option value="34">34</option>
+                                                                    <option value="36">36</option>
+                                                                    <option value="38">38</option>
+                                                                    <option value="40">40</option>
+                                                                    <option value="Free Size">Free Size</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-gray-500">Rate/Pc</label>
+                                                                <input type="number" className="form-input text-xs p-1" value={item.ratePerPiece || ''} onChange={(e) => updateItemField(item.uniqueId, 'ratePerPiece', Number(e.target.value))} />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-gray-500">Pcs/Pack</label>
+                                                                <input type="number" className="form-input text-xs p-1" value={item.pcsInPack || ''} onChange={(e) => updateItemField(item.uniqueId, 'pcsInPack', Number(e.target.value))} />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-gray-500">Rate/Pack</label>
+                                                                <input type="number" className="form-input text-xs p-1" value={item.ratePerPack || ''} onChange={(e) => updateItemField(item.uniqueId, 'ratePerPack', Number(e.target.value))} />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-gray-500">No. Packs</label>
+                                                                <div className="flex items-center gap-1">
+                                                                    <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.uniqueId, (item.noOfPacks || item.quantity) - 1)}>-</button>
+                                                                    <span className="w-6 text-center text-sm">{item.noOfPacks || item.quantity}</span>
+                                                                    <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.uniqueId, (item.noOfPacks || item.quantity) + 1)}>+</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
-                                        {showCustomerDropdown && customerSearch.length >= 2 && customerSuggestions.length === 0 && !isSearchingCustomers && (
-                                            <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-center text-gray-500 text-sm">
-                                                No customers found. Fill details below.
-                                            </div>
-                                        )}
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">Buyer Name *</label>
-                                            <input className="form-input" placeholder="Enter buyer name" value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} />
+                                    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="font-semibold text-gray-900">Summary</h4>
+                                            <span className="text-xs text-gray-500">Auto calculated</span>
                                         </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">Phone Number *</label>
-                                            <input className="form-input" placeholder="Enter phone number" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">GSTIN</label>
-                                            <input className="form-input" placeholder="Enter GSTIN" value={customer.gstin} onChange={(e) => setCustomer({ ...customer, gstin: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">Transport</label>
-                                            <input className="form-input" placeholder="Enter transport" value={transport} onChange={(e) => setTransport(e.target.value)} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">From</label>
-                                            <input className="form-input" placeholder="From (e.g., place or date)" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">To</label>
-                                            <input className="form-input" placeholder="To (e.g., place or date)" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">State</label>
-                                            <input className="form-input" placeholder="State" value={customer.state} onChange={(e) => setCustomer({ ...customer, state: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-500 mb-1 block">State Code</label>
-                                            <input className="form-input" placeholder="State Code" value={customer.stateCode} onChange={(e) => setCustomer({ ...customer, stateCode: e.target.value })} />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-gray-500 mb-1 block">Address (optional)</label>
-                                        <input className="form-input" placeholder="Enter address" value={customer.address} onChange={(e) => setCustomer({ ...customer, address: e.target.value })} />
-                                    </div>
-
-                                    <h4 className="font-semibold text-gray-900 pt-4">Select Products</h4>
-                                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                                        {products.length === 0 ? <p className="text-gray-500 text-center py-4">No products available</p> : products.map((product) => (
-                                            <div key={product._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={() => addItemToBill(product)}>
-                                                <div><p className="font-medium text-gray-900">{product.name}</p><p className="text-sm text-gray-500">{product.sku} • HSN: {product.hsn || 'N/A'}</p></div>
-                                                <div className="text-right"><p className="font-semibold" style={{ color: '#1e40af' }}>{formatCurrency(product.sellingPrice)}</p><button className="text-xs" style={{ color: '#1e40af' }}>+ Add</button></div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-gray-600"><span>Product Amount</span><span>{formatCurrency(subtotal)}</span></div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-gray-600">Discount (%)</span>
+                                                <input type="number" className="form-input w-20 text-right" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <h4 className="font-semibold text-gray-900">Bill Items</h4>
-                                    {billItems.length === 0 ? <div className="text-center py-8 text-gray-500"><FileText size={48} className="mx-auto mb-2 opacity-50" /><p>No items added</p></div> : (
-                                        <div className="space-y-2 max-h-52 overflow-y-auto">
-                                            {billItems.map((item) => (
-                                                <div key={item.uniqueId} className="p-3 bg-gray-50 rounded-lg">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div>
-                                                            <p className="font-medium text-gray-900">{item.name}</p>
-                                                            <p className="text-xs text-gray-500">HSN: {item.hsnCode || 'N/A'}</p>
-                                                        </div>
-                                                        <p className="font-semibold">{formatCurrency((item.ratePerPack || item.price) * (item.noOfPacks || item.quantity))}</p>
-                                                    </div>
-                                                    <div className="grid grid-cols-5 gap-2 text-xs">
-                                                        <div>
-                                                            <label className="text-gray-500">Size</label>
-                                                            <select className="form-input text-xs p-1" value={item.sizesOrPieces || ''} onChange={(e) => updateItemField(item.uniqueId, 'sizesOrPieces', e.target.value)}>
-                                                                <option value="">Select</option>
-                                                                <option value="S">S</option>
-                                                                <option value="M">M</option>
-                                                                <option value="L">L</option>
-                                                                <option value="XL">XL</option>
-                                                                <option value="XXL">XXL</option>
-                                                                <option value="XXXL">XXXL</option>
-                                                                <option value="28">28</option>
-                                                                <option value="30">30</option>
-                                                                <option value="32">32</option>
-                                                                <option value="34">34</option>
-                                                                <option value="36">36</option>
-                                                                <option value="38">38</option>
-                                                                <option value="40">40</option>
-                                                                <option value="Free Size">Free Size</option>
-                                                            </select>
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-gray-500">Rate/Pc</label>
-                                                            <input type="number" className="form-input text-xs p-1" value={item.ratePerPiece || ''} onChange={(e) => updateItemField(item.uniqueId, 'ratePerPiece', Number(e.target.value))} />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-gray-500">Pcs/Pack</label>
-                                                            <input type="number" className="form-input text-xs p-1" value={item.pcsInPack || ''} onChange={(e) => updateItemField(item.uniqueId, 'pcsInPack', Number(e.target.value))} />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-gray-500">Rate/Pack</label>
-                                                            <input type="number" className="form-input text-xs p-1" value={item.ratePerPack || ''} onChange={(e) => updateItemField(item.uniqueId, 'ratePerPack', Number(e.target.value))} />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-gray-500">No. Packs</label>
-                                                            <div className="flex items-center gap-1">
-                                                                <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.uniqueId, (item.noOfPacks || item.quantity) - 1)}>-</button>
-                                                                <span className="w-6 text-center text-sm">{item.noOfPacks || item.quantity}</span>
-                                                                <button className="w-6 h-6 rounded bg-gray-200 text-sm" onClick={() => updateItemQuantity(item.uniqueId, (item.noOfPacks || item.quantity) + 1)}>+</button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                            <div className="flex justify-between text-gray-600"><span>Taxable Amount</span><span>{formatCurrency(taxableAmount)}</span></div>
+                                            <div className="flex justify-between text-gray-600"><span>CGST @ {cgstRate}%</span><span>{formatCurrency(cgstAmount)}</span></div>
+                                            <div className="flex justify-between text-gray-600"><span>SGST @ {sgstRate}%</span><span>{formatCurrency(sgstAmount)}</span></div>
+                                            <div className="flex justify-between text-gray-600"><span>Total Packs</span><span>{totalPacks}</span></div>
+                                            <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t border-gray-200"><span>Grand Total</span><span style={{ color: '#1e40af' }}>{formatCurrency(grandTotal)}</span></div>
                                         </div>
-                                    )}
-                                    <div className="border-t border-gray-200 pt-4 space-y-2">
-                                        <div className="flex justify-between text-gray-600"><span>Product Amount</span><span>{formatCurrency(subtotal)}</span></div>
-                                        <div className="flex items-center justify-between"><span className="text-gray-600">Discount (%)</span><input type="number" className="form-input w-20 text-right" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} /></div>
-                                        <div className="flex justify-between text-gray-600"><span>Taxable Amount</span><span>{formatCurrency(taxableAmount)}</span></div>
-                                        <div className="flex justify-between text-gray-600"><span>CGST @ {cgstRate}%</span><span>{formatCurrency(cgstAmount)}</span></div>
-                                        <div className="flex justify-between text-gray-600"><span>SGST @ {sgstRate}%</span><span>{formatCurrency(sgstAmount)}</span></div>
-                                        <div className="flex justify-between text-gray-600"><span>Total Packs</span><span>{totalPacks}</span></div>
-                                        <div className="flex justify-between text-lg font-bold text-gray-900 pt-2 border-t border-gray-200"><span>Grand Total</span><span style={{ color: '#1e40af' }}>{formatCurrency(grandTotal)}</span></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowBillModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleCreateBill} disabled={isLoading}>{isLoading ? 'Creating...' : 'Create Bill'}</button></div>
+                        <div className="modal-footer rounded-none bg-white/95 backdrop-blur border-t"><button className="btn btn-secondary" onClick={() => setShowBillModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleCreateBill} disabled={isLoading}>{isLoading ? 'Creating...' : 'Create Bill'}</button></div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
             {/* Email Bill Modal */}
             {showEmailModal && emailBill && (

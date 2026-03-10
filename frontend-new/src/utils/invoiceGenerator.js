@@ -1,4 +1,24 @@
 import jsPDF from 'jspdf';
+import lotusLogo from '../assets/lotus-logo.png';
+
+let logoDataUrlCache = null;
+const loadLogoDataUrl = async () => {
+    if (logoDataUrlCache) return logoDataUrlCache;
+    try {
+        const response = await fetch(lotusLogo);
+        const blob = await response.blob();
+        logoDataUrlCache = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+        return logoDataUrlCache;
+    } catch (error) {
+        console.warn('Failed to load invoice logo:', error);
+        return null;
+    }
+};
 
 // ==============================
 // Helpers
@@ -51,7 +71,7 @@ const setF = (pdf, c) => pdf.setFillColor(c.r, c.g, c.b);
 // The bill fits precisely on one A4 page.
 // ==============================
 
-export const generateInvoicePDF = (bill, settings = {}) => {
+export const generateInvoicePDF = (bill, settings = {}, logoDataUrl = null) => {
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // Page dimensions
@@ -69,7 +89,7 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     const addr2 = co.address2 || '81 K, Madurai Road, SankerNager, Tirunelveli Dt. 627357';
     const state = co.state || 'Tamilnadu';
     const stateCode = co.stateCode || '33';
-    const email = co.email || 'sriramfashionserp@gmail.com';
+    const email = co.email || 'sriramfashionstrp@gmail.com';
     const phone = co.phone || '9080573831';
 
     const bk = settings?.bank || {};
@@ -102,8 +122,8 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     const row3H = 8;     // TAX INVOICE title
     const row4H = 20;    // Buyer / Consignee
     const thH = 9;       // Table header
-    const row6H = 32;    // Summary section
-    const row7H = 34;    // Footer
+    const row6H = 28;    // Summary section
+    const row7H = 30;    // Footer
 
     const fixedH = row1H + row2H + row3H + row4H + thH + row6H + row7H;
     const tableBodyH = H - fixedH;
@@ -138,7 +158,16 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     setC(pdf, BLUE);
-    pdf.text(companyName.toUpperCase(), M + PX, y + 8);
+    let nameX = M + PX;
+    if (logoDataUrl) {
+        try {
+            pdf.addImage(logoDataUrl, 'PNG', nameX, y + 1, 10, 10);
+            nameX += 12;
+        } catch {
+            // Ignore logo errors and continue without it
+        }
+    }
+    pdf.text(companyName.toUpperCase(), nameX, y + 8);
 
     pdf.setFontSize(10);
     setC(pdf, BLACK);
@@ -404,8 +433,8 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     pdf.text(`${numBundles}`, sMX + sMW, y + 5, { align: 'right' });
 
     // GST Box: border 2px solid #c00
-    const gstBoxY = y + row6H - 12;
-    const gstBoxH = 9;
+    const gstBoxY = y + row6H - 11;
+    const gstBoxH = 8;
     setD(pdf, RED);
     pdf.setLineWidth(0.6);
     pdf.rect(sMX, gstBoxY, sMW, gstBoxH, 'S');
@@ -484,7 +513,7 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     termsLines.forEach((t, i) => pdf.text(t, fLX, y + 7.5 + i * 2.8, { maxWidth: footLeftW - PX * 2 }));
 
     // Bank box: yellow background, gold border
-    const bankBoxY = y + 20;
+    const bankBoxY = y + 17;
     const bankBoxW = footLeftW - PX * 2;
     const bankBoxH = 12;
 
@@ -504,8 +533,9 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(6);
     setC(pdf, BLUE);
-    pdf.text(`ACC NAME: ${bankAccName}    BANK: ${bankName}`, fLX + 3, bankBoxY + 7, { maxWidth: bankBoxW - 6 });
-    pdf.text(`ACC NUM: ${bankAcc}    BRANCH: ${bankBranch}    IFSC: ${bankIfsc}`, fLX + 3, bankBoxY + 10, { maxWidth: bankBoxW - 6 });
+    pdf.text(`ACC NAME: ${bankAccName}`, fLX + 3, bankBoxY + 6.8, { maxWidth: bankBoxW - 6 });
+    pdf.text(`BANK: ${bankName}`, fLX + 3, bankBoxY + 9.2, { maxWidth: bankBoxW - 6 });
+    pdf.text(`ACC NUM: ${bankAcc}  BRANCH: ${bankBranch}  IFSC: ${bankIfsc}`, fLX + 3, bankBoxY + 11.4, { maxWidth: bankBoxW - 6 });
 
     // Right: Certification + Signature
     const fRX = M + footLeftW + PX;
@@ -533,21 +563,27 @@ export const generateInvoicePDF = (bill, settings = {}) => {
 /** Download Tax Invoice PDF */
 export const downloadInvoicePDF = (bill, settings, filename) => {
     const fn = filename || `SRI_RAM_FASHIONS_Invoice_${bill.billNumber || 'bill'}.pdf`;
-    const pdf = generateInvoicePDF(bill, settings);
-    pdf.save(fn);
-    return pdf;
+    return loadLogoDataUrl().then((logoDataUrl) => {
+        const pdf = generateInvoicePDF(bill, settings, logoDataUrl);
+        pdf.save(fn);
+        return pdf;
+    });
 };
 
 /** Get invoice PDF as blob URL for preview */
 export const getInvoicePreviewUrl = (bill, settings) => {
-    const pdf = generateInvoicePDF(bill, settings);
-    return URL.createObjectURL(pdf.output('blob'));
+    return loadLogoDataUrl().then((logoDataUrl) => {
+        const pdf = generateInvoicePDF(bill, settings, logoDataUrl);
+        return URL.createObjectURL(pdf.output('blob'));
+    });
 };
 
 /** Get invoice PDF as base64 data URL */
 export const getInvoiceDataUrl = (bill, settings) => {
-    const pdf = generateInvoicePDF(bill, settings);
-    return pdf.output('datauristring');
+    return loadLogoDataUrl().then((logoDataUrl) => {
+        const pdf = generateInvoicePDF(bill, settings, logoDataUrl);
+        return pdf.output('datauristring');
+    });
 };
 
 export { numberToWords };

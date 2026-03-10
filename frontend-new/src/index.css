@@ -1,45 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* =========================================================
-   Flat Light Theme Color Palette
+   Blue Primary Theme Palette (aligned with landing page)
    ========================================================= */
 :root {
-  /* Brand Colors */
-  --brand-main: #1e40af;
-  /* Blue-800 */
-  --brand-focus: #1d4ed8;
-  /* Blue-700 */
+  /* Brand/Accent */
+  --brand-main: #2563eb;      /* Blue-600 */
+  --brand-focus: #1d4ed8;     /* Blue-700 */
+  --brand-soft: #e0e7ff;      /* Blue-100 */
 
-  /* Background Colors */
-  --bg-default: #f4f7fb;
-  /* Subtle paper */
+  /* Backgrounds */
+  --bg-default: #f3f7ff;
   --bg-paper: #ffffff;
+  --bg-shell: #e8f0ff;
 
-  /* Text Colors */
-  --text-main: #0b1220;
-  /* Ink */
-  --text-secondary: #475569;
-  /* Slate-600 - Darker for better visibility */
+  /* Text */
+  --text-main: #0f172a;
+  --text-secondary: #334155;
   --text-muted: #64748b;
-  /* Slate-500 */
 
-  /* Border + Shadow */
-  --border-soft: #e2e8f0;
+  /* Borders + Shadow */
+  --border-soft: #d7e3ff;
+  --shadow-soft: 0 14px 30px -26px rgba(15, 23, 42, 0.55), 0 1px 2px rgba(15, 23, 42, 0.08);
 
-  /* Status Colors */
-  --success-bg: #dcfce7;
-  --success-text: #15803d;
-  /* Darker green */
+  /* Status */
+  --success-bg: #e0f2f1;
+  --success-text: #0f766e;
   --warning-bg: #fef3c7;
-  --warning-text: #a16207;
-  /* Darker orange */
+  --warning-text: #b45309;
   --error-bg: #fee2e2;
-  --error-text: #991b1b;
-  /* Darker red */
-  --info-bg: #e0f2fe;
-  --info-text: #0c4a6e;
-  /* Darker blue */
+  --error-text: #c2410c;
+  --info-bg: #dbeafe;
+  --info-text: #1d4ed8;
 }
 
 /* =========================================================
@@ -49,7 +42,7 @@
   body {
     background-color: var(--bg-default);
     color: var(--text-main);
-    font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system,
+    font-family: 'Outfit', ui-sans-serif, system-ui, -apple-system,
       BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
       Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -62,9 +55,9 @@
   .app-shell {
     background-color: var(--bg-default);
     background-image:
-      radial-gradient(1200px 600px at 10% -10%, rgba(30, 64, 175, 0.12) 0%, transparent 60%),
-      radial-gradient(900px 500px at 90% 10%, rgba(14, 165, 233, 0.1) 0%, transparent 55%),
-      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+      radial-gradient(900px 480px at 12% -6%, rgba(37, 99, 235, 0.12) 0%, transparent 65%),
+      radial-gradient(800px 460px at 88% 12%, rgba(14, 165, 233, 0.10) 0%, transparent 60%),
+      linear-gradient(180deg, #f5f8ff 0%, #e8f0ff 100%);
   }
 
   /* Headings */
@@ -149,7 +142,7 @@
   }
 
   .btn-primary {
-    @apply text-white shadow-sm hover:shadow focus:ring-blue-500;
+    @apply text-white shadow-sm hover:shadow focus:ring-blue-200;
     background-color: var(--brand-main);
   }
 
@@ -158,17 +151,19 @@
   }
 
   .btn-secondary {
-    @apply bg-white text-gray-900 border border-gray-300 hover:bg-gray-50 hover:text-gray-900 shadow-sm focus:ring-gray-200;
+    @apply bg-white text-gray-900 border hover:text-gray-900 shadow-sm focus:ring-blue-100;
     font-weight: 600;
     border-color: var(--border-soft);
+    background-color: var(--bg-paper);
   }
 
   .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 shadow-sm focus:ring-red-500;
+    @apply text-white shadow-sm focus:ring-red-300;
+    background-color: #dc2626;
   }
 
   .btn-ghost {
-    @apply text-gray-700 hover:bg-gray-100 hover:text-gray-900 font-semibold;
+    @apply text-gray-700 hover:bg-blue-50 hover:text-gray-900 font-semibold;
   }
 
   /* Modern Icon Action Buttons */
@@ -196,21 +191,23 @@
 
   /* View / Edit (Blue) */
   .action-btn-blue {
-    @apply bg-blue-50 text-blue-600;
+    background-color: var(--brand-soft);
+    color: var(--brand-main);
   }
 
   .action-btn-blue:hover {
-    @apply bg-blue-100 text-blue-700;
+    background-color: #dbeafe;
+    color: var(--brand-focus);
     box-shadow: 0 3px 8px -2px rgba(37, 99, 235, 0.25);
   }
 
   .action-btn-blue:focus {
-    @apply ring-blue-300;
+    @apply ring-blue-200;
   }
 
   /* Download / Export (Green) */
   .action-btn-green {
-    @apply bg-emerald-50 text-emerald-600;
+    @apply bg-emerald-50 text-emerald-700;
   }
 
   .action-btn-green:hover {
@@ -252,29 +249,27 @@
 
   /* Settings / Other (Purple) */
   .action-btn-purple {
-    @apply bg-blue-50 text-blue-600;
+    @apply bg-blue-50 text-blue-700;
   }
 
   .action-btn-purple:hover {
-    @apply bg-blue-100 text-blue-700;
-    box-shadow: 0 3px 8px -2px rgba(147, 51, 234, 0.25);
+    @apply bg-blue-100 text-blue-800;
+    box-shadow: 0 3px 8px -2px rgba(37, 99, 235, 0.25);
   }
 
   .action-btn-purple:focus {
-    @apply ring-blue-300;
+    @apply ring-blue-200;
   }
 
   /* Cards */
   .card {
-    @apply bg-white rounded-2xl border border-gray-200 p-6;
-    border-color: var(--border-soft);
-    box-shadow:
-      0 14px 30px -24px rgba(15, 23, 42, 0.45),
-      0 1px 2px rgba(15, 23, 42, 0.08);
+    @apply bg-white rounded-2xl p-6;
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-soft);
   }
 
   .card-header {
-    @apply flex items-center justify-between mb-6 pb-4 border-b-2 border-gray-200;
+    @apply flex items-center justify-between mb-6 pb-4 border-b-2;
     border-bottom-color: var(--border-soft);
   }
 
@@ -294,17 +289,34 @@
   }
 
   .form-input {
-    @apply w-full px-3 py-2.5 bg-white border-2 border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors;
+    @apply w-full px-3 py-2.5 bg-white border-2 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 transition-colors;
+    border-color: var(--border-soft);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    caret-color: var(--brand-main);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     font-weight: 500;
   }
 
+  .form-input:focus {
+    border-color: var(--brand-main);
+    box-shadow: 0 0 0 3px rgba(196, 125, 44, 0.18);
+  }
+
   .form-select {
-    @apply w-full px-3 py-2.5 bg-white border-2 border-gray-300 rounded-lg text-sm text-gray-900 font-semibold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500;
+    @apply w-full px-3 py-2.5 bg-white border-2 rounded-lg text-sm text-gray-900 font-semibold focus:outline-none focus:ring-1;
+    border-color: var(--border-soft);
+  }
+
+  .form-select:focus {
+    border-color: var(--brand-main);
+    box-shadow: 0 0 0 3px rgba(196, 125, 44, 0.18);
   }
 
   /* Tables */
   .table-container {
-    @apply w-full overflow-x-auto rounded-lg border border-gray-200;
+    @apply w-full overflow-x-auto rounded-lg border;
+    border-color: var(--border-soft);
   }
 
   .table {
@@ -312,21 +324,24 @@
   }
 
   .table th {
-    @apply px-4 py-3 bg-gray-50 text-xs font-bold text-gray-900 uppercase tracking-wider border-b-2 border-gray-300 whitespace-nowrap;
+    @apply px-4 py-3 text-xs font-bold text-gray-900 uppercase tracking-wider border-b-2 whitespace-nowrap;
+    background-color: #e5edff;
+    border-color: var(--border-soft);
     letter-spacing: 0.5px;
   }
 
   .table td {
-    @apply px-4 py-3.5 text-sm text-gray-800 border-b border-gray-100;
+    @apply px-4 py-3.5 text-sm text-gray-800 border-b;
+    border-color: var(--border-soft);
     font-weight: 500;
   }
 
   .table tbody tr:nth-child(even) {
-    @apply bg-gray-50;
+    background-color: #f5f8ff;
   }
 
   .table tbody tr:hover {
-    @apply bg-blue-50;
+    background-color: #eef4ff;
   }
 
   /* Badges */
@@ -336,23 +351,28 @@
   }
 
   .badge-success {
-    @apply bg-green-100 text-green-800;
+    background-color: var(--success-bg);
+    color: var(--success-text);
   }
 
   .badge-warning {
-    @apply bg-yellow-100 text-yellow-800;
+    background-color: var(--warning-bg);
+    color: var(--warning-text);
   }
 
   .badge-error {
-    @apply bg-red-100 text-red-800;
+    background-color: var(--error-bg);
+    color: var(--error-text);
   }
 
   .badge-info {
-    @apply bg-blue-100 text-blue-800;
+    background-color: var(--info-bg);
+    color: var(--info-text);
   }
 
   .badge-gray {
-    @apply bg-gray-100 text-gray-800;
+    background-color: #e2e8f5;
+    color: #475569;
   }
 
   /* Modals - Improved Alignment */
@@ -374,20 +394,21 @@
 
   /* Navigation Link Styling */
   .nav-link {
-    @apply w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg text-slate-600 font-medium transition-all duration-200;
+    @apply w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg font-medium transition-all duration-200;
     border-left: 3px solid transparent;
+    color: #e0e7ff;
   }
 
   .nav-link:hover {
-    background-color: rgba(30, 64, 175, 0.08);
-    color: #1e293b;
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #fff;
   }
 
   .nav-link.active {
     @apply font-semibold;
-    background-color: rgba(30, 64, 175, 0.12);
-    color: var(--brand-main);
-    border-left-color: var(--brand-main);
+    background-color: rgba(37, 99, 235, 0.18);
+    color: #fff;
+    border-left-color: #bfdbfe;
   }
 
   .nav-link svg {
@@ -441,11 +462,13 @@
   }
 
   .tab-button {
-    @apply px-4 py-3 text-sm font-medium text-gray-600 border-b-2 border-transparent transition-all hover:text-gray-900 hover:border-gray-300;
+    @apply px-4 py-3 text-sm font-medium text-gray-600 border-b-2 border-transparent transition-all hover:text-gray-900 hover:border-amber-200;
   }
 
   .tab-button.active {
-    @apply text-blue-600 border-b-blue-600 font-semibold;
+    color: var(--brand-main);
+    border-bottom-color: var(--brand-main);
+    @apply font-semibold;
   }
 
   /* Responsive Modal */
@@ -941,5 +964,209 @@
   td {
     border: 1px solid #ddd;
     padding: 8px;
+  }
+}
+
+/* =========================================================
+   Mobile Responsive Overrides
+   ========================================================= */
+
+/* Small phones (< 480px) */
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+
+  /* Page headers — stack vertically */
+  .space-y-6 > .flex.items-center.justify-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Full-width buttons and search on mobile */
+  .space-y-6 > .flex.items-center.justify-between > .flex.items-center.gap-3 {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .space-y-6 > .flex.items-center.justify-between .relative {
+    width: 100%;
+  }
+
+  .space-y-6 > .flex.items-center.justify-between input[type="text"] {
+    width: 100% !important;
+  }
+
+  /* Smaller buttons */
+  .btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  /* Action buttons smaller */
+  .action-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Dashboard stats cards — single column */
+  .grid.grid-cols-2,
+  .grid.md\:grid-cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Table container scrollable */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Table cells compact */
+  table th,
+  table td,
+  .ti-items-table th,
+  .ti-items-table td {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  /* Make table header text smaller */
+  thead th {
+    font-size: 0.65rem;
+    padding: 8px 6px;
+  }
+
+  /* Avatar smaller on mobile */
+  .w-10.h-10.rounded-full {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px;
+    font-size: 0.75rem;
+  }
+
+  /* Compact card padding */
+  .card {
+    padding: 0.75rem;
+  }
+
+  /* Modal full-width on mobile */
+  .modal-overlay > div {
+    margin: 0.5rem;
+    max-width: none !important;
+    width: calc(100% - 1rem) !important;
+  }
+
+  /* Modal grid — single column */
+  .modal-overlay .grid.grid-cols-2,
+  .modal-overlay .grid.grid-cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Pagination compact */
+  .flex.items-center.justify-between.px-6.py-3 {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  /* Chart containers */
+  .recharts-responsive-container {
+    min-height: 200px;
+  }
+}
+
+/* Tablets and larger phones (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+  /* Page headers — keep row but wrap */
+  .space-y-6 > .flex.items-center.justify-between {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  /* Dashboard stats — 2 columns */
+  .grid.md\:grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Modal reasonable width */
+  .modal-overlay > div {
+    margin: 1rem;
+    max-width: 90vw !important;
+  }
+
+  .modal-overlay .grid.grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Touch-friendly improvements for all mobile */
+@media (max-width: 768px) {
+  /* Bigger touch targets */
+  button, a, .action-btn {
+    min-height: 36px;
+  }
+
+  /* Sidebar overlay when open */
+  aside {
+    z-index: 50 !important;
+  }
+
+  /* Form inputs bigger for touch */
+  .form-input,
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="password"],
+  select,
+  textarea {
+    min-height: 40px;
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+
+  /* Table rows — more spacing for touch */
+  tbody tr {
+    min-height: 48px;
+  }
+
+  /* Hide less important table columns on mobile */
+  .ti-col-ratepc,
+  .ti-col-pcsinpk {
+    display: none;
+  }
+
+  /* Notification dropdown full-width */
+  .absolute.right-0.mt-2.bg-white.rounded-lg.shadow-lg {
+    position: fixed !important;
+    top: 56px !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    width: auto !important;
+    max-height: 70vh !important;
+  }
+
+  /* Scrollable table hint shadow */
+  .overflow-x-auto {
+    position: relative;
+  }
+
+  .overflow-x-auto::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    background: linear-gradient(to left, rgba(255,255,255,0.8), transparent);
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+/* Landscape phone */
+@media (max-height: 500px) and (orientation: landscape) {
+  .modal-overlay > div {
+    max-height: 90vh;
+    overflow-y: auto;
   }
 }

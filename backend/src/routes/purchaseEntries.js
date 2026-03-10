@@ -87,17 +87,15 @@ router.post('/', async (req, res) => {
         let subtotal = 0;
 
         const processedItems = items.map(item => {
-            const amount = (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
+            const amount = (parseFloat(item.weightKg) || 0) * (parseFloat(item.ratePerKg) || 0);
             subtotal += amount;
 
             return {
                 particular: item.particular,
                 hsnCode: item.hsnCode || '',
-                size: item.size || '',
-                ratePerPiece: parseFloat(item.ratePerPiece) || 0,
-                pcsInPack: parseFloat(item.pcsInPack) || 1,
-                ratePerPack: parseFloat(item.ratePerPack) || 0,
-                noOfPacks: parseFloat(item.noOfPacks) || 0,
+                designColor: item.designColor || '',
+                weightKg: parseFloat(item.weightKg) || 0,
+                ratePerKg: parseFloat(item.ratePerKg) || 0,
                 amount,
                 total: amount
             };
@@ -125,20 +123,17 @@ router.post('/', async (req, res) => {
         // === Auto-generate PURCHASE bill ===
         const billItems = [];
         let billSubtotal = 0;
-        let billTotalTax = 0;
 
         for (const item of entry.items) {
-            const itemAmount = (item.ratePerPack || 0) * (item.noOfPacks || 0);
+            const itemAmount = (item.weightKg || 0) * (item.ratePerKg || 0);
 
             const billItem = {
                 productName: item.particular,
-                sizesOrPieces: item.size || '',
-                quantity: item.noOfPacks || 0,
-                price: item.ratePerPack || 0,
-                ratePerPiece: item.ratePerPiece || 0,
-                pcsInPack: item.pcsInPack || 1,
-                ratePerPack: item.ratePerPack || 0,
-                noOfPacks: item.noOfPacks || 0,
+                sizesOrPieces: item.designColor || '',
+                quantity: item.weightKg || 0,
+                price: item.ratePerKg || 0,
+                weightKg: item.weightKg || 0,
+                ratePerKg: item.ratePerKg || 0,
                 hsnCode: item.hsnCode || '',
                 gstRate: 0,
                 gstAmount: 0,
@@ -155,14 +150,14 @@ router.post('/', async (req, res) => {
             const product = await Product.findOne({ name: { $regex: new RegExp(`^${item.particular}$`, 'i') } });
             if (product) {
                 const previousStock = product.stock;
-                product.stock += (item.noOfPacks || 0);
+                product.stock += (item.weightKg || 0);
                 await product.save();
 
                 // Record stock movement
                 await new StockMovement({
                     product: product._id,
                     type: 'in',
-                    quantity: item.noOfPacks || 0,
+                    quantity: item.weightKg || 0,
                     previousStock: previousStock,
                     newStock: product.stock,
                     reason: `Purchased - Purchase Entry #${entry.invoiceNumber}`
@@ -174,7 +169,7 @@ router.post('/', async (req, res) => {
         const billSgst = 0;
         const billGrandTotal = Math.round(billSubtotal);
         const billRoundOff = billGrandTotal - billSubtotal;
-        const totalPacks = entry.items.reduce((sum, item) => sum + (item.noOfPacks || 0), 0);
+        const totalWeight = entry.items.reduce((sum, item) => sum + (item.weightKg || 0), 0);
 
         const bill = new Bill({
             billNumber: await generatePurchaseBillNumber(),
@@ -195,10 +190,10 @@ router.post('/', async (req, res) => {
             taxableAmount: billSubtotal,
             cgst: billCgst,
             sgst: billSgst,
-            totalTax: billTotalTax,
+            totalTax: 0,
             grandTotal: billGrandTotal,
             roundOff: billRoundOff,
-            totalPacks,
+            totalPacks: totalWeight,
             numOfBundles: 1,
             amountInWords: numberToWords(billGrandTotal),
             paymentMethod: 'cash',
@@ -237,17 +232,15 @@ router.put('/:id', async (req, res) => {
             let subtotal = 0;
 
             const processedItems = items.map(item => {
-                const amount = (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
+                const amount = (parseFloat(item.weightKg) || 0) * (parseFloat(item.ratePerKg) || 0);
                 subtotal += amount;
 
                 return {
                     particular: item.particular,
                     hsnCode: item.hsnCode || '',
-                    size: item.size || '',
-                    ratePerPiece: parseFloat(item.ratePerPiece) || 0,
-                    pcsInPack: parseFloat(item.pcsInPack) || 1,
-                    ratePerPack: parseFloat(item.ratePerPack) || 0,
-                    noOfPacks: parseFloat(item.noOfPacks) || 0,
+                    designColor: item.designColor || '',
+                    weightKg: parseFloat(item.weightKg) || 0,
+                    ratePerKg: parseFloat(item.ratePerKg) || 0,
                     amount,
                     total: amount
                 };

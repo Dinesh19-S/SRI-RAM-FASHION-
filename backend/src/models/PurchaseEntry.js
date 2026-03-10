@@ -3,11 +3,9 @@ import mongoose from 'mongoose';
 const purchaseEntryItemSchema = new mongoose.Schema({
     particular: { type: String, required: true },
     hsnCode: { type: String, default: '' },
-    size: { type: String, default: '' },
-    ratePerPiece: { type: Number, default: 0 },
-    pcsInPack: { type: Number, default: 1 },
-    ratePerPack: { type: Number, required: true, min: 0 },
-    noOfPacks: { type: Number, required: true, min: 0 },
+    designColor: { type: String, default: '' },
+    weightKg: { type: Number, required: true, min: 0 },
+    ratePerKg: { type: Number, required: true, min: 0 },
     amount: { type: Number, required: true },
     total: { type: Number, required: true }
 });

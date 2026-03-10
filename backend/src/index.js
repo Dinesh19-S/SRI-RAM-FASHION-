@@ -40,7 +40,13 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 const corsOptions = {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+        // Allow requests from Electron/file://, localhost dev, and whitelisted web origins
+        if (!origin || origin === 'file://' || origin?.startsWith('capacitor://') || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
