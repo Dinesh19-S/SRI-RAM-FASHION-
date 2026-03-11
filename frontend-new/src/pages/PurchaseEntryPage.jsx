@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X, Printer } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { purchaseEntriesAPI, suppliersAPI, settingsAPI } from '../services/api';
@@ -40,12 +41,14 @@ const FABRIC_COLORS = [
 
 const PurchaseEntryPage = () => {
     const toast = useToast();
+    const navigate = useNavigate();
     const [showNewEntry, setShowNewEntry] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [purchases, setPurchases] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
+    const [searchTrigger, setSearchTrigger] = useState(0);
     const [filters, setFilters] = useState({
         invNo: '',
         company: '',
@@ -73,9 +76,17 @@ const PurchaseEntryPage = () => {
 
     useEffect(() => {
         fetchPurchases();
+    }, [pagination.page, pagination.limit, searchTrigger]);
+
+    useEffect(() => {
         fetchSuppliers();
-        fetchSettings();
-    }, [pagination.page, pagination.limit]);
+    }, []);
+
+    useEffect(() => {
+        if (showBillModal && !settings) {
+            fetchSettings();
+        }
+    }, [showBillModal, settings]);
 
     const fetchPurchases = async () => {
         setIsLoading(true);
@@ -123,12 +134,13 @@ const PurchaseEntryPage = () => {
 
     const handleSearch = () => {
         setPagination(prev => ({ ...prev, page: 1 }));
-        fetchPurchases();
+        setSearchTrigger((value) => value + 1);
     };
 
     const handleClearFilters = () => {
         setFilters({ invNo: '', company: '', fromDate: '', toDate: '' });
-        setTimeout(() => fetchPurchases(), 100);
+        setPagination((prev) => ({ ...prev, page: 1 }));
+        setSearchTrigger((value) => value + 1);
     };
 
     const handleNewPurchase = () => {
@@ -179,6 +191,12 @@ const PurchaseEntryPage = () => {
     const calculateItemTotal = (item) => {
         return (parseFloat(item.weightKg) || 0) * (parseFloat(item.ratePerKg) || 0);
     };
+
+    const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 2
+    }).format(Number(amount) || 0);
 
     const handleSave = async () => {
         if (!newPurchase.supplier) {
@@ -477,7 +495,7 @@ const PurchaseEntryPage = () => {
                                             />
                                         </td>
                                         <td className="p-3 text-sm font-bold text-gray-900">
-                                            ₹{calculateItemTotal(item).toFixed(2)}
+                                            {formatCurrency(calculateItemTotal(item))}
                                         </td>
                                         <td className="p-3">
                                             <div className="flex gap-1">
@@ -515,7 +533,7 @@ const PurchaseEntryPage = () => {
                     <div className="mt-4 flex justify-end">
                         <div className="bg-gray-100 px-6 py-3 rounded-lg">
                             <span className="text-lg font-bold text-gray-900">
-                                Grand Total: ₹{items.reduce((sum, item) => sum + calculateItemTotal(item), 0).toFixed(2)}
+                                Grand Total: {formatCurrency(items.reduce((sum, item) => sum + calculateItemTotal(item), 0))}
                             </span>
                         </div>
                     </div>
@@ -548,14 +566,23 @@ const PurchaseEntryPage = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-gray-900">Purchase</h1>
-                <button
-                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium text-sm transition-colors"
-                    style={{ backgroundColor: '#3b82f6' }}
-                    onClick={handleNewPurchase}
-                >
-                    <Plus size={18} />
-                    NEW PURCHASE ENTRY
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 rounded-lg font-medium text-sm transition-colors border border-gray-200 hover:bg-gray-100"
+                        onClick={() => navigate('/dashboard/purchase/billing')}
+                    >
+                        <FileText size={16} />
+                        PURCHASE BILLING
+                    </button>
+                    <button
+                        className="flex items-center gap-2 px-4 py-2 text-white rounded-lg font-medium text-sm transition-colors"
+                        style={{ backgroundColor: '#3b82f6' }}
+                        onClick={handleNewPurchase}
+                    >
+                        <Plus size={18} />
+                        NEW PURCHASE ENTRY
+                    </button>
+                </div>
             </div>
 
             {/* Search Filters Card */}
@@ -653,7 +680,7 @@ const PurchaseEntryPage = () => {
                                         <td className="p-4 text-sm font-medium text-gray-900">
                                             {purchase.items?.reduce((sum, item) => sum + (item.weightKg || 0), 0).toFixed(2) || '0'} kg
                                         </td>
-                                        <td className="p-4 text-sm font-bold text-green-600">₹{(purchase.grandTotal || 0).toLocaleString()}</td>
+                                        <td className="p-4 text-sm font-bold text-green-600">{formatCurrency(purchase.grandTotal || 0)}</td>
                                         <td className="p-4">
                                             <div className="flex gap-2">
                                                 <button
@@ -741,7 +768,7 @@ const PurchaseEntryPage = () => {
                                 <div><span className="text-gray-500">Invoice No:</span> <span className="font-semibold">{selectedEntry.invoiceNumber}</span></div>
                                 <div><span className="text-gray-500">Date:</span> <span className="font-semibold">{formatDate(selectedEntry.date)}</span></div>
                                 <div><span className="text-gray-500">Supplier:</span> <span className="font-semibold">{selectedEntry.supplier?.name}</span></div>
-                                <div><span className="text-gray-500">Total:</span> <span className="font-semibold text-green-600">₹{selectedEntry.grandTotal?.toLocaleString()}</span></div>
+                                <div><span className="text-gray-500">Total:</span> <span className="font-semibold text-green-600">{formatCurrency(selectedEntry.grandTotal || 0)}</span></div>
                             </div>
                             <h4 className="font-semibold mb-2">Fabric Items</h4>
                             <table className="w-full text-sm">
@@ -762,8 +789,8 @@ const PurchaseEntryPage = () => {
                                             <td className="p-2">{item.hsnCode || '-'}</td>
                                             <td className="p-2">{item.designColor || '-'}</td>
                                             <td className="p-2 text-right">{item.weightKg || 0} kg</td>
-                                            <td className="p-2 text-right">₹{item.ratePerKg || 0}</td>
-                                            <td className="p-2 text-right">₹{item.total?.toFixed(2)}</td>
+                                            <td className="p-2 text-right">{formatCurrency(item.ratePerKg || 0)}</td>
+                                            <td className="p-2 text-right">{formatCurrency(item.total ?? ((item.weightKg || 0) * (item.ratePerKg || 0)))}</td>
                                         </tr>
                                     ))}
                                 </tbody>

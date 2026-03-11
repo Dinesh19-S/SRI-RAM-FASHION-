@@ -67,6 +67,7 @@ const initialState = {
     items: [],
     currentBill: null,
     pagination: null,
+    lastFetchedAt: 0,
     isLoading: false,
     error: null,
 };
@@ -94,6 +95,7 @@ const billsSlice = createSlice({
                 state.isLoading = false;
                 state.items = action.payload.data;
                 state.pagination = action.payload.pagination;
+                state.lastFetchedAt = Date.now();
             })
             .addCase(fetchBills.rejected, (state, action) => {
                 state.isLoading = false;

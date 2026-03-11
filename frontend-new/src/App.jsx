@@ -1,23 +1,59 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import MainLayout from './components/layout/MainLayout';
+import { appAPI } from './services/api';
 
 // Lazy-loaded pages for code splitting
-const HomePage = lazy(() => import('./pages/HomePage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const BillingPage = lazy(() => import('./pages/BillingPage'));
-const InventoryPage = lazy(() => import('./pages/InventoryPage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const PurchaseEntryPage = lazy(() => import('./pages/PurchaseEntryPage'));
-const SalesReportsPage = lazy(() => import('./pages/SalesReportsPage'));
-const StockReportsPage = lazy(() => import('./pages/StockReportsPage'));
-const CustomerEntryPage = lazy(() => import('./pages/CustomerEntryPage'));
-const ItemsPage = lazy(() => import('./pages/ItemsPage'));
-const SupplierEntryPage = lazy(() => import('./pages/SupplierEntryPage'));
+const loadHomePage = () => import('./pages/HomePage');
+const loadLoginPage = () => import('./pages/LoginPage');
+const loadRegisterPage = () => import('./pages/RegisterPage');
+const loadDashboardPage = () => import('./pages/DashboardPage');
+const loadBillingPage = () => import('./pages/BillingPage');
+const loadInventoryPage = () => import('./pages/InventoryPage');
+const loadSettingsPage = () => import('./pages/SettingsPage');
+const loadPurchaseEntryPage = () => import('./pages/PurchaseEntryPage');
+const loadPurchaseBillingPage = () => import('./pages/PurchaseBillingPage');
+const loadSalesReportsPage = () => import('./pages/SalesReportsPage');
+const loadStockReportsPage = () => import('./pages/StockReportsPage');
+const loadCustomerEntryPage = () => import('./pages/CustomerEntryPage');
+const loadItemsPage = () => import('./pages/ItemsPage');
+const loadSupplierEntryPage = () => import('./pages/SupplierEntryPage');
+
+const HomePage = lazy(loadHomePage);
+const LoginPage = lazy(loadLoginPage);
+const RegisterPage = lazy(loadRegisterPage);
+const DashboardPage = lazy(loadDashboardPage);
+const BillingPage = lazy(loadBillingPage);
+const InventoryPage = lazy(loadInventoryPage);
+const SettingsPage = lazy(loadSettingsPage);
+const PurchaseEntryPage = lazy(loadPurchaseEntryPage);
+const PurchaseBillingPage = lazy(loadPurchaseBillingPage);
+const SalesReportsPage = lazy(loadSalesReportsPage);
+const StockReportsPage = lazy(loadStockReportsPage);
+const CustomerEntryPage = lazy(loadCustomerEntryPage);
+const ItemsPage = lazy(loadItemsPage);
+const SupplierEntryPage = lazy(loadSupplierEntryPage);
+
+const prefetchProtectedRoutes = () => {
+  loadDashboardPage();
+  loadInventoryPage();
+
+  const warmSecondaryRoutes = () => {
+    loadBillingPage();
+    loadPurchaseEntryPage();
+    loadPurchaseBillingPage();
+    loadCustomerEntryPage();
+    loadSupplierEntryPage();
+  };
+
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    window.requestIdleCallback(warmSecondaryRoutes, { timeout: 1500 });
+  } else {
+    window.setTimeout(warmSecondaryRoutes, 500);
+  }
+};
 
 // Loading fallback
 const PageLoader = () => (
@@ -115,16 +151,17 @@ const AnimatedRoutes = () => {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
-            <Route path="purchase/entry" element={<Suspense fallback={<PageLoader />}><PurchaseEntryPage /></Suspense>} />
-            <Route path="billing" element={<Suspense fallback={<PageLoader />}><BillingPage /></Suspense>} />
-            <Route path="inventory" element={<Suspense fallback={<PageLoader />}><InventoryPage /></Suspense>} />
-            <Route path="reports/sales" element={<Suspense fallback={<PageLoader />}><SalesReportsPage /></Suspense>} />
-            <Route path="reports/stock" element={<Suspense fallback={<PageLoader />}><StockReportsPage /></Suspense>} />
-            <Route path="master/customers" element={<Suspense fallback={<PageLoader />}><CustomerEntryPage /></Suspense>} />
-            <Route path="master/items" element={<Suspense fallback={<PageLoader />}><ItemsPage /></Suspense>} />
-            <Route path="master/suppliers" element={<Suspense fallback={<PageLoader />}><SupplierEntryPage /></Suspense>} />
-            <Route path="settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
+            <Route index element={<DashboardPage />} />
+            <Route path="purchase/entry" element={<PurchaseEntryPage />} />
+            <Route path="purchase/billing" element={<PurchaseBillingPage />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="reports/sales" element={<SalesReportsPage />} />
+            <Route path="reports/stock" element={<StockReportsPage />} />
+            <Route path="master/customers" element={<CustomerEntryPage />} />
+            <Route path="master/items" element={<ItemsPage />} />
+            <Route path="master/suppliers" element={<SupplierEntryPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           {/* Catch all */}
@@ -136,6 +173,40 @@ const AnimatedRoutes = () => {
 };
 
 function App() {
+  const { isAuthenticated } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    appAPI.warmup().catch(() => {
+      // Ignore warm-up failures; real requests will handle connectivity errors.
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return undefined;
+    }
+
+    let timeoutId = null;
+    let idleId = null;
+
+    const schedulePrefetch = () => prefetchProtectedRoutes();
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(schedulePrefetch, { timeout: 1000 });
+    } else {
+      timeoutId = window.setTimeout(schedulePrefetch, 350);
+    }
+
+    return () => {
+      if (idleId !== null && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [isAuthenticated]);
+
   const RouterComponent = (window?.electronAPI?.isElectron || window.location.protocol === 'file:')
     ? HashRouter
     : BrowserRouter;

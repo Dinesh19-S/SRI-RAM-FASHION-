@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Phone, Plus, Search, Pencil, Trash2, Download, X, Save, Building2 } from 'lucide-react';
+import { Mail, Phone, Plus, Search, Pencil, Trash2, X, Save, Building2 } from 'lucide-react';
 import { suppliersAPI } from '../services/api';
 import { useToast } from '../components/common';
 
@@ -141,33 +141,6 @@ const SupplierEntryPage = () => {
         setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }));
     };
 
-    const handleDownload = (supplier) => {
-        const content = `
-SUPPLIER DETAILS
-================
-
-Company Name: ${supplier.companyName || '-'}
-GSTIN: ${supplier.gstin || '-'}
-State: ${supplier.state || '-'}
-Mobile: ${supplier.mobile || '-'}
-Alternate No: ${supplier.alternateNo || '-'}
-Email: ${supplier.email || '-'}
-Address: ${supplier.address || '-'}
-
-Generated on: ${new Date().toLocaleString('en-IN')}
-        `.trim();
-
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${supplier.companyName.replace(/[^a-z0-9]/gi, '_')}_details.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-    };
-
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Page Header */}
@@ -257,13 +230,6 @@ Generated on: ${new Date().toLocaleString('en-IN')}
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button
-                                                    className="action-btn action-btn-green"
-                                                    onClick={() => handleDownload(supplier)}
-                                                    aria-label="Download supplier"
-                                                >
-                                                    <Download size={16} />
-                                                </button>
                                                 <button
                                                     className="action-btn action-btn-blue"
                                                     onClick={() => handleOpenModal(supplier)}

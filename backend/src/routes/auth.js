@@ -4,12 +4,23 @@ import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
 import { sendPasswordResetEmail, isEmailConfigured } from '../services/emailService.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sri-ram-fashions-secret-key';
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '70478872500-1drce72segim48l21r8nm80289q39ndk.apps.googleusercontent.com';
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required');
+}
+
+const GOOGLE_CLIENT_IDS = [
+    ...(process.env.GOOGLE_CLIENT_IDS || '').split(','),
+    process.env.GOOGLE_CLIENT_ID || ''
+]
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+const googleClient = GOOGLE_CLIENT_IDS.length > 0 ? new OAuth2Client() : null;
 
 // Login
 router.post('/login', async (req, res) => {
@@ -48,12 +59,19 @@ router.post('/login', async (req, res) => {
 // Google OAuth Login
 router.post('/google', async (req, res) => {
     try {
+        if (!googleClient || GOOGLE_CLIENT_IDS.length === 0) {
+            return res.status(503).json({
+                success: false,
+                message: 'Google login is not configured on this server'
+            });
+        }
+
         const { credential } = req.body;
 
         // Verify the Google token
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
-            audience: GOOGLE_CLIENT_ID
+            audience: GOOGLE_CLIENT_IDS
         });
 
         const payload = ticket.getPayload();
@@ -108,7 +126,7 @@ router.post('/google', async (req, res) => {
         } else if (error.message.includes('Invalid token')) {
             errorMessage = 'Invalid token. Please try again.';
         } else if (error.message.includes('audience')) {
-            errorMessage = 'Client ID mismatch. Check Google Cloud Console configuration.';
+            errorMessage = 'Client ID mismatch. Check GOOGLE_CLIENT_ID/GOOGLE_CLIENT_IDS and Google Cloud Console origins.';
         }
         res.status(401).json({ success: false, message: errorMessage, debug: error.message });
     }
@@ -291,15 +309,9 @@ router.post('/register', async (req, res) => {
 });
 
 // Get Profile (protected)
-router.get('/profile', async (req, res) => {
+router.get('/profile', authenticateToken, async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (!token) {
-            return res.status(401).json({ success: false, message: 'No token provided' });
-        }
-
-        const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await User.findById(decoded.userId).select('-password');
+        const user = await User.findById(req.user.id).select('-password');
 
         if (!user) {
             return res.status(404).json({ success: false, message: 'User not found' });
@@ -307,7 +319,7 @@ router.get('/profile', async (req, res) => {
 
         res.json({ success: true, user });
     } catch (error) {
-        res.status(401).json({ success: false, message: 'Invalid token' });
+        res.status(500).json({ success: false, message: 'Failed to fetch profile' });
     }
 });
 

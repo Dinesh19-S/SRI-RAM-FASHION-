@@ -1,13 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
-import "dotenv/config"
+import 'dotenv/config';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import User from './models/User.js';
-
-
-// Load environment variables
+import Bill from './models/Bill.js';
+import { API_BASES, API_CONTRACT } from './config/apiContract.js';
+import { initScheduler } from './services/schedulerService.js';
+import { authenticateToken } from './middleware/auth.js';
+import { cacheMiddleware, cachePolicies } from './middleware/cache.js';
 
 // Import Routes
 import authRoutes from './routes/auth.js';
@@ -28,6 +30,17 @@ import aiRoutes from './routes/ai.js';
 import emailRoutes from './routes/email.js';
 
 const app = express();
+const REQUIRED_ENV_VARS = ['MONGODB_URI', 'JWT_SECRET'];
+
+const missingEnvVars = REQUIRED_ENV_VARS.filter((name) => !process.env[name]?.trim());
+if (missingEnvVars.length > 0) {
+    console.error(
+        `Missing required environment variables: ${missingEnvVars.join(', ')}`
+    );
+    process.exit(1);
+}
+
+const MONGODB_URI = process.env.MONGODB_URI;
 
 // CORS Configuration - Allow frontend
 const allowedOrigins = [
@@ -58,71 +71,107 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://dineshknight19_db_user:dinesh1910@cluster0.hepq0h5.mongodb.net/sri-ram-fashions"
+// Request Logger
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} [${req.method}] ${req.url}`);
+    next();
+});
 
 const createDefaultAdmin = async () => {
+    if (process.env.BOOTSTRAP_DEFAULT_ADMIN !== 'true') {
+        return;
+    }
+
+    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL?.trim();
+    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+    const adminName = process.env.DEFAULT_ADMIN_NAME?.trim() || 'Admin User';
+    const adminPhone = process.env.DEFAULT_ADMIN_PHONE?.trim() || '';
+
+    if (!adminEmail || !adminPassword) {
+        console.warn(
+            'BOOTSTRAP_DEFAULT_ADMIN is enabled but DEFAULT_ADMIN_EMAIL or DEFAULT_ADMIN_PASSWORD is missing. Skipping admin bootstrap.'
+        );
+        return;
+    }
+
     try {
-        const adminExists = await User.findOne({ email: 'sriramfashionstrp@gmail.com' });
+        const adminExists = await User.findOne({ email: adminEmail });
         if (!adminExists) {
-            const hashedPassword = await bcrypt.hash('password123', 10);
+            const hashedPassword = await bcrypt.hash(adminPassword, 10);
             await User.create({
-                name: 'Admin User',
-                email: 'sriramfashionstrp@gmail.com',
+                name: adminName,
+                email: adminEmail,
                 password: hashedPassword,
-                phone: '9080573831',
+                phone: adminPhone,
                 role: 'admin',
                 isActive: true
             });
-            console.log('✅ Default admin user created (sriramfashionstrp@gmail.com / password123)');
+            console.log(`Default admin user created: ${adminEmail}`);
         }
     } catch (error) {
         console.error('Error creating default admin:', error);
     }
 };
 
-mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 30000, // Increase timeout to 30 seconds
-    socketTimeoutMS: 45000,
-    maxPoolSize: 10,
-    minPoolSize: 2,
-})
-    .then(async () => {
-        console.log('✅ Connected to MongoDB Atlas');
-        console.log(`📦 Database: ${mongoose.connection.name}`);
-        await createDefaultAdmin();
-    })
-    .catch((err) => {
-        console.error('❌ MongoDB connection error:', err.message);
-        console.error('💡 Please check:');
-        console.error('   1. MongoDB Atlas cluster is running');
-        console.error('   2. Network access allows your IP address');
-        console.error('   3. Database username/password are correct');
-        console.error('   4. Internet connection is stable');
+const migrateDirectBillsToSales = async () => {
+    try {
+        const result = await Bill.updateMany(
+            { billType: 'DIRECT' },
+            { $set: { billType: 'SALES' } }
+        );
+
+        if (result.modifiedCount > 0) {
+            console.log(`Migrated ${result.modifiedCount} DIRECT bill(s) to SALES`);
+        }
+    } catch (error) {
+        console.error('Error migrating DIRECT bills to SALES:', error.message);
+    }
+};
+
+const createApiRouter = () => {
+    const router = express.Router();
+
+    router.get('/health', (req, res) => {
+        res.json({
+            success: true,
+            message: 'Sri Ram Fashions API is running',
+            data: {
+                version: API_CONTRACT.version,
+                serverTime: new Date().toISOString()
+            }
+        });
     });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/bills', billRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/settings', settingsRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/hsn', hsnRoutes);
-app.use('/api/suppliers', supplierRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/sales-entries', salesEntriesRoutes);
-app.use('/api/purchase-entries', purchaseEntriesRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/email', emailRoutes);
+    router.get('/endpoints', (req, res) => {
+        res.json({
+            success: true,
+            data: API_CONTRACT
+        });
+    });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Sri Ram Fashions API is running' });
-});
+    router.use('/auth', authRoutes);
+    router.use('/products', authenticateToken, cacheMiddleware(cachePolicies.PRODUCTS), productRoutes);
+    router.use('/categories', authenticateToken, cacheMiddleware(cachePolicies.PRODUCTS), categoryRoutes);
+    router.use('/bills', authenticateToken, cacheMiddleware(cachePolicies.DYNAMIC), billRoutes);
+    router.use('/inventory', authenticateToken, cacheMiddleware(cachePolicies.DYNAMIC), inventoryRoutes);
+    router.use('/reports', authenticateToken, cacheMiddleware(cachePolicies.REPORTS), reportRoutes);
+    router.use('/settings', authenticateToken, cacheMiddleware(cachePolicies.SETTINGS), settingsRoutes);
+    router.use('/dashboard', authenticateToken, cacheMiddleware(cachePolicies.REPORTS), dashboardRoutes);
+    router.use('/customers', authenticateToken, cacheMiddleware(cachePolicies.STATIC), customerRoutes);
+    router.use('/hsn', authenticateToken, cacheMiddleware(cachePolicies.STATIC), hsnRoutes);
+    router.use('/suppliers', authenticateToken, cacheMiddleware(cachePolicies.STATIC), supplierRoutes);
+    router.use('/payments', authenticateToken, cacheMiddleware(cachePolicies.DYNAMIC), paymentRoutes);
+    router.use('/sales-entries', authenticateToken, cacheMiddleware(cachePolicies.DYNAMIC), salesEntriesRoutes);
+    router.use('/purchase-entries', authenticateToken, cacheMiddleware(cachePolicies.DYNAMIC), purchaseEntriesRoutes);
+    router.use('/ai', authenticateToken, aiRoutes);
+    router.use('/email', authenticateToken, emailRoutes);
+
+    return router;
+};
+
+const apiRouter = createApiRouter();
+app.use(API_BASES.legacy, apiRouter);
+app.use(API_BASES.versioned, apiRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -139,16 +188,50 @@ app.use((req, res) => {
     res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-import { initScheduler } from './services/schedulerService.js';
+const startServer = async () => {
+    try {
+        await mongoose.connect(MONGODB_URI, {
+            serverSelectionTimeoutMS: 10000, // Fail fast if DB is unreachable (10s)
+            socketTimeoutMS: 30000,           // Reduce from 45s to prevent connection hangs
+            maxPoolSize: 10,                  // Keep connection pool efficient
+            minPoolSize: 2
+        });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 API URL: http://localhost:${PORT}/api`);
+        console.log('Connected to MongoDB');
+        console.log(`Database: ${mongoose.connection.name}`);
+        await migrateDirectBillsToSales();
+        await createDefaultAdmin();
 
-    // Start automated tasks
-    initScheduler();
-});
+        const PORT = process.env.PORT || 5000;
+        const server = app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+            console.log(`API URL (legacy): http://localhost:${PORT}${API_BASES.legacy}`);
+            console.log(`API URL (v1): http://localhost:${PORT}${API_BASES.versioned}`);
+            initScheduler();
+        });
+
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                console.error(`ERROR: Port ${PORT} is already in use.`);
+                console.error(`Try running: netstat -aon | findstr :${PORT}`);
+                console.error(`Or kill the process: taskkill /F /PID <PID_FROM_ABOVE>`);
+                process.exit(1);
+            } else {
+                console.error('Server error:', err);
+                process.exit(1);
+            }
+        });
+    } catch (err) {
+        console.error('MongoDB connection error:', err.message);
+        console.error('Please check:');
+        console.error('   1. MongoDB Atlas cluster is running');
+        console.error('   2. Network access allows your IP address');
+        console.error('   3. Database username/password are correct');
+        console.error('   4. Internet connection is stable');
+        process.exit(1);
+    }
+};
+
+startServer();
 
 export default app;

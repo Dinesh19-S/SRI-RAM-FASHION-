@@ -1,5 +1,5 @@
 import './BillTemplate.css';
-import lotusLogo from '../assets/lotus-logo.png';
+import companyLogo from '../assets/logo.jpg';
 
 // Convert number to words in Indian format
 const numberToWords = (num) => {
@@ -99,7 +99,7 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                 {/* ===== ROW 1: Company Name + GSTIN ===== */}
                 <div className="ti-header-row">
                     <div className="ti-company-name">
-                        <img src={lotusLogo} alt="Logo" className="ti-company-logo" />
+                        <img src={companyLogo} alt="Logo" className="ti-company-logo" />
                         {companyName}
                     </div>
                     <div className="ti-gstin-header">GSTIN: {companyGstin}</div>

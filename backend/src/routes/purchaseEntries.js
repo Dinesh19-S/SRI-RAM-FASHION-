@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import PurchaseEntry from '../models/PurchaseEntry.js';
 import Bill from '../models/Bill.js';
 import Product from '../models/Product.js';
@@ -7,8 +8,10 @@ import StockMovement from '../models/StockMovement.js';
 const router = express.Router();
 
 // Generate PURCHASE bill number (PUR-0001 format)
-const generatePurchaseBillNumber = async () => {
-    const count = await Bill.countDocuments({ billType: 'PURCHASE' });
+const generatePurchaseBillNumber = async (session = null) => {
+    const query = Bill.countDocuments({ billType: 'PURCHASE' });
+    if (session) query.session(session);
+    const count = await query;
     return `PUR-${(count + 1).toString().padStart(4, '0')}`;
 };
 
@@ -17,10 +20,18 @@ const numberToWords = (num) => {
     return `Rupees ${Math.floor(num)} Only`;
 };
 
+const createHttpError = (statusCode, message) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
+};
+
 // Get all purchase entries with filters and pagination
 router.get('/', async (req, res) => {
     try {
         const { search, fromDate, toDate, page = 1, limit = 20 } = req.query;
+        const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+        const limitNum = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
 
         const query = {};
 
@@ -40,9 +51,10 @@ router.get('/', async (req, res) => {
         }
 
         const entries = await PurchaseEntry.find(query)
-            .skip((page - 1) * limit)
-            .limit(parseInt(limit))
-            .sort({ date: -1, createdAt: -1 });
+            .skip((pageNum - 1) * limitNum)
+            .limit(limitNum)
+            .sort({ date: -1, createdAt: -1 })
+            .lean();
 
         const total = await PurchaseEntry.countDocuments(query);
 
@@ -50,10 +62,10 @@ router.get('/', async (req, res) => {
             success: true,
             data: entries,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page: pageNum,
+                limit: limitNum,
                 total,
-                pages: Math.ceil(total / limit)
+                pages: Math.ceil(total / limitNum)
             }
         });
     } catch (error) {
@@ -76,136 +88,161 @@ router.get('/:id', async (req, res) => {
 
 // Create new purchase entry + auto-generate PURCHASE bill
 router.post('/', async (req, res) => {
+    const session = await mongoose.startSession();
+    let entry = null;
+    let bill = null;
+
     try {
         const { supplier, date, invoiceNumber, items, notes } = req.body;
 
         if (!invoiceNumber) {
-            return res.status(400).json({ success: false, message: 'Invoice number is required for purchase entries' });
+            throw createHttpError(400, 'Invoice number is required for purchase entries');
         }
 
-        // Calculate totals
-        let subtotal = 0;
-
-        const processedItems = items.map(item => {
-            const amount = (parseFloat(item.weightKg) || 0) * (parseFloat(item.ratePerKg) || 0);
-            subtotal += amount;
-
-            return {
-                particular: item.particular,
-                hsnCode: item.hsnCode || '',
-                designColor: item.designColor || '',
-                weightKg: parseFloat(item.weightKg) || 0,
-                ratePerKg: parseFloat(item.ratePerKg) || 0,
-                amount,
-                total: amount
-            };
-        });
-
-        const grandTotal = subtotal;
-
-        const entry = new PurchaseEntry({
-            invoiceNumber,
-            date: date || new Date(),
-            supplier: {
-                name: supplier.name || supplier,
-                mobile: supplier.mobile || '',
-                gstin: supplier.gstin || '',
-                address: supplier.address || ''
-            },
-            items: processedItems,
-            subtotal,
-            grandTotal,
-            notes
-        });
-
-        await entry.save();
-
-        // === Auto-generate PURCHASE bill ===
-        const billItems = [];
-        let billSubtotal = 0;
-
-        for (const item of entry.items) {
-            const itemAmount = (item.weightKg || 0) * (item.ratePerKg || 0);
-
-            const billItem = {
-                productName: item.particular,
-                sizesOrPieces: item.designColor || '',
-                quantity: item.weightKg || 0,
-                price: item.ratePerKg || 0,
-                weightKg: item.weightKg || 0,
-                ratePerKg: item.ratePerKg || 0,
-                hsnCode: item.hsnCode || '',
-                gstRate: 0,
-                gstAmount: 0,
-                discount: 0,
-                total: itemAmount
-            };
-
-            billItems.push(billItem);
-            billSubtotal += itemAmount;
+        if (!supplier?.name && typeof supplier !== 'string') {
+            throw createHttpError(400, 'Supplier name is required');
         }
 
-        // Increase stock for items that match products by name
-        for (const item of entry.items) {
-            const product = await Product.findOne({ name: { $regex: new RegExp(`^${item.particular}$`, 'i') } });
-            if (product) {
-                const previousStock = product.stock;
-                product.stock += (item.weightKg || 0);
-                await product.save();
+        if (!Array.isArray(items) || items.length === 0) {
+            throw createHttpError(400, 'At least one item is required');
+        }
 
-                // Record stock movement
-                await new StockMovement({
-                    product: product._id,
-                    type: 'in',
+        await session.withTransaction(async () => {
+            // Calculate totals
+            let subtotal = 0;
+
+            const processedItems = items.map((item) => {
+                const weightKg = parseFloat(item.weightKg) || 0;
+                const ratePerKg = parseFloat(item.ratePerKg) || 0;
+                const amount = weightKg * ratePerKg;
+                subtotal += amount;
+
+                return {
+                    particular: item.particular,
+                    hsnCode: item.hsnCode || '',
+                    designColor: item.designColor || '',
+                    weightKg,
+                    ratePerKg,
+                    amount,
+                    total: amount
+                };
+            });
+
+            const grandTotal = subtotal;
+
+            entry = new PurchaseEntry({
+                invoiceNumber,
+                date: date || new Date(),
+                supplier: {
+                    name: supplier.name || supplier,
+                    mobile: supplier.mobile || '',
+                    gstin: supplier.gstin || '',
+                    address: supplier.address || ''
+                },
+                items: processedItems,
+                subtotal,
+                grandTotal,
+                notes
+            });
+
+            await entry.save({ session });
+
+            const billItems = [];
+            let billSubtotal = 0;
+            const stockMovements = [];
+            const billId = new mongoose.Types.ObjectId();
+
+            for (const item of entry.items) {
+                const itemAmount = (item.weightKg || 0) * (item.ratePerKg || 0);
+
+                const billItem = {
+                    productName: item.particular,
+                    sizesOrPieces: item.designColor || '',
                     quantity: item.weightKg || 0,
-                    previousStock: previousStock,
-                    newStock: product.stock,
-                    reason: `Purchased - Purchase Entry #${entry.invoiceNumber}`
-                }).save();
+                    price: item.ratePerKg || 0,
+                    weightKg: item.weightKg || 0,
+                    ratePerKg: item.ratePerKg || 0,
+                    hsnCode: item.hsnCode || '',
+                    gstRate: 0,
+                    gstAmount: 0,
+                    discount: 0,
+                    total: itemAmount
+                };
+
+                billItems.push(billItem);
+                billSubtotal += itemAmount;
             }
-        }
 
-        const billCgst = 0;
-        const billSgst = 0;
-        const billGrandTotal = Math.round(billSubtotal);
-        const billRoundOff = billGrandTotal - billSubtotal;
-        const totalWeight = entry.items.reduce((sum, item) => sum + (item.weightKg || 0), 0);
+            // Increase stock for items that match products by name
+            for (const item of entry.items) {
+                const product = await Product.findOne({ name: { $regex: new RegExp(`^${item.particular}$`, 'i') } }).session(session);
+                if (product) {
+                    const previousStock = product.stock;
+                    product.stock += (item.weightKg || 0);
+                    await product.save({ session });
 
-        const bill = new Bill({
-            billNumber: await generatePurchaseBillNumber(),
-            billType: 'PURCHASE',
-            partyName: entry.supplier.name,
-            date: entry.date,
-            customer: {
-                name: entry.supplier.name,
-                phone: entry.supplier.mobile || '',
-                address: entry.supplier.address || '',
-                gstin: entry.supplier.gstin || '',
-                state: 'Tamilnadu',
-                stateCode: '33'
-            },
-            items: billItems,
-            subtotal: billSubtotal,
-            discountAmount: 0,
-            taxableAmount: billSubtotal,
-            cgst: billCgst,
-            sgst: billSgst,
-            totalTax: 0,
-            grandTotal: billGrandTotal,
-            roundOff: billRoundOff,
-            totalPacks: totalWeight,
-            numOfBundles: 1,
-            amountInWords: numberToWords(billGrandTotal),
-            paymentMethod: 'cash',
-            paymentStatus: 'paid',
-            notes: `Auto-generated from Purchase Entry #${entry.invoiceNumber}`
+                    stockMovements.push({
+                        product: product._id,
+                        type: 'in',
+                        quantity: item.weightKg || 0,
+                        previousStock: previousStock,
+                        newStock: product.stock,
+                        reason: `Purchased - Purchase Entry #${entry.invoiceNumber}`,
+                        reference: `bill:${billId.toString()}`,
+                        createdBy: req.user?.id
+                    });
+                }
+            }
+
+            const billCgst = 0;
+            const billSgst = 0;
+            const billGrandTotal = Math.round(billSubtotal);
+            const billRoundOff = billGrandTotal - billSubtotal;
+            const totalWeight = entry.items.reduce((sum, item) => sum + (item.weightKg || 0), 0);
+
+            bill = new Bill({
+                _id: billId,
+                billNumber: await generatePurchaseBillNumber(session),
+                billType: 'PURCHASE',
+                partyName: entry.supplier.name,
+                date: entry.date,
+                customer: {
+                    name: entry.supplier.name,
+                    phone: entry.supplier.mobile || '',
+                    address: entry.supplier.address || '',
+                    gstin: entry.supplier.gstin || '',
+                    state: 'Tamilnadu',
+                    stateCode: '33'
+                },
+                items: billItems,
+                subtotal: billSubtotal,
+                discountAmount: 0,
+                taxableAmount: billSubtotal,
+                cgst: billCgst,
+                sgst: billSgst,
+                totalTax: 0,
+                grandTotal: billGrandTotal,
+                roundOff: billRoundOff,
+                totalPacks: totalWeight,
+                numOfBundles: 1,
+                amountInWords: numberToWords(billGrandTotal),
+                paymentMethod: 'cash',
+                paymentStatus: 'paid',
+                notes: `Auto-generated from Purchase Entry #${entry.invoiceNumber}`
+            });
+
+            await bill.save({ session });
+
+            if (stockMovements.length > 0) {
+                await StockMovement.insertMany(stockMovements, { session });
+            }
         });
 
-        await bill.save();
-
-        res.status(201).json({ success: true, data: entry, bill: bill });
+        res.status(201).json({ success: true, data: entry, bill });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(error.statusCode || 500).json({ success: false, message: error.message });
+    } finally {
+        session.endSession();
     }
 });
 

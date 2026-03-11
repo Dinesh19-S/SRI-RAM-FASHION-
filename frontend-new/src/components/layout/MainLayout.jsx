@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logout } from '../../store/slices/authSlice';
@@ -18,13 +18,10 @@ import {
     X,
     LogOut,
     User,
-    Store,
     Calculator,
-    IndianRupee,
     TrendingUp,
     Users,
     Truck,
-    ShoppingBag
 } from 'lucide-react';
 
 import logoImage from '../../assets/logo.jpg';
@@ -41,6 +38,7 @@ const navigationSections = [
         items: [
             { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
             { name: 'Billing', href: '/dashboard/billing', icon: Receipt },
+            { name: 'Purchase Billing', href: '/dashboard/purchase/billing', icon: Calculator },
             { name: 'Purchase Entry', href: '/dashboard/purchase/entry', icon: Calculator },
             { name: 'Inventory', href: '/dashboard/inventory', icon: Package },
         ]
@@ -68,10 +66,55 @@ const navigationSections = [
     },
 ];
 
+const searchSuggestions = [
+    { label: 'Dashboard', path: '/dashboard', keywords: ['dashboard', 'home', 'overview'] },
+    { label: 'Purchase Entry', path: '/dashboard/purchase/entry', keywords: ['purchase', 'buy', 'supplier', 'invoice'] },
+    { label: 'Purchase Billing', path: '/dashboard/purchase/billing', keywords: ['purchase', 'bill', 'email', 'pdf'] },
+    { label: 'Sales Reports', path: '/dashboard/reports/sales', keywords: ['sales', 'report', 'analysis'] },
+    { label: 'Billing', path: '/dashboard/billing', keywords: ['billing', 'bill', 'invoice', 'receipt'] },
+    { label: 'Products', path: '/dashboard/inventory', keywords: ['inventory', 'stock', 'product', 'item'] },
+    { label: 'Stock Reports', path: '/dashboard/reports/stock', keywords: ['stock', 'report', 'inventory'] },
+    { label: 'Suppliers', path: '/dashboard/master/suppliers', keywords: ['supplier', 'vendor', 'entry', 'master'] },
+    { label: 'Customers', path: '/dashboard/master/customers', keywords: ['customer', 'entry', 'master', 'company'] },
+    { label: 'Items', path: '/dashboard/master/items', keywords: ['items', 'hsn', 'product', 'master'] },
+    { label: 'Settings', path: '/dashboard/settings', keywords: ['settings', 'config', 'preferences'] },
+];
+
+const NOTIFICATIONS_CACHE_KEY = 'srf:layout:notifications:v1';
+const NOTIFICATIONS_CACHE_TTL = 45 * 1000;
+
+const readCachedNotifications = () => {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+        return null;
+    }
+    try {
+        const raw = localStorage.getItem(NOTIFICATIONS_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed?.timestamp || !Array.isArray(parsed.items)) return null;
+        return parsed;
+    } catch {
+        return null;
+    }
+};
+
+const writeCachedNotifications = (items, timestamp = Date.now()) => {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+        return;
+    }
+    try {
+        localStorage.setItem(
+            NOTIFICATIONS_CACHE_KEY,
+            JSON.stringify({ timestamp, items })
+        );
+    } catch {
+        // Ignore storage errors.
+    }
+};
+
 const MainLayout = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const location = useLocation();
     const { user } = useSelector((state) => state.auth);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -82,6 +125,7 @@ const MainLayout = () => {
     const [notificationsLoading, setNotificationsLoading] = useState(false);
     const [notificationsError, setNotificationsError] = useState('');
     const [notifications, setNotifications] = useState([]);
+    const [notificationsLastLoadedAt, setNotificationsLastLoadedAt] = useState(0);
     const searchRef = useRef(null);
     const notificationsRef = useRef(null);
 
@@ -92,25 +136,22 @@ const MainLayout = () => {
 
     // Page transition animation variants are now defined outside the component for performance
 
-    const searchSuggestions = [
-        { label: 'Dashboard', path: '/dashboard', keywords: ['dashboard', 'home', 'overview'] },
-        { label: 'Purchase Entry', path: '/dashboard/purchase/entry', keywords: ['purchase', 'buy', 'supplier', 'invoice'] },
-        { label: 'Sales Reports', path: '/dashboard/reports/sales', keywords: ['sales', 'report', 'analysis'] },
-        { label: 'Billing', path: '/dashboard/billing', keywords: ['billing', 'bill', 'invoice', 'receipt'] },
-        { label: 'Products', path: '/dashboard/inventory', keywords: ['inventory', 'stock', 'product', 'item'] },
-        { label: 'Stock Reports', path: '/dashboard/reports/stock', keywords: ['stock', 'report', 'inventory'] },
-        { label: 'Suppliers', path: '/dashboard/master/suppliers', keywords: ['supplier', 'vendor', 'entry', 'master'] },
-        { label: 'Customers', path: '/dashboard/master/customers', keywords: ['customer', 'entry', 'master', 'company'] },
-        { label: 'Items', path: '/dashboard/master/items', keywords: ['items', 'hsn', 'product', 'master'] },
-        { label: 'Settings', path: '/dashboard/settings', keywords: ['settings', 'config', 'preferences'] },
-    ];
-
     const filteredSuggestions = searchQuery.trim()
         ? searchSuggestions.filter(s =>
             s.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
             s.keywords.some(k => k.includes(searchQuery.toLowerCase()))
         )
         : [];
+
+    const billNotifications = useMemo(
+        () => notifications.filter((notification) => notification.type === 'bill'),
+        [notifications]
+    );
+
+    const stockNotifications = useMemo(
+        () => notifications.filter((notification) => notification.type === 'low-stock'),
+        [notifications]
+    );
 
     const handleSearchSelect = (path) => {
         navigate(path);
@@ -154,17 +195,29 @@ const MainLayout = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const loadNotifications = useCallback(async () => {
+    useEffect(() => {
+        const cached = readCachedNotifications();
+        if (cached?.items?.length) {
+            setNotifications(cached.items);
+            setNotificationsLastLoadedAt(cached.timestamp || 0);
+        }
+    }, []);
+
+    const loadNotifications = useCallback(async (force = false) => {
+        const isFresh = notifications.length > 0
+            && Date.now() - notificationsLastLoadedAt < NOTIFICATIONS_CACHE_TTL;
+
+        if (isFresh && !force) {
+            return;
+        }
+
         setNotificationsLoading(true);
         setNotificationsError('');
         try {
-            const [lowStockResponse, recentBillsResponse] = await Promise.all([
-                dashboardAPI.getLowStockAlerts(),
-                dashboardAPI.getRecentBills(5)
-            ]);
-
-            const lowStockItems = lowStockResponse?.data?.data || [];
-            const recentBills = recentBillsResponse?.data?.data || [];
+            const response = await dashboardAPI.getNotifications(5);
+            const payload = response?.data?.data || {};
+            const lowStockItems = payload.lowStockAlerts || [];
+            const recentBills = payload.recentBills || [];
 
             const nextNotifications = [
                 ...recentBills.map((bill) => {
@@ -190,19 +243,25 @@ const MainLayout = () => {
                 }))
             ];
 
+            let resolvedNotifications = [];
             setNotifications((prev) => {
                 const readMap = new Map(prev.map((item) => [item.id, item.read]));
-                return nextNotifications.map((item) => ({
+                resolvedNotifications = nextNotifications.map((item) => ({
                     ...item,
                     read: readMap.get(item.id) ?? false
                 }));
+                return resolvedNotifications;
             });
+
+            const loadedAt = Date.now();
+            setNotificationsLastLoadedAt(loadedAt);
+            writeCachedNotifications(resolvedNotifications, loadedAt);
         } catch (error) {
             setNotificationsError('Failed to load notifications');
         } finally {
             setNotificationsLoading(false);
         }
-    }, []);
+    }, [notifications.length, notificationsLastLoadedAt]);
 
     useEffect(() => {
         if (notificationsOpen) {
@@ -215,9 +274,11 @@ const MainLayout = () => {
     };
 
     const handleNotificationClick = (notification) => {
-        setNotifications((prev) =>
-            prev.map((item) => (item.id === notification.id ? { ...item, read: true } : item))
-        );
+        setNotifications((prev) => {
+            const next = prev.map((item) => (item.id === notification.id ? { ...item, read: true } : item));
+            writeCachedNotifications(next, notificationsLastLoadedAt || Date.now());
+            return next;
+        });
         if (notification.action) {
             navigate(notification.action);
         }
@@ -225,7 +286,11 @@ const MainLayout = () => {
     };
 
     const markAllNotificationsRead = () => {
-        setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+        setNotifications((prev) => {
+            const next = prev.map((item) => ({ ...item, read: true }));
+            writeCachedNotifications(next, notificationsLastLoadedAt || Date.now());
+            return next;
+        });
     };
 
     return (
@@ -452,14 +517,12 @@ const MainLayout = () => {
 
                                             {!notificationsLoading && !notificationsError && notifications.length > 0 && (
                                                 <>
-                                                    {notifications.filter((n) => n.type === 'bill').length > 0 && (
+                                                    {billNotifications.length > 0 && (
                                                         <div className="px-4 pt-3 text-xs font-semibold text-gray-400 uppercase">
                                                             Recent Bills
                                                         </div>
                                                     )}
-                                                    {notifications
-                                                        .filter((n) => n.type === 'bill')
-                                                        .map((notification) => (
+                                                    {billNotifications.map((notification) => (
                                                             <button
                                                                 key={notification.id}
                                                                 className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3"
@@ -485,16 +548,14 @@ const MainLayout = () => {
                                                                     <span className="mt-1 w-2 h-2 rounded-full bg-blue-500" />
                                                                 )}
                                                             </button>
-                                                        ))}
+                                                    ))}
 
-                                                    {notifications.filter((n) => n.type === 'low-stock').length > 0 && (
+                                                    {stockNotifications.length > 0 && (
                                                         <div className="px-4 pt-3 text-xs font-semibold text-gray-400 uppercase">
                                                             Low Stock Alerts
                                                         </div>
                                                     )}
-                                                    {notifications
-                                                        .filter((n) => n.type === 'low-stock')
-                                                        .map((notification) => (
+                                                    {stockNotifications.map((notification) => (
                                                             <button
                                                                 key={notification.id}
                                                                 className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-start gap-3"
@@ -515,7 +576,7 @@ const MainLayout = () => {
                                                                     <span className="mt-1 w-2 h-2 rounded-full bg-amber-500" />
                                                                 )}
                                                             </button>
-                                                        ))}
+                                                    ))}
                                                 </>
                                             )}
                                         </div>

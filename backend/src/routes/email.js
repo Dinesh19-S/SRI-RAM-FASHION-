@@ -1,11 +1,12 @@
 import express from 'express';
 import Bill from '../models/Bill.js';
 import { isEmailConfigured, sendBillNotification, sendNotification, sendReportEmail, calculateAndSendDailySummary } from '../services/emailService.js';
+import { authorizeRoles } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Check email configuration status
-router.get('/status', (req, res) => {
+router.get('/status', authorizeRoles('admin'), (req, res) => {
     res.json({
         success: true,
         configured: isEmailConfigured(),
@@ -14,7 +15,7 @@ router.get('/status', (req, res) => {
 });
 
 // Send test email
-router.post('/test', async (req, res) => {
+router.post('/test', authorizeRoles('admin'), async (req, res) => {
     try {
         const { to } = req.body;
         const recipient = to || process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
@@ -46,7 +47,7 @@ router.post('/test', async (req, res) => {
 });
 
 // Send daily summary email to admin
-router.post('/daily-summary', async (req, res) => {
+router.post('/daily-summary', authorizeRoles('admin'), async (req, res) => {
     try {
         if (!isEmailConfigured()) {
             return res.status(400).json({
@@ -74,7 +75,7 @@ router.post('/daily-summary', async (req, res) => {
 });
 
 // Send report email
-router.post('/send-report', async (req, res) => {
+router.post('/send-report', authorizeRoles('admin'), async (req, res) => {
     try {
         const { type, fromDate, toDate, data, to } = req.body;
 

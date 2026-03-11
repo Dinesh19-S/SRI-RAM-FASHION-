@@ -1,5 +1,6 @@
 import express from 'express';
 import Settings from '../models/Settings.js';
+import { authorizeRoles } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get('/', async (req, res) => {
 });
 
 // Update settings
-router.put('/', async (req, res) => {
+router.put('/', authorizeRoles('admin'), async (req, res) => {
     try {
         let settings = await Settings.findOne();
         if (!settings) {
@@ -33,7 +34,7 @@ router.put('/', async (req, res) => {
 });
 
 // Upload logo
-router.post('/logo', async (req, res) => {
+router.post('/logo', authorizeRoles('admin'), async (req, res) => {
     try {
         // In production, handle file upload with multer
         res.json({ success: true, message: 'Logo uploaded' });

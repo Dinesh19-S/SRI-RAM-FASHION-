@@ -4,23 +4,32 @@ import { Provider } from 'react-redux'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { store } from './store'
 import { ToastProvider } from './components/common'
+import { getGoogleLoginStatus } from './utils/authRuntime'
 import './index.css'
 import App from './App.jsx'
 
-// Google OAuth Client ID - Replace with your own from Google Cloud Console
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '70478872500-1drce72segim48l21r8nm80289q39ndk.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+const GOOGLE_LOGIN_STATUS = getGoogleLoginStatus();
+const ENABLE_GOOGLE_PROVIDER = GOOGLE_LOGIN_STATUS.enabled && Boolean(GOOGLE_CLIENT_ID);
 
 // Application always in light mode - theme system removed
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    {ENABLE_GOOGLE_PROVIDER ? (
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <Provider store={store}>
+          <ToastProvider>
+            <App />
+          </ToastProvider>
+        </Provider>
+      </GoogleOAuthProvider>
+    ) : (
       <Provider store={store}>
         <ToastProvider>
           <App />
         </ToastProvider>
       </Provider>
-    </GoogleOAuthProvider>
+    )}
   </StrictMode>,
 )
-

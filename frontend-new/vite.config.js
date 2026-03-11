@@ -10,26 +10,86 @@ export default defineConfig({
     entries: ['src/**/*.{js,jsx,ts,tsx}'],
   },
   build: {
-    chunkSizeWarningLimit: 600,
+    // Lower warning threshold from 600KB to 400KB to catch unoptimized chunks
+    chunkSizeWarningLimit: 400,
+    // Use default Rollup minification (no need for terser)
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules')) {
-            const parts = id.split('node_modules/');
-            const name = parts[parts.length - 1].split('/')[0];
-            // Group @scoped packages
-            if (name.startsWith('@')) {
-              const scoped = parts[parts.length - 1].split('/').slice(0, 2).join('__');
-              return `vendor/${scoped}`;
-            }
-            return `vendor/${name}`;
+          if (!id.includes('node_modules')) return undefined;
+
+          if (
+            id.includes('/react/') ||
+            id.includes('/react-dom/') ||
+            id.includes('/scheduler/') ||
+            id.includes('/redux/') ||
+            id.includes('/react-redux/') ||
+            id.includes('/@reduxjs/')
+          ) {
+            return 'vendor/react-core';
           }
+
+          if (id.includes('/react-router/') || id.includes('/react-router-dom/')) {
+            return 'vendor/router';
+          }
+
+          if (
+            id.includes('/framer-motion/') ||
+            id.includes('/motion-dom/') ||
+            id.includes('/motion-utils/')
+          ) {
+            return 'vendor/motion';
+          }
+
+          if (
+            id.includes('/recharts/') ||
+            id.includes('/d3-') ||
+            id.includes('/victory-vendor/')
+          ) {
+            return 'vendor/charts';
+          }
+
+          if (
+            id.includes('/jspdf/') ||
+            id.includes('/html2canvas/') ||
+            id.includes('/canvg/') ||
+            id.includes('/dompurify/') ||
+            id.includes('/svg-pathdata/')
+          ) {
+            return 'vendor/pdf';
+          }
+
+          if (
+            id.includes('/exceljs/') ||
+            id.includes('/xlsx/') ||
+            id.includes('/pako/') ||
+            id.includes('/fflate/')
+          ) {
+            return 'vendor/excel';
+          }
+
+          if (
+            id.includes('/axios/') ||
+            id.includes('/lucide-react/') ||
+            id.includes('/@react-oauth/')
+          ) {
+            return 'vendor/common';
+          }
+
+          return 'vendor/misc';
         }
       }
     }
   },
   server: {
     port: 5173,
+    strictPort: true,
+    // Optimize HMR for faster dev reload on file changes
+    hmr: {
+      host: 'localhost',
+      port: 5173,
+      protocol: 'ws'
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
@@ -37,7 +97,7 @@ export default defineConfig({
       }
     },
     watch: {
-      // Don't watch build output directories
+      // Don't watch build output directories - prevents unnecessary rebuilds
       ignored: ['**/android/**', '**/ios/**', '**/dist/**', '**/node_modules/**']
     }
   }

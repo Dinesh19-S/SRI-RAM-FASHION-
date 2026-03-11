@@ -16,10 +16,12 @@
     width: 210mm;
     min-height: 297mm;
     margin: 0 auto;
+    padding: 4mm; /* trim inner whitespace */
     background: white;
-    border: 2px solid #333;
+    border: 1.5px solid #333;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
 }
 
 /* ============================================
@@ -489,6 +491,7 @@
         width: 100%;
         min-height: auto;
         margin: 0;
+        padding: 4mm;
         border-width: 1.5px;
         page-break-after: always;
     }
@@ -496,7 +499,7 @@
 
 @page {
     size: A4;
-    margin: 8mm;
+    margin: 4mm;
 }
 
 /* =========================================================

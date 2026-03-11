@@ -67,4 +67,10 @@ productSchema.virtual('isLowStock').get(function () {
     return this.stock <= this.lowStockThreshold;
 });
 
+// Indexes for frequently filtered fields
+productSchema.index({ stock: 1, lowStockThreshold: 1 });
+productSchema.index({ name: 1 });
+productSchema.index({ category: 1 });
+productSchema.index({ isActive: 1 });
+
 export default mongoose.model('Product', productSchema);

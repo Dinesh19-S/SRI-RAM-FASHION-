@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import SalesEntry from '../models/SalesEntry.js';
 import Bill from '../models/Bill.js';
 import Product from '../models/Product.js';
@@ -79,157 +80,196 @@ router.get('/:id', async (req, res) => {
 });
 
 // Generate SALES bill number (SAL-0001 format)
-const generateSalesBillNumber = async () => {
-    const count = await Bill.countDocuments({ billType: 'SALES' });
+const generateSalesBillNumber = async (session = null) => {
+    const query = Bill.countDocuments({ billType: 'SALES' });
+    if (session) query.session(session);
+    const count = await query;
     return `SAL-${(count + 1).toString().padStart(4, '0')}`;
+};
+
+const createHttpError = (statusCode, message) => {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
 };
 
 // Create new sales entry + auto-generate SALES bill
 router.post('/', async (req, res) => {
+    const session = await mongoose.startSession();
+    let entry = null;
+    let bill = null;
+
     try {
         const { customer, date, invoiceNumber, items, notes } = req.body;
 
-        // Calculate totals
-        let subtotal = 0;
+        if (!customer?.name && typeof customer !== 'string') {
+            throw createHttpError(400, 'Customer name is required');
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+            throw createHttpError(400, 'At least one item is required');
+        }
 
-        const processedItems = items.map(item => {
-            const amount = (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
-            subtotal += amount;
+        await session.withTransaction(async () => {
+            // Calculate totals
+            let subtotal = 0;
 
-            return {
-                product: item.product || undefined,
-                particular: item.particular,
-                hsnCode: item.hsnCode || '',
-                size: item.size || '',
-                ratePerPiece: parseFloat(item.ratePerPiece) || 0,
-                pcsInPack: parseFloat(item.pcsInPack) || 1,
-                ratePerPack: parseFloat(item.ratePerPack) || 0,
-                noOfPacks: parseFloat(item.noOfPacks) || 0,
-                amount,
-                total: amount
-            };
-        });
+            const processedItems = items.map((item) => {
+                const amount = (parseFloat(item.ratePerPack) || 0) * (parseFloat(item.noOfPacks) || 0);
+                subtotal += amount;
 
-        const grandTotal = subtotal;
+                return {
+                    product: item.product || undefined,
+                    particular: item.particular,
+                    hsnCode: item.hsnCode || '',
+                    size: item.size || '',
+                    ratePerPiece: parseFloat(item.ratePerPiece) || 0,
+                    pcsInPack: parseFloat(item.pcsInPack) || 1,
+                    ratePerPack: parseFloat(item.ratePerPack) || 0,
+                    noOfPacks: parseFloat(item.noOfPacks) || 0,
+                    amount,
+                    total: amount
+                };
+            });
 
-        const entry = new SalesEntry({
-            invoiceNumber: invoiceNumber || undefined,
-            date: date || new Date(),
-            customer: {
-                name: customer.name || customer,
-                mobile: customer.mobile || '',
-                gstin: customer.gstin || '',
-                address: customer.address || ''
-            },
-            items: processedItems,
-            subtotal,
-            grandTotal,
-            notes
-        });
+            const grandTotal = subtotal;
 
-        await entry.save();
+            entry = new SalesEntry({
+                invoiceNumber: invoiceNumber || undefined,
+                date: date || new Date(),
+                customer: {
+                    name: customer.name || customer,
+                    mobile: customer.mobile || '',
+                    gstin: customer.gstin || '',
+                    address: customer.address || ''
+                },
+                items: processedItems,
+                subtotal,
+                grandTotal,
+                notes
+            });
 
-        // === Auto-generate SALES bill ===
-        // Look up customer email from database
-        const customerRecord = await Customer.findOne({ companyName: { $regex: new RegExp(`^${entry.customer.name}$`, 'i') } });
-        const customerEmail = customerRecord?.email || '';
+            await entry.save({ session });
 
-        const billItems = [];
-        let billSubtotal = 0;
-        let billTotalTax = 0;
+            // Look up customer email from database
+            const customerRecord = await Customer.findOne({ companyName: { $regex: new RegExp(`^${entry.customer.name}$`, 'i') } }).session(session);
+            const customerEmail = customerRecord?.email || '';
 
-        for (const item of entry.items) {
-            const itemAmount = (item.ratePerPack || 0) * (item.noOfPacks || 0);
+            const billItems = [];
+            let billSubtotal = 0;
+            const billTotalTax = 0;
+            const stockMovements = [];
+            const billId = new mongoose.Types.ObjectId();
 
-            const billItem = {
-                productName: item.particular,
-                sizesOrPieces: item.size || '',
-                quantity: item.noOfPacks || 0,
-                price: item.ratePerPack || 0,
-                ratePerPiece: item.ratePerPiece || 0,
-                pcsInPack: item.pcsInPack || 1,
-                ratePerPack: item.ratePerPack || 0,
-                noOfPacks: item.noOfPacks || 0,
-                hsnCode: item.hsnCode || '',
-                gstRate: 0,
-                gstAmount: 0,
-                discount: 0,
-                total: itemAmount
-            };
+            for (const item of entry.items) {
+                const itemAmount = (item.ratePerPack || 0) * (item.noOfPacks || 0);
 
-            // If item has a product reference, link it and deduct stock
-            if (item.product) {
-                const product = await Product.findById(item.product);
-                if (product) {
+                const billItem = {
+                    productName: item.particular,
+                    sizesOrPieces: item.size || '',
+                    quantity: item.noOfPacks || 0,
+                    price: item.ratePerPack || 0,
+                    ratePerPiece: item.ratePerPiece || 0,
+                    pcsInPack: item.pcsInPack || 1,
+                    ratePerPack: item.ratePerPack || 0,
+                    noOfPacks: item.noOfPacks || 0,
+                    hsnCode: item.hsnCode || '',
+                    gstRate: 0,
+                    gstAmount: 0,
+                    discount: 0,
+                    total: itemAmount
+                };
+
+                // If item has a product reference, link it and deduct stock
+                if (item.product) {
+                    const product = await Product.findById(item.product).session(session);
+                    if (!product) {
+                        throw createHttpError(404, `Product not found for item ${item.particular}`);
+                    }
+
+                    const quantity = item.noOfPacks || 0;
+                    if (quantity <= 0) {
+                        throw createHttpError(400, `Invalid quantity for item ${item.particular}`);
+                    }
+                    if (product.stock < quantity) {
+                        throw createHttpError(400, `Insufficient stock for ${product.name}`);
+                    }
+
                     billItem.product = product._id;
                     billItem.sku = product.sku;
                     billItem.hsn = product.hsn;
                     billItem.hsnCode = product.hsn || item.hsnCode;
                     billItem.mrp = product.mrp;
 
-                    // Deduct stock
                     const previousStock = product.stock;
-                    product.stock = Math.max(0, product.stock - (item.noOfPacks || 0));
-                    await product.save();
+                    product.stock = product.stock - quantity;
+                    await product.save({ session });
 
-                    // Record stock movement
-                    await new StockMovement({
+                    stockMovements.push({
                         product: product._id,
                         type: 'out',
-                        quantity: item.noOfPacks || 0,
-                        previousStock: previousStock,
+                        quantity,
+                        previousStock,
                         newStock: product.stock,
-                        reason: `Sold - Sales Entry #${entry.invoiceNumber}`
-                    }).save();
+                        reason: `Sold - Sales Entry #${entry.invoiceNumber}`,
+                        reference: `bill:${billId.toString()}`,
+                        createdBy: req.user?.id
+                    });
                 }
+
+                billItems.push(billItem);
+                billSubtotal += itemAmount;
             }
 
-            billItems.push(billItem);
-            billSubtotal += itemAmount;
-        }
+            const billCgst = billTotalTax / 2;
+            const billSgst = billTotalTax / 2;
+            const billGrandTotal = Math.round(billSubtotal + billTotalTax);
+            const billRoundOff = billGrandTotal - (billSubtotal + billTotalTax);
+            const totalPacks = entry.items.reduce((sum, item) => sum + (item.noOfPacks || 0), 0);
 
-        const billCgst = billTotalTax / 2;
-        const billSgst = billTotalTax / 2;
-        const billGrandTotal = Math.round(billSubtotal + billTotalTax);
-        const billRoundOff = billGrandTotal - (billSubtotal + billTotalTax);
-        const totalPacks = entry.items.reduce((sum, item) => sum + (item.noOfPacks || 0), 0);
+            bill = new Bill({
+                _id: billId,
+                billNumber: await generateSalesBillNumber(session),
+                billType: 'SALES',
+                partyName: entry.customer.name,
+                date: entry.date,
+                customer: {
+                    name: entry.customer.name,
+                    phone: entry.customer.mobile || '',
+                    address: entry.customer.address || '',
+                    gstin: entry.customer.gstin || '',
+                    email: customerEmail,
+                    state: 'Tamilnadu',
+                    stateCode: '33'
+                },
+                items: billItems,
+                subtotal: billSubtotal,
+                discountAmount: 0,
+                taxableAmount: billSubtotal,
+                cgst: billCgst,
+                sgst: billSgst,
+                totalTax: billTotalTax,
+                grandTotal: billGrandTotal,
+                roundOff: billRoundOff,
+                totalPacks,
+                numOfBundles: 1,
+                amountInWords: numberToWords(billGrandTotal),
+                paymentMethod: 'cash',
+                paymentStatus: 'paid',
+                notes: `Auto-generated from Sales Entry #${entry.invoiceNumber}`
+            });
 
-        const bill = new Bill({
-            billNumber: await generateSalesBillNumber(),
-            billType: 'SALES',
-            partyName: entry.customer.name,
-            date: entry.date,
-            customer: {
-                name: entry.customer.name,
-                phone: entry.customer.mobile || '',
-                address: entry.customer.address || '',
-                gstin: entry.customer.gstin || '',
-                email: customerEmail,
-                state: 'Tamilnadu',
-                stateCode: '33'
-            },
-            items: billItems,
-            subtotal: billSubtotal,
-            discountAmount: 0,
-            taxableAmount: billSubtotal,
-            cgst: billCgst,
-            sgst: billSgst,
-            totalTax: billTotalTax,
-            grandTotal: billGrandTotal,
-            roundOff: billRoundOff,
-            totalPacks,
-            numOfBundles: 1,
-            amountInWords: numberToWords(billGrandTotal),
-            paymentMethod: 'cash',
-            paymentStatus: 'paid',
-            notes: `Auto-generated from Sales Entry #${entry.invoiceNumber}`
+            await bill.save({ session });
+
+            if (stockMovements.length > 0) {
+                await StockMovement.insertMany(stockMovements, { session });
+            }
         });
 
-        await bill.save();
-
-        res.status(201).json({ success: true, data: entry, bill: bill });
+        res.status(201).json({ success: true, data: entry, bill });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(error.statusCode || 500).json({ success: false, message: error.message });
+    } finally {
+        session.endSession();
     }
 });
 
@@ -300,118 +340,148 @@ router.put('/:id', async (req, res) => {
 
 // Generate bill from sales entry
 router.post('/:id/generate-bill', async (req, res) => {
+    const session = await mongoose.startSession();
+    let bill = null;
+    const productsForLowStockCheck = [];
+
     try {
-        const entry = await SalesEntry.findById(req.params.id);
-        if (!entry) {
-            return res.status(404).json({ success: false, message: 'Sales entry not found' });
-        }
+        await session.withTransaction(async () => {
+            const entry = await SalesEntry.findById(req.params.id).session(session);
+            if (!entry) {
+                throw createHttpError(404, 'Sales entry not found');
+            }
 
-        // Map sales entry items to bill items
-        const processedItems = [];
-        let subtotal = 0;
-        let totalTax = 0;
+            // Map sales entry items to bill items
+            const processedItems = [];
+            let subtotal = 0;
+            let totalTax = 0;
+            const stockMovements = [];
+            const billId = new mongoose.Types.ObjectId();
 
-        for (const item of entry.items) {
-            const itemAmount = (item.ratePerPack || 0) * (item.noOfPacks || 0);
+            for (const item of entry.items) {
+                const itemAmount = (item.ratePerPack || 0) * (item.noOfPacks || 0);
 
-            const billItem = {
-                productName: item.particular,
-                sizesOrPieces: item.size || '',
-                quantity: item.noOfPacks || 0,
-                price: item.ratePerPack || 0,
-                ratePerPiece: item.ratePerPiece || 0,
-                pcsInPack: item.pcsInPack || 1,
-                ratePerPack: item.ratePerPack || 0,
-                noOfPacks: item.noOfPacks || 0,
-                hsnCode: item.hsnCode || '',
-                gstRate: 0,
-                gstAmount: 0,
-                discount: 0,
-                total: itemAmount
-            };
+                const billItem = {
+                    productName: item.particular,
+                    sizesOrPieces: item.size || '',
+                    quantity: item.noOfPacks || 0,
+                    price: item.ratePerPack || 0,
+                    ratePerPiece: item.ratePerPiece || 0,
+                    pcsInPack: item.pcsInPack || 1,
+                    ratePerPack: item.ratePerPack || 0,
+                    noOfPacks: item.noOfPacks || 0,
+                    hsnCode: item.hsnCode || '',
+                    gstRate: 0,
+                    gstAmount: 0,
+                    discount: 0,
+                    total: itemAmount
+                };
 
-            // If item has a product reference, link it and deduct stock
-            if (item.product) {
-                const product = await Product.findById(item.product);
-                if (product) {
+                // If item has a product reference, link it and deduct stock
+                if (item.product) {
+                    const product = await Product.findById(item.product).session(session);
+                    if (!product) {
+                        throw createHttpError(404, `Product not found for item ${item.particular}`);
+                    }
+
+                    const quantity = item.noOfPacks || 0;
+                    if (quantity <= 0) {
+                        throw createHttpError(400, `Invalid quantity for item ${item.particular}`);
+                    }
+                    if (product.stock < quantity) {
+                        throw createHttpError(400, `Insufficient stock for ${product.name}`);
+                    }
+
                     billItem.product = product._id;
                     billItem.sku = product.sku;
                     billItem.hsn = product.hsn;
                     billItem.hsnCode = product.hsn || item.hsnCode;
                     billItem.mrp = product.mrp;
 
-                    // Deduct stock
                     const previousStock = product.stock;
-                    product.stock = Math.max(0, product.stock - (item.noOfPacks || 0));
-                    await product.save();
+                    product.stock = product.stock - quantity;
+                    await product.save({ session });
+                    productsForLowStockCheck.push(product);
 
-                    // Check for low stock and notify if necessary
-                    const { checkAndNotifyLowStock } = await import('../services/emailService.js');
-                    checkAndNotifyLowStock(product).catch(err => console.error('Low stock alert error:', err));
-
-                    // Record stock movement
-                    await new StockMovement({
+                    stockMovements.push({
                         product: product._id,
                         type: 'out',
-                        quantity: item.noOfPacks || 0,
-                        previousStock: previousStock,
+                        quantity,
+                        previousStock,
                         newStock: product.stock,
-                        reason: `Sold - Bill from Sales Entry #${entry.invoiceNumber}`
-                    }).save();
+                        reason: `Sold - Bill from Sales Entry #${entry.invoiceNumber}`,
+                        reference: `bill:${billId.toString()}`,
+                        createdBy: req.user?.id
+                    });
                 }
+
+                processedItems.push(billItem);
+                subtotal += itemAmount;
             }
 
-            processedItems.push(billItem);
-            subtotal += itemAmount;
-        }
+            const cgst = 0;
+            const sgst = 0;
+            const grandTotal = Math.round(subtotal);
+            const roundOff = grandTotal - subtotal;
 
-        const cgst = 0;
-        const sgst = 0;
-        const grandTotal = Math.round(subtotal);
-        const roundOff = grandTotal - subtotal;
+            const totalPacks = entry.items.reduce((sum, item) => sum + (item.noOfPacks || 0), 0);
 
-        const totalPacks = entry.items.reduce((sum, item) => sum + (item.noOfPacks || 0), 0);
+            // Look up customer email
+            const custRecord = await Customer.findOne({ companyName: { $regex: new RegExp(`^${entry.customer.name}$`, 'i') } }).session(session);
+            const custEmail = custRecord?.email || '';
 
-        // Look up customer email
-        const custRecord = await Customer.findOne({ companyName: { $regex: new RegExp(`^${entry.customer.name}$`, 'i') } });
-        const custEmail = custRecord?.email || '';
+            bill = new Bill({
+                _id: billId,
+                billNumber: await generateSalesBillNumber(session),
+                billType: 'SALES',
+                partyName: entry.customer.name,
+                date: entry.date,
+                customer: {
+                    name: entry.customer.name,
+                    phone: entry.customer.mobile || '',
+                    address: entry.customer.address || '',
+                    gstin: entry.customer.gstin || '',
+                    email: custEmail,
+                    state: 'Tamilnadu',
+                    stateCode: '33'
+                },
+                items: processedItems,
+                subtotal,
+                discountAmount: 0,
+                taxableAmount: subtotal,
+                cgst,
+                sgst,
+                totalTax,
+                grandTotal,
+                roundOff,
+                totalPacks,
+                numOfBundles: 1,
+                amountInWords: numberToWords(grandTotal),
+                paymentMethod: 'cash',
+                paymentStatus: 'paid',
+                notes: `Generated from Sales Entry #${entry.invoiceNumber}`
+            });
 
-        const bill = new Bill({
-            billNumber: await generateSalesBillNumber(),
-            billType: 'SALES',
-            partyName: entry.customer.name,
-            date: entry.date,
-            customer: {
-                name: entry.customer.name,
-                phone: entry.customer.mobile || '',
-                address: entry.customer.address || '',
-                gstin: entry.customer.gstin || '',
-                email: custEmail,
-                state: 'Tamilnadu',
-                stateCode: '33'
-            },
-            items: processedItems,
-            subtotal,
-            discountAmount: 0,
-            taxableAmount: subtotal,
-            cgst,
-            sgst,
-            totalTax,
-            grandTotal,
-            roundOff,
-            totalPacks,
-            numOfBundles: 1,
-            amountInWords: numberToWords(grandTotal),
-            paymentMethod: 'cash',
-            paymentStatus: 'paid',
-            notes: `Generated from Sales Entry #${entry.invoiceNumber}`
+            await bill.save({ session });
+
+            if (stockMovements.length > 0) {
+                await StockMovement.insertMany(stockMovements, { session });
+            }
         });
 
-        await bill.save();
+        // Low stock checks happen after commit
+        if (productsForLowStockCheck.length > 0) {
+            const { checkAndNotifyLowStock } = await import('../services/emailService.js');
+            await Promise.allSettled(
+                productsForLowStockCheck.map((product) => checkAndNotifyLowStock(product))
+            );
+        }
 
         res.status(201).json({ success: true, data: bill });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        res.status(error.statusCode || 500).json({ success: false, message: error.message });
+    } finally {
+        session.endSession();
     }
 });
 

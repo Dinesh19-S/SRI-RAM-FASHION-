@@ -1,44 +1,43 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 /* =========================================================
    Blue Primary Theme Palette (aligned with landing page)
    ========================================================= */
-:root {
-  /* Brand/Accent */
-  --brand-main: #2563eb;      /* Blue-600 */
-  --brand-focus: #1d4ed8;     /* Blue-700 */
-  --brand-soft: #e0e7ff;      /* Blue-100 */
-
-  /* Backgrounds */
-  --bg-default: #f3f7ff;
-  --bg-paper: #ffffff;
-  --bg-shell: #e8f0ff;
-
-  /* Text */
-  --text-main: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-
-  /* Borders + Shadow */
-  --border-soft: #d7e3ff;
-  --shadow-soft: 0 14px 30px -26px rgba(15, 23, 42, 0.55), 0 1px 2px rgba(15, 23, 42, 0.08);
-
-  /* Status */
-  --success-bg: #e0f2f1;
-  --success-text: #0f766e;
-  --warning-bg: #fef3c7;
-  --warning-text: #b45309;
-  --error-bg: #fee2e2;
-  --error-text: #c2410c;
-  --info-bg: #dbeafe;
-  --info-text: #1d4ed8;
-}
-
-/* =========================================================
-   Base Styles
-   ========================================================= */
 @layer base {
+  :root {
+    /* Brand/Accent */
+    --brand-main: #2563eb;      /* Blue-600 */
+    --brand-focus: #1d4ed8;     /* Blue-700 */
+    --brand-soft: #e0e7ff;      /* Blue-100 */
+
+    /* Backgrounds */
+    --bg-default: #f3f7ff;
+    --bg-paper: #ffffff;
+    --bg-shell: #e8f0ff;
+
+    /* Text */
+    --text-main: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+
+    /* Borders + Shadow */
+    --border-soft: #d7e3ff;
+    --shadow-soft: 0 14px 30px -26px rgba(15, 23, 42, 0.55), 0 1px 2px rgba(15, 23, 42, 0.08);
+
+    /* Status */
+    --success-bg: #e0f2f1;
+    --success-text: #0f766e;
+    --warning-bg: #fef3c7;
+    --warning-text: #b45309;
+    --error-bg: #fee2e2;
+    --error-text: #c2410c;
+    --info-bg: #dbeafe;
+    --info-text: #1d4ed8;
+  }
+
+  /* =========================================================
+     Base Styles
+     ========================================================= */
   body {
     background-color: var(--bg-default);
     color: var(--text-main);

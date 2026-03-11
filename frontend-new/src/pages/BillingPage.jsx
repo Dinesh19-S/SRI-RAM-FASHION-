@@ -1,19 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchBills, createBill, deleteBill } from '../store/slices/billsSlice';
 import { fetchProducts } from '../store/slices/productsSlice';
 import { fetchSettings } from '../store/slices/settingsSlice';
 import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users, Receipt, Mail } from 'lucide-react';
 import BillTemplate from '../components/BillTemplate';
-import { downloadInvoicePDF } from '../utils/invoiceGenerator';
-import { downloadBillPDF } from '../utils/pdfGenerator';
 import { customersAPI, emailAPI } from '../services/api';
 import { useToast } from '../components/common';
+
+const BILL_REFRESH_INTERVAL = 30 * 1000;
 
 const BillingPage = () => {
     const toast = useToast();
     const dispatch = useDispatch();
-    const { items: bills, isLoading } = useSelector((state) => state.bills);
+    const { items: bills, isLoading, lastFetchedAt } = useSelector((state) => state.bills);
     const { items: products } = useSelector((state) => state.products);
     const settings = useSelector((state) => state.settings.data);
     const billTemplateRef = useRef(null);
@@ -30,8 +30,16 @@ const BillingPage = () => {
     const [emailTo, setEmailTo] = useState('');
     const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const deferredSearchQuery = useDeferredValue(searchQuery);
     const [filterStatus, setFilterStatus] = useState('all');
     const [billTypeFilter, setBillTypeFilter] = useState('all');
+    const [hasLoadedProducts, setHasLoadedProducts] = useState(false);
+    const [hasLoadedSettings, setHasLoadedSettings] = useState(false);
+
+    // Product searching in modal
+    const [productSearch, setProductSearch] = useState('');
+    const [isSearchingProducts, setIsSearchingProducts] = useState(false);
+
     const [customer, setCustomer] = useState({
         name: '',
         phone: '',
@@ -51,51 +59,64 @@ const BillingPage = () => {
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
     const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
     const TAMIL_NADU_DISTRICTS = [
-        'Ariyalur',
-        'Chengalpattu',
-        'Chennai',
-        'Coimbatore',
-        'Cuddalore',
-        'Dharmapuri',
-        'Dindigul',
-        'Erode',
-        'Kallakurichi',
-        'Kanchipuram',
-        'Kanyakumari',
-        'Karur',
-        'Krishnagiri',
-        'Madurai',
-        'Mayiladuthurai',
-        'Nagapattinam',
-        'Namakkal',
-        'Nilgiris',
-        'Perambalur',
-        'Pudukkottai',
-        'Ramanathapuram',
-        'Ranipet',
-        'Salem',
-        'Sivaganga',
-        'Tenkasi',
-        'Thanjavur',
-        'Theni',
-        'Thoothukudi',
-        'Tiruchirappalli',
-        'Tirunelveli',
-        'Tirupattur',
-        'Tiruppur',
-        'Tiruvallur',
-        'Tiruvannamalai',
-        'Tiruvarur',
-        'Vellore',
-        'Viluppuram',
-        'Virudhunagar'
+        'Ariyalur', 'Chengalpattu', 'Chennai', 'Coimbatore', 'Cuddalore', 'Dharmapuri', 'Dindigul',
+        'Erode', 'Kallakurichi', 'Kanchipuram', 'Kanyakumari', 'Karur', 'Krishnagiri', 'Madurai',
+        'Mayiladuthurai', 'Nagapattinam', 'Namakkal', 'Nilgiris', 'Perambalur', 'Pudukkottai',
+        'Ramanathapuram', 'Ranipet', 'Salem', 'Sivaganga', 'Tenkasi', 'Thanjavur', 'Theni',
+        'Thoothukudi', 'Tiruchirappalli', 'Tirunelveli', 'Tirupattur', 'Tiruppur', 'Tiruvallur',
+        'Tiruvannamalai', 'Tiruvarur', 'Vellore', 'Viluppuram', 'Virudhunagar'
     ];
 
     useEffect(() => {
-        dispatch(fetchBills());
-        dispatch(fetchProducts());
-        dispatch(fetchSettings());
-    }, [dispatch]);
+        if (!lastFetchedAt || Date.now() - lastFetchedAt > BILL_REFRESH_INTERVAL) {
+            dispatch(fetchBills());
+        }
+    }, [dispatch, lastFetchedAt]);
+
+    useEffect(() => {
+        if (!showBillModal || hasLoadedProducts) {
+            return undefined;
+        }
+
+        let isActive = true;
+        dispatch(fetchProducts({ limit: 10 }))
+            .unwrap()
+            .then(() => {
+                if (isActive) {
+                    setHasLoadedProducts(true);
+                }
+            })
+            .catch(() => {
+                // Retry automatically when modal opens again.
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [dispatch, hasLoadedProducts, showBillModal]);
+
+    useEffect(() => {
+        const shouldLoadSettings = showBillModal || showPreviewModal || showEmptyInvoiceModal;
+        if (!shouldLoadSettings || hasLoadedSettings) {
+            return undefined;
+        }
+
+        let isActive = true;
+        dispatch(fetchSettings())
+            .unwrap()
+            .then(() => {
+                if (isActive) {
+                    setHasLoadedSettings(true);
+                }
+            })
+            .catch(() => {
+                // Retry automatically when a settings-dependent modal opens again.
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, [dispatch, hasLoadedSettings, showBillModal, showPreviewModal, showEmptyInvoiceModal]);
 
     // Search customers when customerSearch changes
     useEffect(() => {
@@ -117,6 +138,31 @@ const BillingPage = () => {
         const debounce = setTimeout(searchCustomers, 300);
         return () => clearTimeout(debounce);
     }, [customerSearch]);
+
+    // Search products in modal
+    useEffect(() => {
+        if (!showBillModal) {
+            return undefined;
+        }
+
+        const searchProducts = async () => {
+            if (!productSearch.trim()) {
+                // If search is empty, show default list (top 10)
+                dispatch(fetchProducts({ limit: 10 }));
+                return;
+            }
+            setIsSearchingProducts(true);
+            try {
+                dispatch(fetchProducts({ search: productSearch, limit: 10 }));
+            } catch (error) {
+                console.error('Error searching products:', error);
+            } finally {
+                setIsSearchingProducts(false);
+            }
+        };
+        const debounce = setTimeout(searchProducts, 400);
+        return () => clearTimeout(debounce);
+    }, [productSearch, dispatch, showBillModal]);
 
     const selectCustomer = (selectedCustomer) => {
         setCustomer({
@@ -152,89 +198,109 @@ const BillingPage = () => {
     };
 
     const updateItemQuantity = (uniqueId, quantity) => {
-        if (quantity <= 0) setBillItems(billItems.filter(item => item.uniqueId !== uniqueId));
-        else setBillItems(billItems.map(item => item.uniqueId === uniqueId ? { ...item, quantity, noOfPacks: quantity } : item));
+        if (quantity < 1) {
+            setBillItems(billItems.filter(item => item.uniqueId !== uniqueId));
+            return;
+        }
+        setBillItems(billItems.map(item =>
+            item.uniqueId === uniqueId ? { ...item, quantity, noOfPacks: quantity } : item
+        ));
     };
 
     const updateItemField = (uniqueId, field, value) => {
         setBillItems(billItems.map(item => {
-            if (item.uniqueId !== uniqueId) return item;
-            const updated = { ...item, [field]: value };
-            // Recalculate if rate fields change
-            if (field === 'ratePerPiece' || field === 'pcsInPack') {
-                updated.ratePerPack = (updated.ratePerPiece || 0) * (updated.pcsInPack || 1);
+            if (item.uniqueId === uniqueId) {
+                const updatedItem = { ...item, [field]: value };
+                // Keep quantity and noOfPacks in sync
+                if (field === 'noOfPacks') updatedItem.quantity = value;
+                return updatedItem;
             }
-            if (field === 'ratePerPack' || field === 'noOfPacks') {
-                updated.price = (updated.ratePerPack || updated.price);
-                updated.quantity = updated.noOfPacks || updated.quantity;
-            }
-            return updated;
+            return item;
         }));
     };
 
-    const subtotal = billItems.reduce((sum, item) => sum + ((item.ratePerPack || item.price) * (item.noOfPacks || item.quantity)), 0);
-    const discountAmount = (subtotal * discount) / 100;
-    const taxableAmount = subtotal - discountAmount;
-    const cgstRate = settings?.tax?.cgstRate || 2.5;
-    const sgstRate = settings?.tax?.sgstRate || 2.5;
-    const cgstAmount = (taxableAmount * cgstRate) / 100;
-    const sgstAmount = (taxableAmount * sgstRate) / 100;
-    const gstAmount = cgstAmount + sgstAmount;
-    const grandTotal = Math.round(taxableAmount + gstAmount);
-    const roundOff = grandTotal - (taxableAmount + gstAmount);
-    const totalPacks = billItems.reduce((sum, item) => sum + (item.noOfPacks || item.quantity), 0);
+    const totals = useMemo(() => {
+        const subtotal = billItems.reduce((sum, item) => sum + (item.ratePerPack || item.price) * (item.noOfPacks || item.quantity), 0);
+        const discountAmount = (subtotal * discount) / 100;
+        const taxableAmount = subtotal - discountAmount;
+        // CGST and SGST are 2.5% each for a total of 5% GST
+        const cgstRate = 2.5;
+        const sgstRate = 2.5;
+        const cgstAmount = (taxableAmount * cgstRate) / 100;
+        const sgstAmount = (taxableAmount * sgstRate) / 100;
+        const totalTax = cgstAmount + sgstAmount;
+        const totalPacks = billItems.reduce((sum, item) => sum + Number(item.noOfPacks || item.quantity), 0);
+        const rawTotal = taxableAmount + totalTax;
+        const grandTotal = Math.round(rawTotal);
+        const roundOff = Number((grandTotal - rawTotal).toFixed(2));
+
+        return {
+            subtotal,
+            discountAmount,
+            taxableAmount,
+            cgstAmount,
+            sgstAmount,
+            totalTax,
+            grandTotal,
+            totalPacks,
+            roundOff,
+            cgstRate,
+            sgstRate
+        };
+    }, [billItems, discount]);
+
+    const { subtotal, taxableAmount, cgstAmount, sgstAmount, totalTax, grandTotal, totalPacks, roundOff, cgstRate, sgstRate } = totals;
 
     const handleCreateBill = async () => {
         if (!customer.name || !customer.phone || billItems.length === 0) {
-            toast.warning('Please fill customer details and add items');
+            toast.warning('Please fill buyer details and add at least one item');
             return;
         }
 
-        const billData = {
-            customer,
-            transport,
-            fromDate,
-            toDate,
-            totalPacks,
-            numOfBundles: 1,
-            items: billItems.map(item => ({
-                productId: item.productId,
-                productName: item.name || item.productName,
-                price: item.ratePerPack || item.price,
-                quantity: item.noOfPacks || item.quantity,
-                noOfPacks: item.noOfPacks || item.quantity,
-                pcsInPack: item.pcsInPack || 1,
-                ratePerPiece: item.ratePerPiece || item.price,
-                ratePerPack: item.ratePerPack || item.price,
-                hsnCode: item.hsnCode || '',
-                sizesOrPieces: item.sizesOrPieces || '',
-                gstRate: item.gstRate || 5,
-                discount: 0
-            })),
-            subtotal,
-            discount,
-            discountAmount,
-            taxableAmount,
-            cgst: cgstAmount,
-            sgst: sgstAmount,
-            totalTax: gstAmount,
-            roundOff,
-            grandTotal,
-            paymentMethod
-        };
-
         try {
-            const result = await dispatch(createBill(billData));
-            if (createBill.fulfilled.match(result)) {
-                setShowBillModal(false);
-                resetForm();
-                dispatch(fetchBills());
-            } else {
-                toast.error('Failed to create bill: ' + (result.payload || 'Unknown error'));
-            }
+            const billData = {
+                customer: {
+                    name: customer.name,
+                    phone: customer.phone,
+                    address: customer.address,
+                    gstin: customer.gstin,
+                    state: customer.state,
+                    stateCode: customer.stateCode
+                },
+                items: billItems.map(item => ({
+                    product: item.productId,
+                    name: item.name,
+                    quantity: item.noOfPacks || item.quantity,
+                    price: item.price,
+                    ratePerPiece: item.ratePerPiece,
+                    pcsInPack: item.pcsInPack,
+                    ratePerPack: item.ratePerPack,
+                    sizesOrPieces: item.sizesOrPieces,
+                    hsnCode: item.hsnCode,
+                    gstRate: item.gstRate,
+                    total: (item.ratePerPack || item.price) * (item.noOfPacks || item.quantity)
+                })),
+                transport,
+                fromDate,
+                toDate,
+                subtotal,
+                discount,
+                taxableAmount,
+                cgst: cgstAmount,
+                sgst: sgstAmount,
+                totalTax,
+                roundOff,
+                grandTotal,
+                totalPacks,
+                paymentStatus: 'pending'
+            };
+
+            await dispatch(createBill(billData)).unwrap();
+            toast.success('Bill created successfully');
+            setShowBillModal(false);
+            resetForm();
         } catch (error) {
-            console.error('Error creating bill:', error);
-            toast.error('Failed to create bill: ' + (error.message || 'Unknown error'));
+            toast.error(error || 'Failed to create bill');
         }
     };
 
@@ -245,11 +311,39 @@ const BillingPage = () => {
         setToDate('');
         setBillItems([]);
         setDiscount(0);
+        setCustomerSearch('');
     };
 
     const handleViewBill = (bill) => {
         setSelectedBill(bill);
         setShowPreviewModal(true);
+    };
+
+    const ensureSettingsLoaded = async () => {
+        if (settings) {
+            return settings;
+        }
+
+        try {
+            const loadedSettings = await dispatch(fetchSettings()).unwrap();
+            setHasLoadedSettings(true);
+            return loadedSettings;
+        } catch (error) {
+            toast.error('Failed to load billing settings');
+            return null;
+        }
+    };
+
+    const handleDownloadPDF = async (bill) => {
+        try {
+            const currentSettings = await ensureSettingsLoaded();
+            if (!currentSettings) return;
+            const { downloadInvoicePDF } = await import('../utils/invoiceGenerator');
+            await downloadInvoicePDF(bill, currentSettings);
+            toast.success('PDF download started');
+        } catch (error) {
+            toast.error('Failed to generate PDF');
+        }
     };
 
     const handleDeleteClick = (bill) => {
@@ -262,38 +356,26 @@ const BillingPage = () => {
         setIsDeleting(true);
         try {
             await dispatch(deleteBill(selectedBill._id)).unwrap();
+            toast.success('Bill deleted successfully');
             setShowDeleteConfirm(false);
             setSelectedBill(null);
         } catch (error) {
-            toast.error('Failed to delete bill: ' + (error || 'Unknown error'));
+            toast.error(error || 'Failed to delete bill');
         } finally {
             setIsDeleting(false);
         }
     };
 
-    const handleDownloadPDF = async (bill) => {
-        await downloadInvoicePDF(bill, settings);
-    };
-
     const handleEmailBill = async () => {
-        const trimmedEmail = emailTo?.trim();
-        if (!trimmedEmail || !emailBill) {
-            toast.warning('Please enter a valid email address');
-            return;
-        }
+        if (!emailBill || !emailTo) return;
         setIsSendingEmail(true);
         try {
-            const response = await emailAPI.sendBill(emailBill._id, trimmedEmail);
-            if (response.data.success) {
-                toast.success(response.data.message || 'Bill emailed successfully!');
-                setShowEmailModal(false);
-                setEmailTo('');
-                setEmailBill(null);
-            } else {
-                toast.error(response.data.message || 'Failed to send email');
-            }
+            await emailAPI.sendBill(emailBill._id, emailTo);
+            toast.success('Email sent successfully');
+            setShowEmailModal(false);
+            setEmailBill(null);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to send email');
+            toast.error('Failed to send email: ' + (error.response?.data?.message || error.message));
         } finally {
             setIsSendingEmail(false);
         }
@@ -301,24 +383,29 @@ const BillingPage = () => {
 
     const handlePrintBill = async () => {
         if (selectedBill) {
-            await downloadInvoicePDF(selectedBill, settings);
+            const currentSettings = await ensureSettingsLoaded();
+            if (!currentSettings) return;
+            const { downloadInvoicePDF } = await import('../utils/invoiceGenerator');
+            await downloadInvoicePDF(selectedBill, currentSettings);
         }
     };
 
     const formatCurrency = (amount) => `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
+    const resolveBillType = (billType) => (billType === 'DIRECT' ? 'SALES' : (billType || 'SALES'));
 
-    const filteredBills = bills.filter(bill => {
-        const searchLower = searchQuery.toLowerCase();
+    const filteredBills = useMemo(() => bills.filter((bill) => {
+        const searchLower = deferredSearchQuery.toLowerCase();
         const billDateObj = new Date(bill.date || bill.createdAt);
         const billDate = `${billDateObj.getDate().toString().padStart(2, '0')}/${(billDateObj.getMonth() + 1).toString().padStart(2, '0')}/${billDateObj.getFullYear()}`;
         const matchesSearch =
             bill.billNumber?.toLowerCase().includes(searchLower) ||
             bill.customer?.name?.toLowerCase().includes(searchLower) ||
             bill.partyName?.toLowerCase().includes(searchLower) ||
-            billDate.includes(searchQuery);
-        const matchesType = billTypeFilter === 'all' || bill.billType === billTypeFilter;
+            billDate.includes(deferredSearchQuery);
+        const normalizedBillType = resolveBillType(bill.billType);
+        const matchesType = billTypeFilter === 'all' || normalizedBillType === billTypeFilter;
         return matchesSearch && matchesType && (filterStatus === 'all' || bill.paymentStatus === filterStatus);
-    });
+    }), [bills, deferredSearchQuery, billTypeFilter, filterStatus]);
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -348,11 +435,11 @@ const BillingPage = () => {
                     <div className="flex gap-4 flex-wrap items-center">
                         <div className="flex gap-2 flex-wrap items-center">
                             <span className="text-xs font-semibold text-gray-600 uppercase">Type:</span>
-                            {[{ key: 'all', label: 'All' }, { key: 'SALES', label: 'Sales' }, { key: 'PURCHASE', label: 'Purchase' }, { key: 'DIRECT', label: 'Direct' }].map(f => (
+                            {[{ key: 'all', label: 'All' }, { key: 'SALES', label: 'Sales' }, { key: 'PURCHASE', label: 'Purchase' }].map(f => (
                                 <button
                                     key={f.key}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${billTypeFilter === f.key ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                    style={billTypeFilter === f.key ? { backgroundColor: f.key === 'SALES' ? '#16a34a' : f.key === 'PURCHASE' ? '#2563eb' : f.key === 'DIRECT' ? '#6b7280' : '#7c3aed' } : {}}
+                                    style={billTypeFilter === f.key ? { backgroundColor: f.key === 'SALES' ? '#16a34a' : f.key === 'PURCHASE' ? '#2563eb' : '#7c3aed' } : {}}
                                     onClick={() => setBillTypeFilter(f.key)}
                                 >
                                     {f.label}
@@ -385,15 +472,17 @@ const BillingPage = () => {
                     <table className="table">
                         <thead><tr className="bg-gray-50"><th>Bill No</th><th>Type</th><th>Date</th><th>Party</th><th>Amount</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
                         <tbody>
-                            {filteredBills.map((bill) => (
+                            {filteredBills.map((bill) => {
+                                const normalizedBillType = resolveBillType(bill.billType);
+                                return (
                                 <tr key={bill._id}>
                                     <td className="font-medium" style={{ color: '#1e40af' }}>{bill.billNumber}</td>
                                     <td>
                                         <span className="px-2 py-1 rounded-full text-xs font-semibold" style={{
-                                            backgroundColor: bill.billType === 'SALES' ? '#dcfce7' : bill.billType === 'PURCHASE' ? '#dbeafe' : '#f3f4f6',
-                                            color: bill.billType === 'SALES' ? '#15803d' : bill.billType === 'PURCHASE' ? '#1d4ed8' : '#4b5563'
+                                            backgroundColor: normalizedBillType === 'SALES' ? '#dcfce7' : normalizedBillType === 'PURCHASE' ? '#dbeafe' : '#f3f4f6',
+                                            color: normalizedBillType === 'SALES' ? '#15803d' : normalizedBillType === 'PURCHASE' ? '#1d4ed8' : '#4b5563'
                                         }}>
-                                            {bill.billType || 'DIRECT'}
+                                            {normalizedBillType}
                                         </span>
                                     </td>
                                     <td>{(() => { const d = new Date(bill.date || bill.createdAt); return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`; })()}</td>
@@ -441,13 +530,12 @@ const BillingPage = () => {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 )}
             </div>
-
-
 
             {/* Bill Preview Modal */}
             {showPreviewModal && selectedBill && (
@@ -571,7 +659,7 @@ const BillingPage = () => {
                                                 <input
                                                     className="form-input"
                                                     list="tn-districts"
-                                                    placeholder="From (e.g., place or date)"
+                                                    placeholder="From (province or district)"
                                                     value={fromDate}
                                                     onChange={(e) => setFromDate(e.target.value)}
                                                 />
@@ -581,7 +669,7 @@ const BillingPage = () => {
                                                 <input
                                                     className="form-input"
                                                     list="tn-districts"
-                                                    placeholder="To (e.g., place or date)"
+                                                    placeholder="To (province or district)"
                                                     value={toDate}
                                                     onChange={(e) => setToDate(e.target.value)}
                                                 />
@@ -611,13 +699,27 @@ const BillingPage = () => {
                                     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
                                         <div className="flex items-center justify-between mb-4">
                                             <h4 className="font-semibold text-gray-900">Select Products</h4>
-                                            <span className="text-xs text-gray-500">{products.length} products</span>
+                                            <div className="relative">
+                                                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <input 
+                                                    type="text" 
+                                                    className="form-input py-1.5 pl-8 text-xs w-48" 
+                                                    placeholder="Search products..." 
+                                                    value={productSearch}
+                                                    onChange={(e) => setProductSearch(e.target.value)}
+                                                />
+                                                {isSearchingProducts && (
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                                        <div className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin border-blue-500" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                                            {products.length === 0 ? <p className="text-gray-500 text-center py-4">No products available</p> : products.map((product) => (
+                                            {products.length === 0 ? <p className="text-gray-500 text-center py-4">No products found</p> : products.map((product) => (
                                                 <div key={product._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onClick={() => addItemToBill(product)}>
                                                     <div><p className="font-medium text-gray-900">{product.name}</p><p className="text-sm text-gray-500">{product.sku} • HSN: {product.hsn || 'N/A'}</p></div>
-                                                    <div className="text-right"><p className="font-semibold" style={{ color: '#1e40af' }}>{formatCurrency(product.sellingPrice)}</p><button className="text-xs" style={{ color: '#1e40af' }}>+ Add</button></div>
+                                                    <div className="text-right"><p className="font-semibold" style={{ color: '#1e40af' }}>{formatCurrency(product.sellingPrice)}</p><button className="text-xs font-medium" style={{ color: '#1e40af' }}>+ Add Item</button></div>
                                                 </div>
                                             ))}
                                         </div>
@@ -809,6 +911,7 @@ const BillingPage = () => {
                                     onClick={async () => {
                                         const element = emptyInvoiceRef.current;
                                         if (element) {
+                                            const { downloadBillPDF } = await import('../utils/pdfGenerator');
                                             await downloadBillPDF(element, 'Empty_Invoice');
                                         }
                                     }}

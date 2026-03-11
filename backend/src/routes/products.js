@@ -8,6 +8,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const { category, search, page = 1, limit = 20 } = req.query;
+        const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+        const limitNum = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
 
         const query = { isActive: true };
         if (category) query.category = category;
@@ -20,9 +22,10 @@ router.get('/', async (req, res) => {
 
         const products = await Product.find(query)
             .populate('category', 'name')
-            .skip((page - 1) * limit)
-            .limit(parseInt(limit))
-            .sort({ createdAt: -1 });
+            .skip((pageNum - 1) * limitNum)
+            .limit(limitNum)
+            .sort({ createdAt: -1 })
+            .lean();
 
         const total = await Product.countDocuments(query);
 
@@ -30,10 +33,10 @@ router.get('/', async (req, res) => {
             success: true,
             data: products,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page: pageNum,
+                limit: limitNum,
                 total,
-                pages: Math.ceil(total / limit)
+                pages: Math.ceil(total / limitNum)
             }
         });
     } catch (error) {
@@ -47,7 +50,9 @@ router.get('/low-stock', async (req, res) => {
         const products = await Product.find({
             isActive: true,
             $expr: { $lte: ['$stock', '$lowStockThreshold'] }
-        }).populate('category', 'name');
+        })
+            .populate('category', 'name')
+            .lean();
 
         res.json({ success: true, data: products });
     } catch (error) {

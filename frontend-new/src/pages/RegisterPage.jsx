@@ -5,13 +5,14 @@ import { GoogleLogin } from '@react-oauth/google';
 import { register, clearError, googleLogin } from '../store/slices/authSlice';
 import { Mail, Lock, Phone, Eye, EyeOff, ArrowRight, User, CheckCircle, XCircle } from 'lucide-react';
 import sriRamLogo from '../assets/logo.jpg';
-
-const isElectron = typeof window !== 'undefined' && (window.location.protocol === 'file:' || navigator.userAgent.includes('Electron'));
+import { getCurrentOrigin, getGoogleLoginStatus } from '../utils/authRuntime';
 
 const RegisterPage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { isLoading, error } = useSelector((state) => state.auth);
+    const googleLoginStatus = getGoogleLoginStatus();
+    const googleOrigin = getCurrentOrigin();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -23,6 +24,7 @@ const RegisterPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
+    const [googleError, setGoogleError] = useState('');
 
     const validateForm = () => {
         const errors = {};
@@ -79,6 +81,9 @@ const RegisterPage = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        if (googleError) {
+            setGoogleError('');
+        }
         // Clear validation error for this field
         if (validationErrors[name]) {
             setValidationErrors(prev => ({ ...prev, [name]: '' }));
@@ -91,6 +96,7 @@ const RegisterPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setGoogleError('');
 
         if (!validateForm()) {
             return;
@@ -110,11 +116,12 @@ const RegisterPage = () => {
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center p-4 relative font-sans">
-            {/* Background Image */}
+            {/* Background */}
             <div
-                className="absolute inset-0 z-0 bg-cover bg-center"
+                className="absolute inset-0 z-0"
                 style={{
-                    backgroundImage: 'url("https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop")',
+                    background:
+                        'radial-gradient(circle at 20% 10%, #1f3a8a 0%, rgba(31,58,138,0) 45%), radial-gradient(circle at 80% 90%, #0f766e 0%, rgba(15,118,110,0) 40%), linear-gradient(120deg, #0f172a 0%, #0b1120 40%, #111827 100%)',
                 }}
             ></div>
 
@@ -135,10 +142,10 @@ const RegisterPage = () => {
                     <p className="text-sm text-gray-700 font-bold">Create your account</p>
                 </div>
 
-                {error && (
+                {(error || googleError) && (
                     <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm flex items-center gap-2 text-left font-medium">
                         <XCircle size={18} />
-                        {error}
+                        {error || googleError}
                     </div>
                 )}
 
@@ -267,37 +274,49 @@ const RegisterPage = () => {
                     </button>
                 </form>
 
-                {!isElectron && (
-                    <>
-                        <div className="flex items-center my-6">
-                            <div className="flex-1 border-t border-gray-300"></div>
-                            <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
-                            <div className="flex-1 border-t border-gray-300"></div>
-                        </div>
+                <div className="flex items-center my-6">
+                    <div className="flex-1 border-t border-gray-300"></div>
+                    <span className="px-4 text-gray-700 text-xs font-bold tracking-wider">OR CONTINUE WITH</span>
+                    <div className="flex-1 border-t border-gray-300"></div>
+                </div>
 
-                        {/* Social Buttons */}
-                        <div className="space-y-3">
-                            <div className="flex justify-center w-full">
-                                <GoogleLogin
-                                    onSuccess={async (credentialResponse) => {
-                                        const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
-                                        if (googleLogin.fulfilled.match(result)) {
-                                            navigate('/dashboard');
-                                        }
-                                    }}
-                                    onError={(error) => {
-                                        dispatch(clearError());
-                                    }}
-                                    theme="outline"
-                                    size="large"
-                                    width="340"
-                                    shape="rectangular"
-                                    text="signup_with"
-                                    logo_alignment="center"
-                                />
-                            </div>
+                {googleLoginStatus.enabled ? (
+                    <div className="space-y-3">
+                        <div className="flex justify-center w-full">
+                            <GoogleLogin
+                                onSuccess={async (credentialResponse) => {
+                                    dispatch(clearError());
+                                    setGoogleError('');
+                                    if (!credentialResponse?.credential) {
+                                        setGoogleError('Google response was incomplete. Please try again.');
+                                        return;
+                                    }
+                                    const result = await dispatch(googleLogin({ credential: credentialResponse.credential }));
+                                    if (googleLogin.fulfilled.match(result)) {
+                                        navigate('/dashboard');
+                                        return;
+                                    }
+                                    setGoogleError(result.payload || 'Google login failed. Please try again.');
+                                }}
+                                onError={() => {
+                                    dispatch(clearError());
+                                    setGoogleError(
+                                        `Google login failed for origin ${googleOrigin}. Use a Web OAuth client and add this origin in Google Cloud Console.`
+                                    );
+                                }}
+                                theme="outline"
+                                size="large"
+                                width="340"
+                                shape="rectangular"
+                                text="signup_with"
+                                logo_alignment="center"
+                            />
                         </div>
-                    </>
+                    </div>
+                ) : (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm text-left font-medium">
+                        {googleLoginStatus.reason}
+                    </div>
                 )}
 
                 <div className="mt-8 text-center text-gray-700 text-sm font-medium">
@@ -307,9 +326,8 @@ const RegisterPage = () => {
 
             {/* Injected Styles */}
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&family=Playfair+Display:wght@700&display=swap');
-                .font-sans { font-family: 'Montserrat', sans-serif; }
-                .font-serif { font-family: 'Playfair Display', serif; }
+                .font-sans { font-family: 'Outfit', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+                .font-serif { font-family: Georgia, 'Times New Roman', Times, serif; }
             `}</style>
         </div>
     );

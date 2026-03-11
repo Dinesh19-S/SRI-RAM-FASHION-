@@ -65,15 +65,36 @@ Frontend runs at: http://localhost:5173
 cd backend
 npm install
 
-# Create .env file with:
+# Copy and edit backend/.env.example:
+# cp .env.example .env
+#
+# Required variables:
 # PORT=5000
 # MONGODB_URI=mongodb://localhost:27017/sri-ram-fashions
 # JWT_SECRET=your-secret-key
+#
+# Optional but recommended:
+# GOOGLE_CLIENT_ID=your-google-client-id
+# BOOTSTRAP_DEFAULT_ADMIN=false
 
 npm run dev
 ```
 
 Backend runs at: http://localhost:5000
+
+### Google Login Setup (Fix for `Error 400: invalid_request`)
+
+Use a Google OAuth **Web application** client ID.
+
+1. Open Google Cloud Console -> APIs & Services -> Credentials.
+2. Create or edit an OAuth Client ID of type **Web application**.
+3. Add Authorized JavaScript origins:
+   - `http://localhost:5173`
+   - your deployed frontend origin (for example `https://sri-ram-fashions.onrender.com`)
+4. Put the same client ID in:
+   - `frontend-new/.env` as `VITE_GOOGLE_CLIENT_ID`
+   - `backend/.env` as `GOOGLE_CLIENT_ID` (or `GOOGLE_CLIENT_IDS` for multiple IDs)
+5. Restart frontend and backend after updating env values.
 
 ## 📱 Pages
 
@@ -112,6 +133,8 @@ Backend runs at: http://localhost:5000
 | POST | `/api/bills` | Create bill |
 | GET | `/api/reports/sales-trend` | Get sales data |
 | GET | `/api/settings` | Get settings |
+
+> Security note: All business APIs now require `Authorization: Bearer <JWT>` except `/api/auth/*` and `/api/health`.
 
 ## 🎯 Demo Login
 

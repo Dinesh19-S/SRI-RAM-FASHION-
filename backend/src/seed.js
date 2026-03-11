@@ -12,40 +12,46 @@ import Product from './models/Product.js';
 import Bill from './models/Bill.js';
 import Settings from './models/Settings.js';
 
-// Get MongoDB URI
-const MONGODB_URI = "mongodb+srv://dineshknight19_db_user:dinesh1910@cluster0.hepq0h5.mongodb.net/sri-ram-fashions"
+const MONGODB_URI = process.env.MONGODB_URI;
+const SEED_ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL?.trim() || 'admin@sriramfashions.com';
+const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD;
+const SEED_ADMIN_NAME = process.env.SEED_ADMIN_NAME?.trim() || 'Admin User';
+const SEED_ADMIN_PHONE = process.env.SEED_ADMIN_PHONE?.trim() || '9876543210';
 
 if (!MONGODB_URI) {
-    console.error("❌ ERROR: MONGODB_URI is missing in .env file");
+    console.error('ERROR: MONGODB_URI is missing in .env file');
+    process.exit(1);
+}
+
+if (!SEED_ADMIN_PASSWORD) {
+    console.error('ERROR: SEED_ADMIN_PASSWORD is missing in .env file');
     process.exit(1);
 }
 
 const seedDatabase = async () => {
     try {
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ Connected to MongoDB');
+        console.log('Connected to MongoDB');
 
-        // Clear existing data
+        // WARNING: this is destructive and clears all existing data.
         await User.deleteMany({});
         await Category.deleteMany({});
         await Product.deleteMany({});
         await Bill.deleteMany({});
         await Settings.deleteMany({});
-        console.log('🗑️ Cleared existing data');
+        console.log('Cleared existing data');
 
-        // Create Admin User
-        const hashedPassword = await bcrypt.hash('password123', 10);
+        const hashedPassword = await bcrypt.hash(SEED_ADMIN_PASSWORD, 10);
         const admin = await User.create({
-            name: 'Admin User',
-            email: 'admin@sriramfashions.com',
+            name: SEED_ADMIN_NAME,
+            email: SEED_ADMIN_EMAIL,
             password: hashedPassword,
-            phone: '9876543210',
+            phone: SEED_ADMIN_PHONE,
             role: 'admin',
             isActive: true
         });
-        console.log('👤 Admin user created');
+        console.log('Admin user created');
 
-        // Create Categories
         const categories = await Category.insertMany([
             { name: 'Sarees', description: 'Traditional and designer sarees' },
             { name: 'Kurtas', description: 'Men and women kurtas' },
@@ -53,9 +59,8 @@ const seedDatabase = async () => {
             { name: 'Dupattas', description: 'Silk and cotton dupattas' },
             { name: 'Suits', description: 'Salwar suits and dress materials' }
         ]);
-        console.log('📁 Categories created');
+        console.log('Categories created');
 
-        // Create Products
         const products = await Product.insertMany([
             { name: 'Banarasi Silk Saree - Red', sku: 'SAR001', category: categories[0]._id, mrp: 4500, sellingPrice: 3999, stock: 15, gstRate: 12, hsn: '5007', lowStockThreshold: 5 },
             { name: 'Kanjivaram Silk Saree - Gold', sku: 'SAR002', category: categories[0]._id, mrp: 8500, sellingPrice: 7499, stock: 8, gstRate: 12, hsn: '5007', lowStockThreshold: 3 },
@@ -68,11 +73,10 @@ const seedDatabase = async () => {
             { name: 'Party Lehenga - Purple', sku: 'LEH002', category: categories[2]._id, mrp: 8500, sellingPrice: 7499, stock: 7, gstRate: 12, hsn: '6204', lowStockThreshold: 3 },
             { name: 'Chiffon Dupatta - Multi', sku: 'DUP001', category: categories[3]._id, mrp: 600, sellingPrice: 499, stock: 50, gstRate: 5, hsn: '6214', lowStockThreshold: 15 },
             { name: 'Silk Dupatta - Gold', sku: 'DUP002', category: categories[3]._id, mrp: 1200, sellingPrice: 999, stock: 25, gstRate: 12, hsn: '6214', lowStockThreshold: 8 },
-            { name: 'Anarkali Suit - Green', sku: 'SUT001', category: categories[4]._id, mrp: 3500, sellingPrice: 2999, stock: 12, gstRate: 12, hsn: '6204', lowStockThreshold: 4 },
+            { name: 'Anarkali Suit - Green', sku: 'SUT001', category: categories[4]._id, mrp: 3500, sellingPrice: 2999, stock: 12, gstRate: 12, hsn: '6204', lowStockThreshold: 4 }
         ]);
-        console.log('📦 Products created');
+        console.log('Products created');
 
-        // Generate Bill Number
         const generateBillNumber = () => {
             const date = new Date();
             const y = date.getFullYear().toString().slice(-2);
@@ -81,7 +85,6 @@ const seedDatabase = async () => {
             return `SRF${y}${m}${r}`;
         };
 
-        // Create Bills
         const sampleBills = [
             {
                 billNumber: generateBillNumber(),
@@ -89,8 +92,16 @@ const seedDatabase = async () => {
                 items: [
                     { product: products[0]._id, productName: products[0].name, sku: products[0].sku, quantity: 1, price: 3999, gstRate: 12, gstAmount: 480, total: 4479 }
                 ],
-                subtotal: 3999, discountAmount: 0, taxableAmount: 3999, cgst: 240, sgst: 240, totalTax: 480, grandTotal: 4479,
-                paymentMethod: 'upi', paymentStatus: 'paid', createdBy: admin._id
+                subtotal: 3999,
+                discountAmount: 0,
+                taxableAmount: 3999,
+                cgst: 240,
+                sgst: 240,
+                totalTax: 480,
+                grandTotal: 4479,
+                paymentMethod: 'upi',
+                paymentStatus: 'paid',
+                createdBy: admin._id
             },
             {
                 billNumber: generateBillNumber(),
@@ -99,15 +110,22 @@ const seedDatabase = async () => {
                     { product: products[4]._id, productName: products[4].name, sku: products[4].sku, quantity: 2, price: 999, gstRate: 12, gstAmount: 240, total: 2238 },
                     { product: products[9]._id, productName: products[9].name, sku: products[9].sku, quantity: 1, price: 499, gstRate: 5, gstAmount: 25, total: 524 }
                 ],
-                subtotal: 2497, discountAmount: 0, taxableAmount: 2497, cgst: 132, sgst: 133, totalTax: 265, grandTotal: 2762,
-                paymentMethod: 'cash', paymentStatus: 'paid', createdBy: admin._id
+                subtotal: 2497,
+                discountAmount: 0,
+                taxableAmount: 2497,
+                cgst: 132,
+                sgst: 133,
+                totalTax: 265,
+                grandTotal: 2762,
+                paymentMethod: 'cash',
+                paymentStatus: 'paid',
+                createdBy: admin._id
             }
         ];
 
         await Bill.insertMany(sampleBills);
-        console.log('🧾 Sample bills created');
+        console.log('Sample bills created');
 
-        // Settings
         await Settings.create({
             company: {
                 name: 'SRI RAM FASHIONS',
@@ -137,17 +155,16 @@ const seedDatabase = async () => {
             billTerms: 'Cheques made in favour of SRI RAM FASHIONS to be send toTrinelveli Address\nAll disputes are subjected toTrinelveli Jurisdiction',
             billFooter: 'Certified that above particulars are true and correct\nFor SRI RAM FASHIONS'
         });
-        console.log('⚙️ Settings created');
+        console.log('Settings created');
 
-        console.log('\n✅ Database seeded successfully!');
-        console.log('\n📋 Login Credentials:');
-        console.log('   Email: admin@sriramfashions.com');
-        console.log('   Password: password123\n');
+        console.log('\nDatabase seeded successfully.');
+        console.log('\nLogin Credentials:');
+        console.log(`   Email: ${SEED_ADMIN_EMAIL}`);
+        console.log('   Password: [from SEED_ADMIN_PASSWORD env var]\n');
 
         process.exit(0);
-
     } catch (error) {
-        console.error('❌ Seed error:', error);
+        console.error('Seed error:', error);
         process.exit(1);
     }
 };

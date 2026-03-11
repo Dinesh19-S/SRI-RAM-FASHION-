@@ -5,6 +5,7 @@ import Customer from '../models/Customer.js';
 import Supplier from '../models/Supplier.js';
 import SalesEntry from '../models/SalesEntry.js';
 import PurchaseEntry from '../models/PurchaseEntry.js';
+import cacheService from './cacheService.js';
 
 // Rate limiting store
 const requestCounts = new Map();
@@ -32,36 +33,42 @@ const checkRateLimit = (userId) => {
     return true;
 };
 
-// Get context data for AI queries
+// Get context data for AI queries (cached for 5 minutes to reduce DB load)
 const getBusinessContext = async () => {
-    try {
-        const [products, lowStockProducts, recentBills, customerCount, supplierCount] = await Promise.all([
-            Product.countDocuments(),
-            Product.find({ $expr: { $lte: ['$stock', '$lowStockThreshold'] } }).limit(10).lean(),
-            Bill.find().sort({ createdAt: -1 }).limit(5).lean(),
-            Customer.countDocuments(),
-            Supplier.countDocuments(),
-        ]);
+    return cacheService.getOrSet(
+        cacheService.CACHE_KEYS.BUSINESS_CONTEXT,
+        async () => {
+            try {
+                const [products, lowStockProducts, recentBills, customerCount, supplierCount] = await Promise.all([
+                    Product.countDocuments(),
+                    Product.find({ $expr: { $lte: ['$stock', '$lowStockThreshold'] } }).limit(10).lean().select('name stock lowStockThreshold'),
+                    Bill.find().sort({ createdAt: -1 }).limit(5).lean().select('billNumber customer.name grandTotal createdAt'),
+                    Customer.countDocuments(),
+                    Supplier.countDocuments(),
+                ]);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todaySales = await Bill.aggregate([
-            { $match: { createdAt: { $gte: today } } },
-            { $group: { _id: null, total: { $sum: '$grandTotal' }, count: { $sum: 1 } } }
-        ]);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const todaySales = await Bill.aggregate([
+                    { $match: { createdAt: { $gte: today } } },
+                    { $group: { _id: null, total: { $sum: '$grandTotal' }, count: { $sum: 1 } } }
+                ]);
 
-        return {
-            totalProducts: products,
-            lowStockItems: lowStockProducts.map(p => ({ name: p.name, stock: p.stock, threshold: p.lowStockThreshold })),
-            recentBills: recentBills.map(b => ({ billNumber: b.billNumber, grandTotal: b.grandTotal, date: b.createdAt })),
-            customerCount,
-            supplierCount,
-            todaySales: todaySales[0] || { total: 0, count: 0 },
-        };
-    } catch (error) {
-        console.error('Error fetching business context:', error);
-        return null;
-    }
+                return {
+                    totalProducts: products,
+                    lowStockItems: lowStockProducts.map(p => ({ name: p.name, stock: p.stock, threshold: p.lowStockThreshold })),
+                    recentBills: recentBills.map(b => ({ billNumber: b.billNumber, grandTotal: b.grandTotal, date: b.createdAt })),
+                    customerCount,
+                    supplierCount,
+                    todaySales: todaySales[0] || { total: 0, count: 0 },
+                };
+            } catch (error) {
+                console.error('Error fetching business context:', error);
+                return null;
+            }
+        },
+        cacheService.CACHE_TTL.CONTEXT
+    );
 };
 
 // Chat with AI assistant

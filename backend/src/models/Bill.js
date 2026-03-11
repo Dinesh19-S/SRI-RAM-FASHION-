@@ -118,7 +118,8 @@ const billSchema = new mongoose.Schema({
     billType: {
         type: String,
         enum: ['SALES', 'PURCHASE', 'DIRECT'],
-        default: 'DIRECT'
+        default: 'SALES',
+        set: (value) => (value === 'DIRECT' ? 'SALES' : value)
     },
     partyName: String,
     createdBy: {
@@ -128,6 +129,15 @@ const billSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+// Helpful indexes for dashboards and filters
+billSchema.index({ date: -1 });
+billSchema.index({ billType: 1, date: -1 });
+billSchema.index({ paymentStatus: 1, date: -1 });
+billSchema.index({ customer: 1 });
+
+billSchema.index({ createdBy: 1 });
+billSchema.index({ 'customer.phone': 1 });
 
 // Pre-save hook to calculate totals
 billSchema.pre('save', function (next) {

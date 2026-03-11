@@ -58,6 +58,7 @@ salesEntrySchema.pre('save', async function (next) {
 
 // Index for efficient queries
 salesEntrySchema.index({ date: -1 });
+salesEntrySchema.index({ status: 1 });
 salesEntrySchema.index({ 'customer.name': 1 });
 
 export default mongoose.model('SalesEntry', salesEntrySchema);

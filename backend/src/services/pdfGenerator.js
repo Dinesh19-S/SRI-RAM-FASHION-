@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import Settings from '../models/Settings.js';
+import cacheService from './cacheService.js';
 
 // Convert number to words in Indian format
 const numberToWords = (num) => {
@@ -56,11 +57,15 @@ const formatDate = (date) => {
  * The items table dynamically fills remaining A4 space so the bill fits exactly one page.
  */
 export const generateBillPDF = async (bill) => {
-    // Load settings
-    let settings = await Settings.findOne();
-    if (!settings) {
-        settings = new Settings();
-    }
+    // Load settings (cached for 1 hour to reduce DB load)
+    let settings = await cacheService.getOrSet(
+        cacheService.CACHE_KEYS.SETTINGS,
+        async () => {
+            const loaded = await Settings.findOne();
+            return loaded || new Settings();
+        },
+        cacheService.CACHE_TTL.SETTINGS
+    );
 
     // Company details
     const companyName = settings?.company?.name || 'SRI RAM FASHIONS';
@@ -73,14 +78,14 @@ export const generateBillPDF = async (bill) => {
     const companyPhone = settings?.company?.phone || '9080573831';
     const companyMob = settings?.company?.phone2 || '8248893759';
 
-    // Bank details
+    // Bank details (from cached settings)
     const bankName = settings?.bank?.bankName || 'SOUTH INDIAN BANK';
     const bankAccount = settings?.bank?.accountNumber || '0338073000002328';
     const bankBranch = settings?.bank?.branchName || 'TIRUPUR';
     const bankIfsc = settings?.bank?.ifscCode || 'SIBL0000338';
     const bankAccName = settings?.bank?.accountHolderName || 'SRI RAM FASHIONS';
 
-    // Tax calculations
+    // Tax calculations (from cached settings)
     const productAmt = bill.subtotal || 0;
     const discount = bill.discountAmount || 0;
     const taxableAmt = productAmt - discount;

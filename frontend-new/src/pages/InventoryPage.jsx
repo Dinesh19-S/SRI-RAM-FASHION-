@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, fetchCategories, updateProductStock, createCategory, deleteProduct } from '../store/slices/productsSlice';
-import { Package, Plus, Search, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Box, TrendingUp, X, FolderPlus, Trash2 } from 'lucide-react';
+import { Package, Plus, Search, ArrowUpCircle, ArrowDownCircle, AlertTriangle, Box, TrendingUp, X, FolderPlus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '../components/common';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const InventoryPage = () => {
     const toast = useToast();
     const dispatch = useDispatch();
-    const { items: products, categories, isLoading } = useSelector((state) => state.products);
+    const { items: products, categories, pagination, isLoading } = useSelector((state) => state.products);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
+    const [page, setPage] = useState(1);
     const [showStockModal, setShowStockModal] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [stockType, setStockType] = useState('in');
@@ -30,9 +31,25 @@ const InventoryPage = () => {
     });
 
     useEffect(() => {
-        dispatch(fetchProducts());
         dispatch(fetchCategories());
     }, [dispatch]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            dispatch(fetchProducts({
+                page,
+                limit: 10,
+                search: searchQuery,
+                category: filterCategory === 'all' ? undefined : filterCategory
+            }));
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [dispatch, page, searchQuery, filterCategory]);
+
+    // Reset page when filters change
+    useEffect(() => {
+        setPage(1);
+    }, [searchQuery, filterCategory]);
 
     const handleStockUpdate = async () => {
         if (!selectedProduct || !stockQuantity || !stockReason) return;
@@ -43,7 +60,6 @@ const InventoryPage = () => {
             setSelectedProduct(null);
             setStockQuantity(1);
             setStockReason('');
-            dispatch(fetchProducts());
         } catch (error) {
             toast.error('Failed to update stock: ' + (error || 'Unknown error'));
         }
@@ -91,23 +107,24 @@ const InventoryPage = () => {
         }
     };
 
-    const stats = {
-        totalProducts: products.length,
+    const stats = useMemo(() => ({
+        totalProducts: pagination?.total || products.length,
         totalStock: products.reduce((s, p) => s + (p.stock || 0), 0),
         lowStock: products.filter(p => p.stock <= (p.lowStockThreshold || 5)).length,
         inventoryValue: products.reduce((s, p) => s + ((p.stock || 0) * (p.sellingPrice || 0)), 0)
-    };
+    }), [pagination?.total, products]);
 
-    const categoryData = categories.map(c => ({ name: c.name, value: products.filter(p => p.category?._id === c._id || p.category === c._id).reduce((s, p) => s + (p.stock || 0), 0) }));
+    const categoryData = useMemo(() => categories.slice(0, 5).map(c => ({
+        name: c.name,
+        value: products
+            .filter(p => p.category?._id === c._id || p.category === c._id)
+            .reduce((s, p) => s + (p.stock || 0), 0)
+    })), [categories, products]);
+    
     const COLORS = ['#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
     const formatCurrency = (a) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(a);
 
-    const filteredProducts = products.filter(p => {
-        const matchesSearch = p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
-        const catId = p.category?._id || p.category;
-        const matchesCategory = filterCategory === 'all' || catId === filterCategory;
-        return matchesSearch && matchesCategory;
-    });
+    const filteredProducts = products;
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -150,7 +167,7 @@ const InventoryPage = () => {
                             <Box size={24} className="text-white" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Stock</p>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Page Stock</p>
                             <p className="text-2xl font-bold text-white mt-0.5">{stats.totalStock.toLocaleString()}</p>
                         </div>
                     </div>
@@ -170,7 +187,7 @@ const InventoryPage = () => {
                             <AlertTriangle size={24} className="text-white" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Low Stock</p>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Page Low Stock</p>
                             <p className="text-2xl font-bold text-white mt-0.5">{stats.lowStock}</p>
                         </div>
                     </div>
@@ -190,7 +207,7 @@ const InventoryPage = () => {
                             <TrendingUp size={24} className="text-white" />
                         </div>
                         <div>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Inventory Value</p>
+                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Page Value</p>
                             <p className="text-2xl font-bold text-white mt-0.5">{formatCurrency(stats.inventoryValue)}</p>
                         </div>
                     </div>
@@ -200,7 +217,7 @@ const InventoryPage = () => {
             {products.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 card">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock by Category</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Stock by Category (Current Page)</h3>
                         <ResponsiveContainer width="100%" height={200}><BarChart data={categoryData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis /><Tooltip /><Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer>
                     </div>
                     <div className="card">
@@ -211,8 +228,8 @@ const InventoryPage = () => {
             )}
 
             <div className="flex gap-4">
-                <div className="relative flex-1"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" className="form-input pl-10" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
-                <select className="form-input w-40" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}><option value="all">All Categories</option>{categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select>
+                <div className="relative flex-1"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" className="form-input pl-10" placeholder="Search product name or SKU..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
+                <select className="form-input w-48" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}><option value="all">All Categories</option>{categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select>
             </div>
 
             <div className="card overflow-hidden p-0">
@@ -221,46 +238,100 @@ const InventoryPage = () => {
                 ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-12 text-gray-500"><Package size={48} className="mx-auto mb-2 opacity-50" /><p>No products found</p></div>
                 ) : (
-                    <table className="table">
-                        <thead><tr className="bg-gray-50"><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Price</th><th>Status</th><th className="text-right">Stock Actions</th></tr></thead>
-                        <tbody>
-                            {filteredProducts.map(p => (
-                                <tr key={p._id}>
-                                    <td className="font-medium">{p.name}</td><td className="text-gray-500">{p.sku}</td><td>{p.category?.name || 'N/A'}</td><td className="font-semibold">{p.stock}</td><td>{formatCurrency(p.sellingPrice)}</td>
-                                    <td>
-                                        <span className={`badge ${p.stock <= (p.lowStockThreshold || 5) ? 'badge-error' : 'badge-success'}`}>
-                                            {p.stock <= (p.lowStockThreshold || 5) ? 'Low' : 'In Stock'} • {p.stock}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                className="action-btn action-btn-green"
-                                                onClick={() => { setSelectedProduct(p); setStockType('in'); setShowStockModal(true); }}
-                                                title="Stock In"
-                                            >
-                                                <ArrowUpCircle size={18} />
-                                            </button>
-                                            <button
-                                                className="action-btn action-btn-amber"
-                                                onClick={() => { setSelectedProduct(p); setStockType('out'); setShowStockModal(true); }}
-                                                title="Stock Out"
-                                            >
-                                                <ArrowDownCircle size={18} />
-                                            </button>
-                                            <button
-                                                className="action-btn action-btn-red"
-                                                onClick={() => handleDeleteClick(p)}
-                                                title="Delete"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <>
+                        <table className="table">
+                            <thead><tr className="bg-gray-50"><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Price</th><th>Status</th><th className="text-right">Stock Actions</th></tr></thead>
+                            <tbody>
+                                {filteredProducts.map(p => (
+                                    <tr key={p._id}>
+                                        <td className="font-medium">{p.name}</td><td className="text-gray-500">{p.sku}</td><td>{p.category?.name || 'N/A'}</td><td className="font-semibold">{p.stock}</td><td>{formatCurrency(p.sellingPrice)}</td>
+                                        <td>
+                                            <span className={`badge ${p.stock <= (p.lowStockThreshold || 5) ? 'badge-error' : 'badge-success'}`}>
+                                                {p.stock <= (p.lowStockThreshold || 5) ? 'Low' : 'In Stock'} • {p.stock}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    className="action-btn action-btn-green"
+                                                    onClick={() => { setSelectedProduct(p); setStockType('in'); setShowStockModal(true); }}
+                                                    title="Stock In"
+                                                >
+                                                    <ArrowUpCircle size={18} />
+                                                </button>
+                                                <button
+                                                    className="action-btn action-btn-amber"
+                                                    onClick={() => { setSelectedProduct(p); setStockType('out'); setShowStockModal(true); }}
+                                                    title="Stock Out"
+                                                >
+                                                    <ArrowDownCircle size={18} />
+                                                </button>
+                                                <button
+                                                    className="action-btn action-btn-red"
+                                                    onClick={() => handleDeleteClick(p)}
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {/* Pagination Controls */}
+                        {pagination && pagination.pages > 1 && (
+                            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100">
+                                <p className="text-sm text-gray-600">
+                                    Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-medium">{pagination.total}</span> products
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        className="p-2 rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        disabled={page === 1}
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    {[...Array(pagination.pages)].map((_, i) => {
+                                        const pageNum = i + 1;
+                                        // Simple pagination: show current, first, last, and neighbors
+                                        if (
+                                            pageNum === 1 ||
+                                            pageNum === pagination.pages ||
+                                            (pageNum >= page - 1 && pageNum <= page + 1)
+                                        ) {
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    className={`w-10 h-10 rounded-lg border font-medium transition-colors ${page === pageNum
+                                                        ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                                                        : 'bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-500'
+                                                        }`}
+                                                    onClick={() => setPage(pageNum)}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        } else if (
+                                            pageNum === page - 2 ||
+                                            pageNum === page + 2
+                                        ) {
+                                            return <span key={pageNum} className="flex items-center justify-center w-8">...</span>;
+                                        }
+                                        return null;
+                                    })}
+                                    <button
+                                        className="p-2 rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
+                                        disabled={page === pagination.pages}
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

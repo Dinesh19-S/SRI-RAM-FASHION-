@@ -7,6 +7,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const { search, page = 1, limit = 10 } = req.query;
+        const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+        const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
 
         const query = { isActive: true };
         if (search) {
@@ -18,9 +20,10 @@ router.get('/', async (req, res) => {
         }
 
         const customers = await Customer.find(query)
-            .skip((page - 1) * limit)
-            .limit(parseInt(limit))
-            .sort({ createdAt: -1 });
+            .skip((pageNum - 1) * limitNum)
+            .limit(limitNum)
+            .sort({ createdAt: -1 })
+            .lean();
 
         const total = await Customer.countDocuments(query);
 
@@ -28,10 +31,10 @@ router.get('/', async (req, res) => {
             success: true,
             data: customers,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page: pageNum,
+                limit: limitNum,
                 total,
-                pages: Math.ceil(total / limit)
+                pages: Math.ceil(total / limitNum)
             }
         });
     } catch (error) {
