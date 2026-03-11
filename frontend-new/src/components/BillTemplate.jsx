@@ -1,5 +1,4 @@
 import './BillTemplate.css';
-import companyLogo from '../assets/logo.jpg';
 
 // Convert number to words in Indian format
 const numberToWords = (num) => {
@@ -99,7 +98,6 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                 {/* ===== ROW 1: Company Name + GSTIN ===== */}
                 <div className="ti-header-row">
                     <div className="ti-company-name">
-                        <img src={companyLogo} alt="Logo" className="ti-company-logo" />
                         {companyName}
                     </div>
                     <div className="ti-gstin-header">GSTIN: {companyGstin}</div>
@@ -272,6 +270,10 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                             <span>{productAmt.toFixed(2)}</span>
                         </div>
                         <div className="ti-tax-row">
+                            <span>Discount</span>
+                            <span>{discount.toFixed(2)}</span>
+                        </div>
+                        <div className="ti-tax-row">
                             <span>Taxable Amt</span>
                             <span>{taxableAmt.toFixed(2)}</span>
                         </div>
@@ -282,6 +284,10 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         <div className="ti-tax-row ti-tax-highlight">
                             <span>SGST @{sgstRate}%</span>
                             <span>{sgstAmt.toFixed(2)}</span>
+                        </div>
+                        <div className="ti-tax-row">
+                            <span>Round Off</span>
+                            <span>{roundOff.toFixed(2)}</span>
                         </div>
                         <div className="ti-tax-row ti-tax-total">
                             <span>Total Amt</span>
@@ -302,7 +308,9 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         <div className="ti-bank-box">
                             <div className="ti-bank-title">Bank Details:</div>
                             <div className="ti-bank-info">
-                                {bankName}  |  A/C: {bankAccount}  |  IFSC: {bankIfsc}
+                                <div>ACC NAME: {bankAccName}</div>
+                                <div>BANK: {bankName}</div>
+                                <div>ACC NUM: {bankAccount} | BRANCH: {bankBranch} | IFSC: {bankIfsc}</div>
                             </div>
                         </div>
                     </div>

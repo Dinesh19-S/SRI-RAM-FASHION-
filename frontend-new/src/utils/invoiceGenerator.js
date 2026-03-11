@@ -1,24 +1,4 @@
 import jsPDF from 'jspdf';
-import lotusLogo from '../assets/lotus-logo.png';
-
-let logoDataUrlCache = null;
-const loadLogoDataUrl = async () => {
-    if (logoDataUrlCache) return logoDataUrlCache;
-    try {
-        const response = await fetch(lotusLogo);
-        const blob = await response.blob();
-        logoDataUrlCache = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-        return logoDataUrlCache;
-    } catch (error) {
-        console.warn('Failed to load invoice logo:', error);
-        return null;
-    }
-};
 
 // ==============================
 // Helpers
@@ -71,7 +51,7 @@ const setF = (pdf, c) => pdf.setFillColor(c.r, c.g, c.b);
 // The bill fits precisely on one A4 page.
 // ==============================
 
-export const generateInvoicePDF = (bill, settings = {}, logoDataUrl = null) => {
+export const generateInvoicePDF = (bill, settings = {}) => {
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // Page dimensions
@@ -158,15 +138,7 @@ export const generateInvoicePDF = (bill, settings = {}, logoDataUrl = null) => {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     setC(pdf, BLUE);
-    let nameX = M + PX;
-    if (logoDataUrl) {
-        try {
-            pdf.addImage(logoDataUrl, 'PNG', nameX, y + 1, 10, 10);
-            nameX += 12;
-        } catch {
-            // Ignore logo errors and continue without it
-        }
-    }
+    const nameX = M + PX;
     pdf.text(companyName.toUpperCase(), nameX, y + 8);
 
     pdf.setFontSize(10);
@@ -448,38 +420,39 @@ export const generateInvoicePDF = (bill, settings = {}, logoDataUrl = null) => {
     // Right column: Tax breakdown
     const sRX = M + sumLeftW + sumMidW + PX;
     const sRW = sumRightW - PX * 2;
-    const taxFontSize = 7.5;
-    const taxRowH = 3.8;
-    let txY = y + 3;
+    const taxRows = [
+        { label: 'Product Amt', value: productAmt.toFixed(2) },
+        { label: 'Discount', value: discount.toFixed(2) },
+        { label: 'Taxable Amt', value: taxableAmt.toFixed(2) },
+        { label: `CGST @ ${cgstRate}%`, value: cgstAmt.toFixed(2), highlight: true },
+        { label: `SGST @ ${sgstRate}%`, value: sgstAmt.toFixed(2), highlight: true },
+        { label: 'Round Off', value: roundOff.toFixed(2) }
+    ];
+    const rightTop = y + 4;
+    const totalLineY = y + row6H - 8;
+    const totalTextY = y + row6H - 3;
+    const taxRowGap = (totalLineY - rightTop - 1) / Math.max(taxRows.length - 1, 1);
 
-    const drawTaxRow = (label, value, isHighlight = false, isTotal = false) => {
-        if (isTotal) {
-            txY += 1;
-            setD(pdf, BLACK);
-            pdf.setLineWidth(0.4);
-            pdf.line(sRX - 1, txY, sRX + sRW + 1, txY);
-            txY += 1.5;
-        }
+    taxRows.forEach((row, index) => {
+        const rowY = rightTop + (taxRowGap * index);
+        const color = row.highlight ? RED : BLACK;
 
-        const color = isHighlight ? RED : BLACK;
-        const fontSize = isTotal ? 8.5 : taxFontSize;
-
-        pdf.setFont('helvetica', (isHighlight || isTotal) ? 'bold' : 'normal');
-        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', row.highlight ? 'bold' : 'normal');
+        pdf.setFontSize(7.2);
         setC(pdf, color);
-        pdf.text(label, sRX, txY);
+        pdf.text(row.label, sRX, rowY);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(value, sRX + sRW, txY, { align: 'right' });
-        txY += taxRowH;
-    };
+        pdf.text(row.value, sRX + sRW, rowY, { align: 'right' });
+    });
 
-    drawTaxRow('Product Amt', productAmt.toFixed(2));
-    drawTaxRow('Discount', discount.toFixed(0));
-    drawTaxRow('Taxable Amt', taxableAmt.toFixed(2));
-    drawTaxRow(`CGST @ ${cgstRate}%`, cgstAmt.toFixed(2), true);
-    drawTaxRow(`SGST @ ${sgstRate}%`, sgstAmt.toFixed(2), true);
-    drawTaxRow('Round Off', roundOff.toFixed(2));
-    drawTaxRow('Total Amt', `${totalAmt}`, false, true);
+    setD(pdf, BLACK);
+    pdf.setLineWidth(0.4);
+    pdf.line(sRX - 1, totalLineY, sRX + sRW + 1, totalLineY);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.2);
+    setC(pdf, BLACK);
+    pdf.text('Total Amt', sRX, totalTextY);
+    pdf.text(`${totalAmt}`, sRX + sRW, totalTextY, { align: 'right' });
 
     y += row6H;
     hLine(y, 0.5);
@@ -513,9 +486,9 @@ export const generateInvoicePDF = (bill, settings = {}, logoDataUrl = null) => {
     termsLines.forEach((t, i) => pdf.text(t, fLX, y + 7.5 + i * 2.8, { maxWidth: footLeftW - PX * 2 }));
 
     // Bank box: yellow background, gold border
-    const bankBoxY = y + 17;
+    const bankBoxY = y + 16;
     const bankBoxW = footLeftW - PX * 2;
-    const bankBoxH = 12;
+    const bankBoxH = 13;
 
     setF(pdf, BANK_BG);
     pdf.rect(fLX, bankBoxY, bankBoxW, bankBoxH, 'F');
@@ -531,11 +504,11 @@ export const generateInvoicePDF = (bill, settings = {}, logoDataUrl = null) => {
 
     // Bank info
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(6);
+    pdf.setFontSize(5.6);
     setC(pdf, BLUE);
-    pdf.text(`ACC NAME: ${bankAccName}`, fLX + 3, bankBoxY + 6.8, { maxWidth: bankBoxW - 6 });
-    pdf.text(`BANK: ${bankName}`, fLX + 3, bankBoxY + 9.2, { maxWidth: bankBoxW - 6 });
-    pdf.text(`ACC NUM: ${bankAcc}  BRANCH: ${bankBranch}  IFSC: ${bankIfsc}`, fLX + 3, bankBoxY + 11.4, { maxWidth: bankBoxW - 6 });
+    pdf.text(`ACC NAME: ${bankAccName}`, fLX + 3, bankBoxY + 6.6, { maxWidth: bankBoxW - 6 });
+    pdf.text(`BANK: ${bankName}`, fLX + 3, bankBoxY + 9.6, { maxWidth: bankBoxW - 6 });
+    pdf.text(`ACC NUM: ${bankAcc} | BRANCH: ${bankBranch} | IFSC: ${bankIfsc}`, fLX + 3, bankBoxY + 12.4, { maxWidth: bankBoxW - 6 });
 
     // Right: Certification + Signature
     const fRX = M + footLeftW + PX;
@@ -563,27 +536,21 @@ export const generateInvoicePDF = (bill, settings = {}, logoDataUrl = null) => {
 /** Download Tax Invoice PDF */
 export const downloadInvoicePDF = (bill, settings, filename) => {
     const fn = filename || `SRI_RAM_FASHIONS_Invoice_${bill.billNumber || 'bill'}.pdf`;
-    return loadLogoDataUrl().then((logoDataUrl) => {
-        const pdf = generateInvoicePDF(bill, settings, logoDataUrl);
-        pdf.save(fn);
-        return pdf;
-    });
+    const pdf = generateInvoicePDF(bill, settings);
+    pdf.save(fn);
+    return Promise.resolve(pdf);
 };
 
 /** Get invoice PDF as blob URL for preview */
 export const getInvoicePreviewUrl = (bill, settings) => {
-    return loadLogoDataUrl().then((logoDataUrl) => {
-        const pdf = generateInvoicePDF(bill, settings, logoDataUrl);
-        return URL.createObjectURL(pdf.output('blob'));
-    });
+    const pdf = generateInvoicePDF(bill, settings);
+    return Promise.resolve(URL.createObjectURL(pdf.output('blob')));
 };
 
 /** Get invoice PDF as base64 data URL */
 export const getInvoiceDataUrl = (bill, settings) => {
-    return loadLogoDataUrl().then((logoDataUrl) => {
-        const pdf = generateInvoicePDF(bill, settings, logoDataUrl);
-        return pdf.output('datauristring');
-    });
+    const pdf = generateInvoicePDF(bill, settings);
+    return Promise.resolve(pdf.output('datauristring'));
 };
 
 export { numberToWords };

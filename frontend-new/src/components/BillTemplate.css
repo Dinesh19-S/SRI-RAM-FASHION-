@@ -41,15 +41,6 @@
     color: #1a3d7c;
     letter-spacing: 2px;
     text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.ti-company-logo {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
 }
 
 .ti-gstin-header {
@@ -254,7 +245,8 @@
 .ti-summary-row {
     display: flex;
     border-bottom: 1.5px solid #333;
-    min-height: 96px;
+    min-height: 112px;
+    align-items: stretch;
 }
 
 /* -- Left column: Total Packs / Bill Amount / In Words -- */
@@ -264,23 +256,26 @@
     border-right: 1.5px solid #333;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    justify-content: flex-start;
+    gap: 5px;
 }
 
 .ti-summary-field {
-    display: flex;
+    display: grid;
+    grid-template-columns: 92px 12px minmax(0, 1fr);
+    align-items: start;
     font-size: 11px;
+    column-gap: 4px;
 }
 
 .ti-summary-label {
     font-weight: 800;
     color: #000;
-    min-width: 85px;
 }
 
 .ti-summary-sep {
     font-weight: 700;
-    margin: 0 4px;
+    text-align: center;
 }
 
 .ti-summary-value {
@@ -292,7 +287,9 @@
     font-size: 10px;
     font-weight: 600;
     text-transform: capitalize;
-    max-width: 200px;
+    max-width: none;
+    line-height: 1.35;
+    word-break: break-word;
 }
 
 /* -- Middle column: Bundles + GST Box -- */
@@ -303,14 +300,16 @@
     flex-direction: column;
     justify-content: space-between;
     padding: 8px 10px;
+    gap: 10px;
 }
 
 .ti-bundles-box {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     font-size: 11px;
     font-weight: 700;
+    gap: 8px;
 }
 
 .ti-bundles-label {
@@ -329,7 +328,8 @@
     align-items: center;
     border: 2px solid #c00;
     padding: 6px 10px;
-    margin-top: 8px;
+    margin-top: auto;
+    gap: 8px;
 }
 
 .ti-gst-label {
@@ -350,23 +350,27 @@
     padding: 6px 12px;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    justify-content: flex-start;
+    gap: 2px;
 }
 
 .ti-tax-row {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
     font-size: 11px;
-    padding: 1.5px 0;
+    padding: 1px 0;
+    column-gap: 8px;
 }
 
 .ti-tax-row span:first-child {
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .ti-tax-row span:last-child {
     font-weight: 700;
-    min-width: 60px;
+    min-width: 72px;
     text-align: right;
 }
 
@@ -381,7 +385,7 @@
 
 .ti-tax-total {
     border-top: 1.5px solid #000;
-    margin-top: 3px;
+    margin-top: 4px;
     padding-top: 4px;
 }
 
@@ -395,12 +399,13 @@
    ============================================ */
 .ti-footer-row {
     display: flex;
-    min-height: 90px;
+    min-height: 96px;
+    align-items: stretch;
 }
 
 .ti-footer-left {
     flex: 1.2;
-    padding: 6px 12px;
+    padding: 8px 12px;
     border-right: 1.5px solid #333;
     display: flex;
     flex-direction: column;
@@ -425,7 +430,7 @@
     background: #fffbe6;
     border: 1.5px solid #d4a017;
     padding: 5px 8px;
-    margin-top: 2px;
+    margin-top: auto;
 }
 
 .ti-bank-title {
@@ -442,6 +447,10 @@
     font-weight: 700;
     color: #1a3d7c;
     line-height: 1.35;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    word-break: break-word;
 }
 
 .ti-footer-right {
@@ -449,10 +458,10 @@
     padding: 8px 12px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     text-align: center;
-    gap: 8px;
+    gap: 10px;
 }
 
 .ti-certified {

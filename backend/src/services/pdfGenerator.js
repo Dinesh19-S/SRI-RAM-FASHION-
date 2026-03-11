@@ -1,6 +1,4 @@
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
 import Settings from '../models/Settings.js';
 import cacheService from './cacheService.js';
 
@@ -159,40 +157,10 @@ export const generateBillPDF = async (bill) => {
     const PX = 16;
     const PY = 6;
 
-    // Resolve lotus logo (settings logo -> local asset fallback)
-    const resolveLogo = () => {
-        const logoValue = settings?.company?.logo;
-        if (logoValue) {
-            if (logoValue.startsWith('data:')) {
-                const base64 = logoValue.split(',')[1];
-                if (base64) return Buffer.from(base64, 'base64');
-            } else {
-                return logoValue;
-            }
-        }
-        const candidates = [
-            path.resolve(process.cwd(), 'frontend-new', 'src', 'assets', 'lotus-logo.png'),
-            path.resolve(process.cwd(), '..', 'frontend-new', 'src', 'assets', 'lotus-logo.png')
-        ];
-        for (const p of candidates) {
-            if (fs.existsSync(p)) return p;
-        }
-        return null;
-    };
-    const logo = resolveLogo();
-
     // =============================================
     // ROW 1: Company Name + GSTIN
     // =============================================
-    let nameX = M + PX;
-    if (logo) {
-        try {
-            doc.image(logo, nameX, y + 3, { width: 28, height: 28 });
-            nameX += 34;
-        } catch {
-            // Ignore logo errors and continue without it
-        }
-    }
+    const nameX = M + PX;
     doc.font('Helvetica-Bold').fontSize(20).fillColor(BLUE);
     doc.text(companyName.toUpperCase(), nameX, y + 10, {
         width: W * 0.6 - (nameX - (M + PX)),
@@ -462,35 +430,34 @@ export const generateBillPDF = async (bill) => {
     // Right column - Tax breakdown
     const sRX = M + sumLeftW + sumMidW + 14;
     const sRW = sumRightW - 28;
-    const taxFontSize = 9;
-    const taxRowH = 11;
-    let txY = y + 6;
+    const taxRows = [
+        { label: 'Product Amt', value: productAmt.toFixed(2) },
+        { label: 'Discount', value: discount.toFixed(2) },
+        { label: 'Taxable Amt', value: taxableAmt.toFixed(2) },
+        { label: `CGST @ ${cgstRate}%`, value: cgstAmt.toFixed(2), highlight: true },
+        { label: `SGST @ ${sgstRate}%`, value: sgstAmt.toFixed(2), highlight: true },
+        { label: 'Round Off', value: roundOff.toFixed(2) }
+    ];
+    const rightTop = y + 8;
+    const totalLineY = y + row6H - 20;
+    const totalTextY = y + row6H - 10;
+    const taxRowGap = (totalLineY - rightTop - 2) / Math.max(taxRows.length - 1, 1);
 
-    const drawTaxRow = (label, value, isHighlight = false, isTotal = false) => {
-        if (isTotal) {
-            txY += 3;
-            doc.lineWidth(1.5).moveTo(sRX - 4, txY).lineTo(sRX + sRW + 4, txY).stroke(BLACK);
-            txY += 4;
-        }
+    taxRows.forEach((row, index) => {
+        const rowY = rightTop + (taxRowGap * index);
+        const color = row.highlight ? RED : BLACK;
+        const fontWeight = row.highlight ? 'Helvetica-Bold' : 'Helvetica';
 
-        const color = isHighlight ? RED : BLACK;
-        const fontSize = isTotal ? 10 : taxFontSize;
-        const fontWeight = (isHighlight || isTotal) ? 'Helvetica-Bold' : 'Helvetica';
+        doc.font(fontWeight).fontSize(8.6).fillColor(color);
+        doc.text(row.label, sRX, rowY, { width: sRW * 0.58 });
+        doc.font('Helvetica-Bold').fontSize(8.6).fillColor(color);
+        doc.text(row.value, sRX + sRW * 0.58, rowY, { width: sRW * 0.42, align: 'right' });
+    });
 
-        doc.font(fontWeight).fontSize(fontSize).fillColor(color);
-        doc.text(label, sRX, txY, { width: sRW * 0.55 });
-        doc.font('Helvetica-Bold').fontSize(fontSize).fillColor(color);
-        doc.text(value, sRX + sRW * 0.55, txY, { width: sRW * 0.45, align: 'right' });
-        txY += taxRowH;
-    };
-
-    drawTaxRow('Product Amt', productAmt.toFixed(2));
-    drawTaxRow('Discount', discount.toFixed(0));
-    drawTaxRow('Taxable Amt', taxableAmt.toFixed(2));
-    drawTaxRow(`CGST @ ${cgstRate}%`, cgstAmt.toFixed(2), true);
-    drawTaxRow(`SGST @ ${sgstRate}%`, sgstAmt.toFixed(2), true);
-    drawTaxRow('Round Off', roundOff.toFixed(2));
-    drawTaxRow('Total Amt', `${totalAmt}`, false, true);
+    doc.lineWidth(1.5).moveTo(sRX - 4, totalLineY).lineTo(sRX + sRW + 4, totalLineY).stroke(BLACK);
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(BLACK);
+    doc.text('Total Amt', sRX, totalTextY, { width: sRW * 0.58 });
+    doc.text(`${totalAmt}`, sRX + sRW * 0.58, totalTextY, { width: sRW * 0.42, align: 'right' });
 
     y += row6H;
     hLine(y, 1.5);
@@ -518,9 +485,9 @@ export const generateBillPDF = async (bill) => {
     );
 
     // Bank box
-    const bankBoxY = y + 46;
+    const bankBoxY = y + 42;
     const bankBoxW = footLeftW - 28;
-    const bankBoxH = 30;
+    const bankBoxH = 34;
     doc.rect(fLX, bankBoxY, bankBoxW, bankBoxH).fill('#fffbe6');
     doc.lineWidth(1.5).rect(fLX, bankBoxY, bankBoxW, bankBoxH).stroke('#d4a017');
 
@@ -529,7 +496,7 @@ export const generateBillPDF = async (bill) => {
     doc.font('Helvetica-Bold').fontSize(7.5).fillColor(BLUE);
     doc.text(`ACC NAME: ${bankAccName}`, fLX + 8, bankBoxY + 14, { width: bankBoxW - 16 });
     doc.text(`BANK: ${bankName}`, fLX + 8, bankBoxY + 20, { width: bankBoxW - 16 });
-    doc.text(`ACC NUM: ${bankAccount}    BRANCH: ${bankBranch}    IFSC: ${bankIfsc}`, fLX + 8, bankBoxY + 26, { width: bankBoxW - 16 });
+    doc.text(`ACC NUM: ${bankAccount} | BRANCH: ${bankBranch} | IFSC: ${bankIfsc}`, fLX + 8, bankBoxY + 27, { width: bankBoxW - 16 });
 
     // Right: Certification + Signature
     const fRX = M + footLeftW + 14;
