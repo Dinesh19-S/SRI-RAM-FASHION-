@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { dashboardAPI, emailAPI } from '../services/api';
 import {
     XAxis,
@@ -88,6 +89,7 @@ const writeCachedOverview = (payload) => {
 
 const DashboardPage = () => {
     const toast = useToast();
+    const { user } = useSelector((state) => state.auth);
     const [stats, setStats] = useState(EMPTY_STATS);
     const [recentBills, setRecentBills] = useState([]);
     const [revenueData, setRevenueData] = useState([]);
@@ -99,6 +101,7 @@ const DashboardPage = () => {
     const [loading, setLoading] = useState(true);
     const [sendingSummary, setSendingSummary] = useState(false);
     const [chartPeriod, setChartPeriod] = useState('month');
+    const canSendSummary = user?.role === 'admin';
 
     const applyOverviewPayload = (overview = {}) => {
         const nextStats = overview?.stats || EMPTY_STATS;
@@ -206,12 +209,22 @@ const DashboardPage = () => {
     );
 
     const handleSendSummary = async () => {
+        if (!canSendSummary) {
+            toast.warning('Daily summary can be sent only from an admin account');
+            return;
+        }
+
         try {
             setSendingSummary(true);
             await emailAPI.sendDailySummary();
             toast.success('Daily summary email sent');
         } catch (err) {
-            toast.error('Failed to send summary');
+            if (err?.response?.status === 403) {
+                toast.warning('Daily summary can be sent only from an admin account');
+                return;
+            }
+
+            toast.error(err?.response?.data?.message || 'Failed to send summary');
         } finally {
             setSendingSummary(false);
         }
@@ -235,15 +248,17 @@ const DashboardPage = () => {
                         <DigitalClock />
                     </div>
                 </div>
-                <button
-                    onClick={handleSendSummary}
-                    disabled={sendingSummary}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-70"
-                    style={{ background: '#fff', color: '#1e40af', borderColor: '#bfdbfe' }}
-                >
-                    {sendingSummary ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-                    {sendingSummary ? 'Sending...' : 'Email Daily Summary'}
-                </button>
+                {canSendSummary && (
+                    <button
+                        onClick={handleSendSummary}
+                        disabled={sendingSummary}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-70"
+                        style={{ background: '#fff', color: '#1e40af', borderColor: '#bfdbfe' }}
+                    >
+                        {sendingSummary ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                        {sendingSummary ? 'Sending...' : 'Email Daily Summary'}
+                    </button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
