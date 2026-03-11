@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import { formatDate } from '../utils/dateUtils';
 import { EmailActionModal, useToast } from '../components/common';
-import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
+import { getEmailRecipientValidation, pickDefaultRecipient } from '../utils/emailUtils';
 import { Loader2, Mail, Clock as ClockIcon } from 'lucide-react';
 
 // Static helpers outside component to prevent recreation
@@ -255,8 +255,9 @@ const DashboardPage = () => {
             return;
         }
 
-        if (!isValidEmailRecipientList(summaryRecipient)) {
-            toast.warning('Enter a valid email address');
+        const { hasValidRecipients } = getEmailRecipientValidation(summaryRecipient);
+        if (!hasValidRecipients) {
+            toast.warning('Enter at least one valid email address');
             return;
         }
 

@@ -53,6 +53,16 @@ const getEmailProvider = () => {
 };
 
 const formatRecipientList = (recipients = []) => recipients.join(', ');
+const appendSkippedInvalidMessage = (message, invalidRecipientsList = []) => (
+    invalidRecipientsList.length > 0
+        ? `${message}. Skipped invalid: ${formatRecipientList(invalidRecipientsList)}`
+        : message
+);
+const buildMissingRecipientMessage = (invalidRecipientsList = []) => (
+    invalidRecipientsList.length > 0
+        ? `No valid recipient email found. Invalid: ${formatRecipientList(invalidRecipientsList)}`
+        : 'No recipient email provided'
+);
 
 // Check email configuration status
 router.get('/status', (req, res) => {
@@ -83,15 +93,8 @@ router.post('/test', async (req, res) => {
         }
 
         const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
-        if (invalid.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid email address: ${invalid.join(', ')}`
-            });
-        }
-
         if (recipients.length === 0) {
-            return res.status(400).json({ success: false, message: 'No recipient email provided' });
+            return res.status(400).json({ success: false, message: buildMissingRecipientMessage(invalid) });
         }
 
         const result = await sendNotification(
@@ -102,7 +105,11 @@ router.post('/test', async (req, res) => {
 
         res.json({
             success: result.success,
-            message: result.success ? `Test email sent to ${formatRecipientList(recipients)}` : result.message
+            invalidRecipients: invalid,
+            sentRecipients: result.success ? recipients : [],
+            message: result.success
+                ? appendSkippedInvalidMessage(`Test email sent to ${formatRecipientList(recipients)}`, invalid)
+                : result.message
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -120,23 +127,28 @@ router.post('/daily-summary', async (req, res) => {
         }
 
         const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
-        if (invalid.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid email address: ${invalid.join(', ')}`
-            });
-        }
-
         if (recipients.length === 0) {
-            return res.status(400).json({ success: false, message: 'No recipient email configured' });
+            return res.status(400).json({ success: false, message: buildMissingRecipientMessage(invalid) });
         }
 
         const result = await calculateAndSendDailySummary(recipients);
+        const sentRecipients = recipients.filter((entry, index) => result.results?.[index]?.success);
+        const failedRecipients = recipients.filter((entry, index) => !result.results?.[index]?.success);
+        const success = sentRecipients.length > 0;
+        const baseMessage = success
+            ? `Daily summary sent to ${formatRecipientList(sentRecipients)}`
+            : (result.message || 'Failed to send daily summary');
+        const failureSuffix = failedRecipients.length > 0
+            ? `. Failed: ${formatRecipientList(failedRecipients)}`
+            : '';
 
         res.json({
-            success: result.success,
-            message: result.success ? `Daily summary sent to ${formatRecipientList(recipients)}` : result.message,
-            data: result.data
+            success,
+            message: appendSkippedInvalidMessage(`${baseMessage}${failureSuffix}`, invalid),
+            data: result.data,
+            sentRecipients,
+            failedRecipients,
+            invalidRecipients: invalid
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -156,15 +168,8 @@ router.post('/send-report', async (req, res) => {
         }
 
         const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
-        if (invalid.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid email address: ${invalid.join(', ')}`
-            });
-        }
-
         if (recipients.length === 0) {
-            return res.status(400).json({ success: false, message: 'No recipient email configured' });
+            return res.status(400).json({ success: false, message: buildMissingRecipientMessage(invalid) });
         }
 
         const reportTitles = {
@@ -178,11 +183,22 @@ router.post('/send-report', async (req, res) => {
         const options = { title, fromDate, toDate, type };
 
         const results = await sendReportEmail(data, options, recipients);
-        const sent = results.some((entry) => entry.success);
+        const sentRecipients = recipients.filter((entry, index) => results[index]?.success);
+        const failedRecipients = recipients.filter((entry, index) => !results[index]?.success);
+        const sent = sentRecipients.length > 0;
+        const baseMessage = sent
+            ? `${title} sent to ${formatRecipientList(sentRecipients)}`
+            : 'Failed to send email report';
+        const failureSuffix = failedRecipients.length > 0
+            ? `. Failed: ${formatRecipientList(failedRecipients)}`
+            : '';
 
         res.json({
             success: sent,
-            message: sent ? `${title} sent to ${formatRecipientList(recipients)}` : 'Failed to send email report'
+            message: appendSkippedInvalidMessage(`${baseMessage}${failureSuffix}`, invalid),
+            sentRecipients,
+            failedRecipients,
+            invalidRecipients: invalid
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -207,26 +223,30 @@ router.post('/send-bill/:billId', async (req, res) => {
         }
 
         const { recipients, invalidRecipients: invalid } = resolveRecipients(req, bill.customer?.email);
-        if (invalid.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid email address: ${invalid.join(', ')}`
-            });
-        }
-
         if (recipients.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'No email address found. Please provide a recipient email.'
+                message: buildMissingRecipientMessage(invalid)
             });
         }
 
         const results = await sendBillNotification(bill, recipients);
-        const sent = results.some((entry) => entry.success);
+        const sentRecipients = recipients.filter((entry, index) => results[index]?.success);
+        const failedRecipients = recipients.filter((entry, index) => !results[index]?.success);
+        const sent = sentRecipients.length > 0;
+        const baseMessage = sent
+            ? `Bill ${bill.billNumber} emailed to ${formatRecipientList(sentRecipients)}`
+            : 'Failed to send email';
+        const failureSuffix = failedRecipients.length > 0
+            ? `. Failed: ${formatRecipientList(failedRecipients)}`
+            : '';
 
         res.json({
             success: sent,
-            message: sent ? `Bill ${bill.billNumber} emailed to ${formatRecipientList(recipients)}` : 'Failed to send email'
+            message: appendSkippedInvalidMessage(`${baseMessage}${failureSuffix}`, invalid),
+            sentRecipients,
+            failedRecipients,
+            invalidRecipients: invalid
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

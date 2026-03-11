@@ -8,7 +8,7 @@ import { printReport } from '../utils/printReport';
 import { reportsAPI, emailAPI } from '../services/api';
 import { EmailActionModal, useToast } from '../components/common';
 import { formatDate } from '../utils/dateUtils';
-import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
+import { getEmailRecipientValidation, pickDefaultRecipient } from '../utils/emailUtils';
 
 const SalesReportsPage = () => {
     const toast = useToast();
@@ -145,8 +145,9 @@ const SalesReportsPage = () => {
             return;
         }
 
-        if (!isValidEmailRecipientList(emailTo)) {
-            toast.warning('Enter a valid email address');
+        const { hasValidRecipients } = getEmailRecipientValidation(emailTo);
+        if (!hasValidRecipients) {
+            toast.warning('Enter at least one valid email address');
             return;
         }
 

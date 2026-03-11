@@ -681,7 +681,7 @@ export const calculateAndSendDailySummary = async (recipientEmails) => {
     };
 
     const results = await sendDailySummary(summary, recipientEmails);
-    return { success: true, data: summary, results };
+    return { success: results.some((entry) => entry.success), data: summary, results };
   } catch (error) {
     console.error('Error calculating daily summary:', error);
     return { success: false, message: error.message };

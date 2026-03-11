@@ -187,7 +187,7 @@ export const generateBillPDF = async (bill) => {
     vLine(M + addressW, row2Top, row2Top + row2H);
 
     // Address
-    doc.font('Helvetica').fontSize(8).fillColor(GRAY_TEXT);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(GRAY_TEXT);
     const addrX = M + PX;
     let addrY = row2Top + PY + 2;
     const addrLineH = 11;

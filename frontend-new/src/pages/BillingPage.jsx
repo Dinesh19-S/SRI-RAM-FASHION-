@@ -7,7 +7,7 @@ import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users, Recei
 import BillTemplate from '../components/BillTemplate';
 import { customersAPI, emailAPI } from '../services/api';
 import { EmailActionModal, useToast } from '../components/common';
-import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
+import { getEmailRecipientValidation, pickDefaultRecipient } from '../utils/emailUtils';
 
 const BILL_REFRESH_INTERVAL = 30 * 1000;
 
@@ -259,6 +259,12 @@ const BillingPage = () => {
             return;
         }
 
+        const hasMissingProductId = billItems.some((item) => !item.productId);
+        if (hasMissingProductId) {
+            toast.error('One or more bill items are missing product information');
+            return;
+        }
+
         try {
             const billData = {
                 customer: {
@@ -270,7 +276,7 @@ const BillingPage = () => {
                     stateCode: customer.stateCode
                 },
                 items: billItems.map(item => ({
-                    product: item.productId,
+                    productId: item.productId,
                     name: item.name,
                     quantity: item.noOfPacks || item.quantity,
                     price: item.price,
@@ -370,8 +376,9 @@ const BillingPage = () => {
 
     const handleEmailBill = async () => {
         if (!emailBill) return;
-        if (!isValidEmailRecipientList(emailTo)) {
-            toast.warning('Please enter a valid recipient email');
+        const { hasValidRecipients } = getEmailRecipientValidation(emailTo);
+        if (!hasValidRecipients) {
+            toast.warning('Please enter at least one valid recipient email');
             return;
         }
 

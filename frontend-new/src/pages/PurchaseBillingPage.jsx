@@ -6,7 +6,7 @@ import { billsAPI, emailAPI } from '../services/api';
 import { EmailActionModal, useToast } from '../components/common';
 import { downloadInvoicePDF } from '../utils/invoiceGenerator';
 import { fetchSettings } from '../store/slices/settingsSlice';
-import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
+import { getEmailRecipientValidation, pickDefaultRecipient } from '../utils/emailUtils';
 
 const formatCurrency = (amount) => new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -105,8 +105,9 @@ const PurchaseBillingPage = () => {
     };
 
     const handleEmailBill = async () => {
-        if (!selectedBill || !isValidEmailRecipientList(emailTo)) {
-            toast.warning('Please enter a valid recipient email');
+        const { hasValidRecipients } = getEmailRecipientValidation(emailTo);
+        if (!selectedBill || !hasValidRecipients) {
+            toast.warning('Please enter at least one valid recipient email');
             return;
         }
         setIsSendingEmail(true);

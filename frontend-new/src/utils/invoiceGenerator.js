@@ -159,7 +159,7 @@ export const generateInvoicePDF = (bill, settings = {}) => {
     vLine(M + addrW, row2Top, row2Top + row2H);
 
     // Address
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(7);
     setC(pdf, GRAY_TEXT);
     const addrLines = [

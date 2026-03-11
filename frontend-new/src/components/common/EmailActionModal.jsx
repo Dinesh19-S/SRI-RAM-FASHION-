@@ -11,7 +11,7 @@ const EmailActionModal = ({
     isSubmitting = false,
     submitLabel = 'Send Email',
     placeholder = 'Recipient email address',
-    helperText = 'Use comma to send to multiple recipients.'
+    helperText = 'Use comma to send to multiple recipients. Invalid emails will be skipped.'
 }) => {
     if (!open) {
         return null;

@@ -16,9 +16,22 @@ export const normalizeEmailRecipients = (value) => {
     return [...new Set(recipients.map((entry) => entry.toLowerCase()))];
 };
 
+export const getEmailRecipientValidation = (value) => {
+    const recipients = normalizeEmailRecipients(value);
+    const validRecipients = recipients.filter((entry) => EMAIL_PATTERN.test(entry));
+    const invalidRecipients = recipients.filter((entry) => !EMAIL_PATTERN.test(entry));
+
+    return {
+        recipients,
+        validRecipients,
+        invalidRecipients,
+        hasValidRecipients: validRecipients.length > 0
+    };
+};
+
 export const isValidEmailRecipientList = (value) => {
-    const recipients = splitEmailRecipients(value);
-    return recipients.length > 0 && recipients.every((entry) => EMAIL_PATTERN.test(entry));
+    const { recipients, invalidRecipients } = getEmailRecipientValidation(value);
+    return recipients.length > 0 && invalidRecipients.length === 0;
 };
 
 export const pickDefaultRecipient = (...sources) => {
