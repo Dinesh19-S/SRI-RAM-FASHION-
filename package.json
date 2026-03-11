@@ -1,13 +1,14 @@
 {
     "name": "sri-ram-fashion-app",
     "version": "1.0.0",
-    "description": "Sri Ram Fashions App - Backend API",
+    "description": "Sri Ram Fashions App",
     "scripts": {
         "start": "cd backend && npm start",
-        "build": "cd backend && npm install",
-        "postinstall": "cd backend && npm install"
+        "build": "cd frontend-new && npm install && npm run build",
+        "build:frontend": "cd frontend-new && npm install && npm run build",
+        "install:backend": "cd backend && npm install"
     },
     "engines": {
-        "node": ">=18.0.0"
+        "node": "20.x"
     }
 }
