@@ -1,13 +1,18 @@
 {
-    "name": "sri-ram-fashion-app",
-    "version": "1.0.0",
-    "description": "Sri Ram Fashions App - Backend API",
-    "scripts": {
-        "start": "cd backend && npm start",
-        "build": "cd backend && npm install",
-        "postinstall": "cd backend && npm install"
-    },
-    "engines": {
-        "node": ">=18.0.0"
-    }
+  "name": "sri-ram-fashion-app",
+  "version": "1.0.0",
+  "description": "Sri Ram Fashions App - Backend API",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "build": "cd backend && npm install",
+    "postinstall": "cd backend && npm install",
+    "deploy": "wrangler deploy",
+    "preview": "wrangler dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.72.0"
+  }
 }
