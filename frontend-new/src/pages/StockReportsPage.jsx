@@ -1,18 +1,57 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Package, X, Printer, Search, FileSpreadsheet, Mail } from 'lucide-react';
 import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcelStyled } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
 import { reportsAPI, emailAPI } from '../services/api';
-import { useToast } from '../components/common';
+import { EmailActionModal, useToast } from '../components/common';
+import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
 
 const StockReportsPage = () => {
     const toast = useToast();
+    const { user } = useSelector((state) => state.auth);
     const [nameSearch, setNameSearch] = useState('');
     const [sizeFilter, setSizeFilter] = useState('');
     const [reportData, setReportData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailTo, setEmailTo] = useState(() => pickDefaultRecipient(user?.email));
+    const [defaultRecipient, setDefaultRecipient] = useState(() => pickDefaultRecipient(user?.email));
+    const [emailConfigured, setEmailConfigured] = useState(null);
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        const loadEmailStatus = async () => {
+            try {
+                const response = await emailAPI.getStatus();
+                if (isCancelled) return;
+
+                const nextDefaultRecipient = pickDefaultRecipient(
+                    response?.data?.defaultRecipients,
+                    response?.data?.defaultRecipient,
+                    user?.email
+                );
+
+                setEmailConfigured(Boolean(response?.data?.configured));
+                setDefaultRecipient(nextDefaultRecipient);
+                setEmailTo((current) => current || nextDefaultRecipient);
+            } catch (error) {
+                if (!isCancelled) {
+                    setDefaultRecipient((current) => current || pickDefaultRecipient(user?.email));
+                }
+            }
+        };
+
+        loadEmailStatus();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [user?.email]);
 
     const handleSearch = async () => {
         setIsLoading(true);
@@ -67,24 +106,41 @@ const StockReportsPage = () => {
         printReport('printable-report');
     };
 
-    const handleEmail = async () => {
+    const openEmailModal = () => {
         if (reportData.length === 0) {
             toast.warning('No data to email');
             return;
         }
 
+        setEmailTo((current) => pickDefaultRecipient(current, defaultRecipient, user?.email));
+        setShowEmailModal(true);
+    };
+
+    const handleEmail = async () => {
+        if (emailConfigured === false) {
+            toast.error('Email service is not configured on the server');
+            return;
+        }
+
+        if (!isValidEmailRecipientList(emailTo)) {
+            toast.warning('Enter a valid email address');
+            return;
+        }
+
         try {
-            setIsLoading(true);
+            setIsSendingEmail(true);
             const today = new Date().toISOString().split('T')[0];
             const response = await emailAPI.sendReport({
                 type: 'stock',
                 fromDate: today,
                 toDate: today,
-                data: reportData
+                data: reportData,
+                to: emailTo
             });
 
             if (response.data.success) {
-                toast.success('Stock report emailed successfully!');
+                toast.success(response.data.message || 'Stock report emailed successfully');
+                setShowEmailModal(false);
             } else {
                 toast.error(response.data.message || 'Failed to email report');
             }
@@ -92,7 +148,7 @@ const StockReportsPage = () => {
             console.error('Error emailing report:', error);
             toast.error(error.response?.data?.message || 'Error emailing report');
         } finally {
-            setIsLoading(false);
+            setIsSendingEmail(false);
         }
     };
 
@@ -171,7 +227,7 @@ const StockReportsPage = () => {
                         Print
                     </button>
 
-                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={handleEmail}>
+                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={openEmailModal}>
                         <Mail size={16} />
                         Mail
                     </button>
@@ -279,6 +335,18 @@ const StockReportsPage = () => {
                     </div>
                 </div>
             )}
+
+            <EmailActionModal
+                open={showEmailModal}
+                title="Email Stock Report"
+                description="Send the current stock report to one or more email addresses."
+                value={emailTo}
+                onChange={setEmailTo}
+                onClose={() => setShowEmailModal(false)}
+                onSubmit={handleEmail}
+                isSubmitting={isSendingEmail}
+                submitLabel="Send Report"
+            />
         </div>
     );
 };

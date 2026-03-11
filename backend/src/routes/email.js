@@ -1,53 +1,116 @@
 import express from 'express';
 import Bill from '../models/Bill.js';
-import { isEmailConfigured, sendBillNotification, sendNotification, sendReportEmail, calculateAndSendDailySummary } from '../services/emailService.js';
-import { authorizeRoles } from '../middleware/auth.js';
+import {
+    isEmailConfigured,
+    sendBillNotification,
+    sendNotification,
+    sendReportEmail,
+    calculateAndSendDailySummary
+} from '../services/emailService.js';
 
 const router = express.Router();
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
+const splitRecipients = (value) => {
+    if (Array.isArray(value)) {
+        return value.flatMap((entry) => splitRecipients(entry));
+    }
+
+    return String(value || '')
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+};
+
+const uniqueRecipients = (values = []) => {
+    const flattened = splitRecipients(values);
+    return [...new Set(flattened.map((entry) => entry.toLowerCase()))];
+};
+
+const invalidRecipients = (recipients = []) => recipients.filter((entry) => !EMAIL_PATTERN.test(entry));
+
+const resolveRecipients = (req, ...fallbackSources) => {
+    const requestedRecipients = uniqueRecipients(req.body?.to);
+    const fallbackRecipients = uniqueRecipients([
+        req.user?.email,
+        ...fallbackSources,
+        process.env.ADMIN_EMAIL,
+        process.env.EMAIL_USER
+    ]);
+
+    const recipients = requestedRecipients.length > 0 ? requestedRecipients : fallbackRecipients;
+
+    return {
+        recipients: recipients.filter((entry) => EMAIL_PATTERN.test(entry)),
+        invalidRecipients: invalidRecipients(recipients)
+    };
+};
+
+const getEmailProvider = () => {
+    if (process.env.RESEND_API_KEY) return 'resend';
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) return 'smtp';
+    return null;
+};
+
+const formatRecipientList = (recipients = []) => recipients.join(', ');
 
 // Check email configuration status
-router.get('/status', authorizeRoles('admin'), (req, res) => {
+router.get('/status', (req, res) => {
+    const defaultRecipients = uniqueRecipients([
+        req.user?.email,
+        process.env.ADMIN_EMAIL,
+        process.env.EMAIL_USER
+    ]);
+
     res.json({
         success: true,
         configured: isEmailConfigured(),
+        provider: getEmailProvider(),
+        defaultRecipient: defaultRecipients[0] || '',
+        defaultRecipients,
         emailUser: process.env.EMAIL_USER ? `${process.env.EMAIL_USER.slice(0, 3)}***` : null
     });
 });
 
 // Send test email
-router.post('/test', authorizeRoles('admin'), async (req, res) => {
+router.post('/test', async (req, res) => {
     try {
-        const { to } = req.body;
-        const recipient = to || process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
-
-        if (!recipient) {
-            return res.status(400).json({ success: false, message: 'No recipient email provided' });
-        }
-
         if (!isEmailConfigured()) {
             return res.status(400).json({
                 success: false,
-                message: 'Email service not configured. Set RESEND_API_KEY in .env'
+                message: 'Email service not configured. Set RESEND_API_KEY or EMAIL_USER and EMAIL_PASS in .env'
             });
         }
 
+        const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
+        if (invalid.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid email address: ${invalid.join(', ')}`
+            });
+        }
+
+        if (recipients.length === 0) {
+            return res.status(400).json({ success: false, message: 'No recipient email provided' });
+        }
+
         const result = await sendNotification(
-            recipient,
-            '✅ Test Email - Sri Ram Fashions',
-            'This is a test email to verify your email configuration is working correctly. If you received this, your SMTP settings are properly configured!'
+            recipients,
+            'Test Email - Sri Ram Fashions',
+            'This is a test email to verify your email configuration is working correctly.'
         );
 
         res.json({
             success: result.success,
-            message: result.success ? `Test email sent to ${recipient}` : result.message
+            message: result.success ? `Test email sent to ${formatRecipientList(recipients)}` : result.message
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Send daily summary email to admin
-router.post('/daily-summary', authorizeRoles('admin'), async (req, res) => {
+// Send daily summary email
+router.post('/daily-summary', async (req, res) => {
     try {
         if (!isEmailConfigured()) {
             return res.status(400).json({
@@ -56,17 +119,23 @@ router.post('/daily-summary', authorizeRoles('admin'), async (req, res) => {
             });
         }
 
-        const recipient = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
-        if (!recipient) {
-            return res.status(400).json({ success: false, message: 'No admin email configured' });
+        const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
+        if (invalid.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid email address: ${invalid.join(', ')}`
+            });
         }
 
-        const adminEmails = recipient.split(',').map(e => e.trim());
-        const result = await calculateAndSendDailySummary(adminEmails);
+        if (recipients.length === 0) {
+            return res.status(400).json({ success: false, message: 'No recipient email configured' });
+        }
+
+        const result = await calculateAndSendDailySummary(recipients);
 
         res.json({
             success: result.success,
-            message: result.success ? `Daily summary sent to admin` : result.message,
+            message: result.success ? `Daily summary sent to ${formatRecipientList(recipients)}` : result.message,
             data: result.data
         });
     } catch (error) {
@@ -75,9 +144,9 @@ router.post('/daily-summary', authorizeRoles('admin'), async (req, res) => {
 });
 
 // Send report email
-router.post('/send-report', authorizeRoles('admin'), async (req, res) => {
+router.post('/send-report', async (req, res) => {
     try {
-        const { type, fromDate, toDate, data, to } = req.body;
+        const { type, fromDate, toDate, data } = req.body;
 
         if (!isEmailConfigured()) {
             return res.status(400).json({
@@ -86,8 +155,15 @@ router.post('/send-report', authorizeRoles('admin'), async (req, res) => {
             });
         }
 
-        const recipient = to || process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
-        if (!recipient) {
+        const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
+        if (invalid.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid email address: ${invalid.join(', ')}`
+            });
+        }
+
+        if (recipients.length === 0) {
             return res.status(400).json({ success: false, message: 'No recipient email configured' });
         }
 
@@ -101,24 +177,22 @@ router.post('/send-report', authorizeRoles('admin'), async (req, res) => {
         const title = reportTitles[type] || 'Report';
         const options = { title, fromDate, toDate, type };
 
-        const adminEmails = recipient.split(',').map(e => e.trim());
-        const results = await sendReportEmail(data, options, adminEmails);
-        const sent = results.some(r => r.success);
+        const results = await sendReportEmail(data, options, recipients);
+        const sent = results.some((entry) => entry.success);
 
         res.json({
             success: sent,
-            message: sent ? `${title} sent to ${recipient}` : 'Failed to send email report'
+            message: sent ? `${title} sent to ${formatRecipientList(recipients)}` : 'Failed to send email report'
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Send bill email to customer
+// Send bill email
 router.post('/send-bill/:billId', async (req, res) => {
     try {
         const { billId } = req.params;
-        const { to } = req.body; // Optional override email
 
         const bill = await Bill.findById(billId);
         if (!bill) {
@@ -128,25 +202,31 @@ router.post('/send-bill/:billId', async (req, res) => {
         if (!isEmailConfigured()) {
             return res.status(400).json({
                 success: false,
-                message: 'Email service not configured. Set RESEND_API_KEY in .env'
+                message: 'Email service not configured. Set RESEND_API_KEY or EMAIL_USER and EMAIL_PASS in .env'
             });
         }
 
-        // Determine recipient: explicit `to`, customer email, or admin email
-        const recipient = to || bill.customer?.email;
-        if (!recipient) {
+        const { recipients, invalidRecipients: invalid } = resolveRecipients(req, bill.customer?.email);
+        if (invalid.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid email address: ${invalid.join(', ')}`
+            });
+        }
+
+        if (recipients.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: 'No email address found. Please provide a recipient email.'
             });
         }
 
-        const results = await sendBillNotification(bill, [recipient]);
-        const sent = results.some(r => r.success);
+        const results = await sendBillNotification(bill, recipients);
+        const sent = results.some((entry) => entry.success);
 
         res.json({
             success: sent,
-            message: sent ? `Bill ${bill.billNumber} emailed to ${recipient}` : 'Failed to send email'
+            message: sent ? `Bill ${bill.billNumber} emailed to ${formatRecipientList(recipients)}` : 'Failed to send email'
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

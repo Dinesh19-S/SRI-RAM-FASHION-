@@ -13,7 +13,8 @@ import {
     ComposedChart
 } from 'recharts';
 import { formatDate } from '../utils/dateUtils';
-import { useToast } from '../components/common';
+import { EmailActionModal, useToast } from '../components/common';
+import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
 import { Loader2, Mail, Clock as ClockIcon } from 'lucide-react';
 
 // Static helpers outside component to prevent recreation
@@ -100,8 +101,11 @@ const DashboardPage = () => {
     const [allProducts, setAllProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sendingSummary, setSendingSummary] = useState(false);
+    const [showSummaryModal, setShowSummaryModal] = useState(false);
+    const [summaryRecipient, setSummaryRecipient] = useState(() => pickDefaultRecipient(user?.email));
+    const [defaultSummaryRecipient, setDefaultSummaryRecipient] = useState(() => pickDefaultRecipient(user?.email));
+    const [emailConfigured, setEmailConfigured] = useState(null);
     const [chartPeriod, setChartPeriod] = useState('month');
-    const canSendSummary = user?.role === 'admin';
 
     const applyOverviewPayload = (overview = {}) => {
         const nextStats = overview?.stats || EMPTY_STATS;
@@ -203,27 +207,65 @@ const DashboardPage = () => {
         };
     }, [chartPeriod]);
 
+    useEffect(() => {
+        let isCancelled = false;
+
+        const loadEmailStatus = async () => {
+            try {
+                const response = await emailAPI.getStatus();
+                if (isCancelled) return;
+
+                const configured = Boolean(response?.data?.configured);
+                const nextDefaultRecipient = pickDefaultRecipient(
+                    response?.data?.defaultRecipients,
+                    response?.data?.defaultRecipient,
+                    user?.email
+                );
+
+                setEmailConfigured(configured);
+                setDefaultSummaryRecipient(nextDefaultRecipient);
+                setSummaryRecipient((current) => current || nextDefaultRecipient);
+            } catch (error) {
+                if (!isCancelled) {
+                    setDefaultSummaryRecipient((current) => current || pickDefaultRecipient(user?.email));
+                }
+            }
+        };
+
+        loadEmailStatus();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [user?.email]);
+
     const maxStock = useMemo(
         () => Math.max(...allProducts.map((product) => product.stock || 0), 1),
         [allProducts]
     );
 
+    const openSummaryModal = () => {
+        setSummaryRecipient((current) => pickDefaultRecipient(current, defaultSummaryRecipient, user?.email));
+        setShowSummaryModal(true);
+    };
+
     const handleSendSummary = async () => {
-        if (!canSendSummary) {
-            toast.warning('Daily summary can be sent only from an admin account');
+        if (emailConfigured === false) {
+            toast.error('Email service is not configured on the server');
+            return;
+        }
+
+        if (!isValidEmailRecipientList(summaryRecipient)) {
+            toast.warning('Enter a valid email address');
             return;
         }
 
         try {
             setSendingSummary(true);
-            await emailAPI.sendDailySummary();
-            toast.success('Daily summary email sent');
+            const response = await emailAPI.sendDailySummary(summaryRecipient);
+            toast.success(response?.data?.message || 'Daily summary email sent');
+            setShowSummaryModal(false);
         } catch (err) {
-            if (err?.response?.status === 403) {
-                toast.warning('Daily summary can be sent only from an admin account');
-                return;
-            }
-
             toast.error(err?.response?.data?.message || 'Failed to send summary');
         } finally {
             setSendingSummary(false);
@@ -248,17 +290,15 @@ const DashboardPage = () => {
                         <DigitalClock />
                     </div>
                 </div>
-                {canSendSummary && (
-                    <button
-                        onClick={handleSendSummary}
-                        disabled={sendingSummary}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-70"
-                        style={{ background: '#fff', color: '#1e40af', borderColor: '#bfdbfe' }}
-                    >
-                        {sendingSummary ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-                        {sendingSummary ? 'Sending...' : 'Email Daily Summary'}
-                    </button>
-                )}
+                <button
+                    onClick={openSummaryModal}
+                    disabled={sendingSummary}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-70"
+                    style={{ background: '#fff', color: '#1e40af', borderColor: '#bfdbfe' }}
+                >
+                    {sendingSummary ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                    {sendingSummary ? 'Sending...' : 'Email Daily Summary'}
+                </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -455,6 +495,17 @@ const DashboardPage = () => {
                 </div>
             </div>
 
+            <EmailActionModal
+                open={showSummaryModal}
+                title="Email Daily Summary"
+                description="Send today's business summary to one or more email addresses."
+                value={summaryRecipient}
+                onChange={setSummaryRecipient}
+                onClose={() => setShowSummaryModal(false)}
+                onSubmit={handleSendSummary}
+                isSubmitting={sendingSummary}
+                submitLabel="Send Summary"
+            />
         </div>
     );
 };

@@ -15,3 +15,4 @@ export {
     DashboardSkeleton
 } from './Skeleton';
 export { default as ConfirmDialog } from './ConfirmDialog';
+export { default as EmailActionModal } from './EmailActionModal';

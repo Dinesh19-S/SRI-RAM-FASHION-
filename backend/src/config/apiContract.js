@@ -54,6 +54,13 @@ export const API_CONTRACT = {
             lowStockAlerts: '/dashboard/low-stock-alerts',
             categoryStats: '/dashboard/category-stats'
         },
+        email: {
+            status: '/email/status',
+            test: '/email/test',
+            dailySummary: '/email/daily-summary',
+            sendReport: '/email/send-report',
+            sendBill: '/email/send-bill/:billId'
+        },
         reports: {
             salesSummary: '/reports/sales-summary',
             salesTrend: '/reports/sales-trend',

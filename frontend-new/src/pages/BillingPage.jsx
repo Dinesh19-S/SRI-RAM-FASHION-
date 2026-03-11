@@ -6,7 +6,8 @@ import { fetchSettings } from '../store/slices/settingsSlice';
 import { Plus, Search, Printer, Eye, Trash2, X, FileText, Download, Users, Receipt, Mail } from 'lucide-react';
 import BillTemplate from '../components/BillTemplate';
 import { customersAPI, emailAPI } from '../services/api';
-import { useToast } from '../components/common';
+import { EmailActionModal, useToast } from '../components/common';
+import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
 
 const BILL_REFRESH_INTERVAL = 30 * 1000;
 
@@ -16,6 +17,7 @@ const BillingPage = () => {
     const { items: bills, isLoading, lastFetchedAt } = useSelector((state) => state.bills);
     const { items: products } = useSelector((state) => state.products);
     const settings = useSelector((state) => state.settings.data);
+    const { user } = useSelector((state) => state.auth);
     const billTemplateRef = useRef(null);
     const emptyInvoiceRef = useRef(null);
 
@@ -367,13 +369,19 @@ const BillingPage = () => {
     };
 
     const handleEmailBill = async () => {
-        if (!emailBill || !emailTo) return;
+        if (!emailBill) return;
+        if (!isValidEmailRecipientList(emailTo)) {
+            toast.warning('Please enter a valid recipient email');
+            return;
+        }
+
         setIsSendingEmail(true);
         try {
-            await emailAPI.sendBill(emailBill._id, emailTo);
-            toast.success('Email sent successfully');
+            const response = await emailAPI.sendBill(emailBill._id, emailTo);
+            toast.success(response?.data?.message || 'Email sent successfully');
             setShowEmailModal(false);
             setEmailBill(null);
+            setEmailTo('');
         } catch (error) {
             toast.error('Failed to send email: ' + (error.response?.data?.message || error.message));
         } finally {
@@ -392,6 +400,11 @@ const BillingPage = () => {
 
     const formatCurrency = (amount) => `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
     const resolveBillType = (billType) => (billType === 'DIRECT' ? 'SALES' : (billType || 'SALES'));
+    const closeEmailModal = () => {
+        setShowEmailModal(false);
+        setEmailBill(null);
+        setEmailTo('');
+    };
 
     const filteredBills = useMemo(() => bills.filter((bill) => {
         const searchLower = deferredSearchQuery.toLowerCase();
@@ -515,7 +528,11 @@ const BillingPage = () => {
                                             <button
                                                 className="action-btn"
                                                 style={{ color: '#7c3aed', backgroundColor: '#f5f3ff' }}
-                                                onClick={() => { setEmailBill(bill); setEmailTo(bill.customer?.email || ''); setShowEmailModal(true); }}
+                                                onClick={() => {
+                                                    setEmailBill(bill);
+                                                    setEmailTo(pickDefaultRecipient(bill.customer?.email, user?.email));
+                                                    setShowEmailModal(true);
+                                                }}
                                                 title="Email Bill"
                                             >
                                                 <Mail size={18} />
@@ -549,7 +566,7 @@ const BillingPage = () => {
                                     style={{ backgroundColor: '#1e40af', color: 'white' }}
                                     onClick={() => {
                                         setEmailBill(selectedBill);
-                                        setEmailTo(selectedBill.customer?.email || '');
+                                        setEmailTo(pickDefaultRecipient(selectedBill.customer?.email, user?.email));
                                         setShowPreviewModal(false);
                                         setShowEmailModal(true);
                                     }}
@@ -826,46 +843,16 @@ const BillingPage = () => {
                 </div>
             )}
 
-            {/* Email Bill Modal */}
-            {showEmailModal && emailBill && (
-                <div className="modal-overlay" onClick={() => { setShowEmailModal(false); setEmailBill(null); }}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <div className="text-center">
-                            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#f5f3ff' }}>
-                                <Mail size={32} style={{ color: '#7c3aed' }} />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Email Bill</h3>
-                            <p className="text-gray-600 mb-4">
-                                Send bill <strong>{emailBill.billNumber}</strong> ({formatCurrency(emailBill.grandTotal)}) via email.
-                            </p>
-                            <input
-                                type="email"
-                                className="form-input w-full mb-4"
-                                placeholder="Recipient email address"
-                                value={emailTo}
-                                onChange={(e) => setEmailTo(e.target.value)}
-                                autoFocus
-                            />
-                            <div className="flex gap-3 justify-center">
-                                <button
-                                    className="btn btn-secondary"
-                                    onClick={() => { setShowEmailModal(false); setEmailBill(null); }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="btn"
-                                    style={{ backgroundColor: '#7c3aed', color: 'white' }}
-                                    onClick={handleEmailBill}
-                                    disabled={isSendingEmail || !emailTo}
-                                >
-                                    {isSendingEmail ? 'Sending...' : 'Send Email'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <EmailActionModal
+                open={Boolean(showEmailModal && emailBill)}
+                title="Email Bill"
+                description={emailBill ? `Send bill ${emailBill.billNumber} (${formatCurrency(emailBill.grandTotal)}) via email.` : ''}
+                value={emailTo}
+                onChange={setEmailTo}
+                onClose={closeEmailModal}
+                onSubmit={handleEmailBill}
+                isSubmitting={isSendingEmail}
+            />
 
             {/* Delete Bill Confirmation Modal */}
             {

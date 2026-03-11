@@ -441,9 +441,9 @@ export const aiAPI = {
 
 export const emailAPI = {
     getStatus: () => cachedGet(ENDPOINTS.email.status, {}, CACHE_TTL.SHORT),
-    sendTest: (to) => api.post(ENDPOINTS.email.test, { to }),
-    sendBill: (billId, to) => api.post(ENDPOINTS.email.sendBill(billId), { to }),
-    sendDailySummary: () => api.post(ENDPOINTS.email.dailySummary),
+    sendTest: (to) => api.post(ENDPOINTS.email.test, to ? { to } : {}),
+    sendBill: (billId, to) => api.post(ENDPOINTS.email.sendBill(billId), to ? { to } : {}),
+    sendDailySummary: (to) => api.post(ENDPOINTS.email.dailySummary, to ? { to } : {}),
     sendReport: (data) => api.post(ENDPOINTS.email.sendReport, data),
 };
 

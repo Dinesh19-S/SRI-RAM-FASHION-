@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { Search, TrendingUp, X, Printer, FileSpreadsheet, Mail, FileText } from 'lucide-react';
 import DateRangeFilter from '../components/reports/DateRangeFilter';
 import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcelStyled } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
 import { reportsAPI, emailAPI } from '../services/api';
-import { useToast } from '../components/common';
+import { EmailActionModal, useToast } from '../components/common';
 import { formatDate } from '../utils/dateUtils';
+import { isValidEmailRecipientList, pickDefaultRecipient } from '../utils/emailUtils';
 
 const SalesReportsPage = () => {
     const toast = useToast();
+    const { user } = useSelector((state) => state.auth);
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [customerSearch, setCustomerSearch] = useState('');
     const [invoiceNo, setInvoiceNo] = useState('');
     const [reportData, setReportData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailTo, setEmailTo] = useState(() => pickDefaultRecipient(user?.email));
+    const [defaultRecipient, setDefaultRecipient] = useState(() => pickDefaultRecipient(user?.email));
+    const [emailConfigured, setEmailConfigured] = useState(null);
 
     // Initialize with current month dates
     useEffect(() => {
@@ -25,6 +33,37 @@ const SalesReportsPage = () => {
         setFromDate(firstDay.toISOString().split('T')[0]);
         setToDate(today.toISOString().split('T')[0]);
     }, []);
+
+    useEffect(() => {
+        let isCancelled = false;
+
+        const loadEmailStatus = async () => {
+            try {
+                const response = await emailAPI.getStatus();
+                if (isCancelled) return;
+
+                const nextDefaultRecipient = pickDefaultRecipient(
+                    response?.data?.defaultRecipients,
+                    response?.data?.defaultRecipient,
+                    user?.email
+                );
+
+                setEmailConfigured(Boolean(response?.data?.configured));
+                setDefaultRecipient(nextDefaultRecipient);
+                setEmailTo((current) => current || nextDefaultRecipient);
+            } catch (error) {
+                if (!isCancelled) {
+                    setDefaultRecipient((current) => current || pickDefaultRecipient(user?.email));
+                }
+            }
+        };
+
+        loadEmailStatus();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [user?.email]);
 
     const handleSearch = async () => {
         setIsLoading(true);
@@ -90,23 +129,40 @@ const SalesReportsPage = () => {
         printReport('printable-report');
     };
 
-    const handleEmail = async () => {
+    const openEmailModal = () => {
         if (reportData.length === 0) {
             toast.warning('No data to email');
             return;
         }
 
+        setEmailTo((current) => pickDefaultRecipient(current, defaultRecipient, user?.email));
+        setShowEmailModal(true);
+    };
+
+    const handleEmail = async () => {
+        if (emailConfigured === false) {
+            toast.error('Email service is not configured on the server');
+            return;
+        }
+
+        if (!isValidEmailRecipientList(emailTo)) {
+            toast.warning('Enter a valid email address');
+            return;
+        }
+
         try {
-            setIsLoading(true);
+            setIsSendingEmail(true);
             const response = await emailAPI.sendReport({
                 type: 'sales',
                 fromDate,
                 toDate,
-                data: reportData
+                data: reportData,
+                to: emailTo
             });
 
             if (response.data.success) {
-                toast.success('Sales report emailed successfully!');
+                toast.success(response.data.message || 'Sales report emailed successfully');
+                setShowEmailModal(false);
             } else {
                 toast.error(response.data.message || 'Failed to email report');
             }
@@ -114,7 +170,7 @@ const SalesReportsPage = () => {
             console.error('Error emailing report:', error);
             toast.error(error.response?.data?.message || 'Error emailing report');
         } finally {
-            setIsLoading(false);
+            setIsSendingEmail(false);
         }
     };
 
@@ -210,7 +266,7 @@ const SalesReportsPage = () => {
                         Print
                     </button>
 
-                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={handleEmail}>
+                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={openEmailModal}>
                         <Mail size={16} />
                         Mail
                     </button>
@@ -329,6 +385,18 @@ const SalesReportsPage = () => {
                     </div>
                 </div>
             )}
+
+            <EmailActionModal
+                open={showEmailModal}
+                title="Email Sales Report"
+                description="Send the current sales report to one or more email addresses."
+                value={emailTo}
+                onChange={setEmailTo}
+                onClose={() => setShowEmailModal(false)}
+                onSubmit={handleEmail}
+                isSubmitting={isSendingEmail}
+                submitLabel="Send Report"
+            />
         </div>
     );
 };

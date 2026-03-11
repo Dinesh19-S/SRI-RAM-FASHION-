@@ -76,11 +76,36 @@ npm install
 # Optional but recommended:
 # GOOGLE_CLIENT_ID=your-google-client-id
 # BOOTSTRAP_DEFAULT_ADMIN=false
+#
+# Email delivery (choose one)
+# RESEND_API_KEY=your_resend_api_key
+# RESEND_FROM=Sri Ram Fashions <no-reply@yourdomain.com>
+# ADMIN_EMAIL=owner@yourdomain.com
+#
+# or Gmail SMTP fallback
+# EMAIL_USER=your_gmail_address
+# EMAIL_PASS=your_gmail_app_password
+# EMAIL_FROM=Sri Ram Fashions <your_gmail_address>
 
 npm run dev
 ```
 
 Backend runs at: http://localhost:5000
+
+### Email Setup
+
+Manual email actions in the dashboard, billing, purchase billing, and report pages use the backend email service.
+
+Use one of these configurations in `backend/.env`:
+
+- `RESEND_API_KEY`, `RESEND_FROM`, `ADMIN_EMAIL`
+- `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_FROM`, `ADMIN_EMAIL`
+
+Notes:
+
+- `ADMIN_EMAIL` is used for scheduled alerts and as a fallback recipient.
+- Manual email actions now also default to the logged-in user's email when available.
+- Restart the backend after changing email env values.
 
 ### Google Login Setup (Fix for `Error 400: invalid_request`)
 
