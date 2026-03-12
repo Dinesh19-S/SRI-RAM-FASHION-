@@ -17,9 +17,6 @@ const StockReportsPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-    const [showEmailModal, setShowEmailModal] = useState(false);
-    const [emailTo, setEmailTo] = useState(() => pickDefaultRecipient(user?.email));
-    const [defaultRecipient, setDefaultRecipient] = useState(() => pickDefaultRecipient(user?.email));
     const [emailConfigured, setEmailConfigured] = useState(null);
 
     useEffect(() => {
@@ -29,20 +26,9 @@ const StockReportsPage = () => {
             try {
                 const response = await emailAPI.getStatus();
                 if (isCancelled) return;
-
-                const nextDefaultRecipient = pickDefaultRecipient(
-                    response?.data?.defaultRecipients,
-                    response?.data?.defaultRecipient,
-                    user?.email
-                );
-
                 setEmailConfigured(Boolean(response?.data?.configured));
-                setDefaultRecipient(nextDefaultRecipient);
-                setEmailTo((current) => current || nextDefaultRecipient);
             } catch (error) {
-                if (!isCancelled) {
-                    setDefaultRecipient((current) => current || pickDefaultRecipient(user?.email));
-                }
+                console.error('Error loading email status:', error);
             }
         };
 
@@ -51,7 +37,7 @@ const StockReportsPage = () => {
         return () => {
             isCancelled = true;
         };
-    }, [user?.email]);
+    }, []);
 
     const handleSearch = async () => {
         setIsLoading(true);
@@ -106,28 +92,18 @@ const StockReportsPage = () => {
         printReport('printable-report');
     };
 
-    const openEmailModal = () => {
+    const handleEmail = async () => {
         if (reportData.length === 0) {
             toast.warning('No data to email');
             return;
         }
 
-        setEmailTo((current) => pickDefaultRecipient(current, defaultRecipient, user?.email));
-        setShowEmailModal(true);
-    };
-
-    const handleEmail = async () => {
         if (emailConfigured === false) {
             toast.error('Email service is not configured on the server');
             return;
         }
 
-        const { hasValidRecipients } = getEmailRecipientValidation(emailTo);
-        if (!hasValidRecipients) {
-            toast.warning('Enter at least one valid email address');
-            return;
-        }
-
+        const toastId = toast.loading('Preparing stock report email...');
         try {
             setIsSendingEmail(true);
             const today = new Date().toISOString().split('T')[0];
@@ -135,19 +111,29 @@ const StockReportsPage = () => {
                 type: 'stock',
                 fromDate: today,
                 toDate: today,
-                data: reportData,
-                to: emailTo
+                data: reportData
             });
 
             if (response.data.success) {
-                toast.success(response.data.message || 'Stock report emailed successfully');
-                setShowEmailModal(false);
+                toast.update(toastId, { 
+                    message: response.data.message || 'Stock report is being sent to admin', 
+                    type: 'success',
+                    duration: 5000 
+                });
             } else {
-                toast.error(response.data.message || 'Failed to email report');
+                toast.update(toastId, { 
+                    message: response.data.message || 'Failed to initiate email', 
+                    type: 'error',
+                    duration: 5000 
+                });
             }
         } catch (error) {
             console.error('Error emailing report:', error);
-            toast.error(error.response?.data?.message || 'Error emailing report');
+            toast.update(toastId, { 
+                message: error.response?.data?.message || 'Error emailing report', 
+                type: 'error',
+                duration: 5000 
+            });
         } finally {
             setIsSendingEmail(false);
         }
@@ -155,16 +141,19 @@ const StockReportsPage = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Page Header */}
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <Package className="text-orange-600" size={20} />
+            <div className="page-header-shell">
+                <div className="flex items-start gap-4">
+                    <div className="page-icon-badge">
+                        <Package size={20} />
+                    </div>
+                    <div className="page-header-copy">
+                        <p className="page-header-kicker">Inventory and stock reports</p>
+                        <h1 className="page-header-title">Stock</h1>
+                    </div>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">Stock</h1>
             </div>
 
-            {/* Filters and Actions */}
-            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="page-filter-card">
                 <div className="flex flex-wrap items-end gap-3">
                     {/* Name */}
                     <div className="shrink-0 w-64">
@@ -228,22 +217,27 @@ const StockReportsPage = () => {
                         Print
                     </button>
 
-                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={openEmailModal}>
-                        <Mail size={16} />
-                        Mail
+                    <button 
+                        className="btn text-white bg-blue-600 hover:bg-blue-700" 
+                        onClick={handleEmail}
+                        disabled={isSendingEmail || isLoading}
+                    >
+                        <Mail size={16} className={isSendingEmail ? 'animate-spin' : ''} />
+                        {isSendingEmail ? 'Sending...' : 'Mail'}
                     </button>
                 </div>
             </div>
 
-            {/* Report Content */}
-            <div className="card print:shadow-none" id="printable-report">
-                <ReportHeader
-                    reportTitle="Stock Report"
-                    additionalInfo={`Date: ${new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}`}
-                />
+            <div className="page-table-card print:shadow-none" id="printable-report">
+                <div className="p-6">
+                    <ReportHeader
+                        reportTitle="Stock Report"
+                        additionalInfo={`Date: ${new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}`}
+                    />
+                </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="page-table">
                         <thead>
                             <tr className="border-b-2 border-gray-300">
                                 <th className="text-left py-3 px-4 font-semibold text-gray-700 print:text-black">S.No</th>
@@ -337,17 +331,6 @@ const StockReportsPage = () => {
                 </div>
             )}
 
-            <EmailActionModal
-                open={showEmailModal}
-                title="Email Stock Report"
-                description="Send the current stock report to one or more email addresses."
-                value={emailTo}
-                onChange={setEmailTo}
-                onClose={() => setShowEmailModal(false)}
-                onSubmit={handleEmail}
-                isSubmitting={isSendingEmail}
-                submitLabel="Send Report"
-            />
         </div>
     );
 };

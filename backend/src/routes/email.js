@@ -126,29 +126,23 @@ router.post('/daily-summary', async (req, res) => {
             });
         }
 
-        const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
+        // Force recipients to be the admin email only as per user request
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+        const recipients = [adminEmail].filter((e) => EMAIL_PATTERN.test(e));
+
         if (recipients.length === 0) {
-            return res.status(400).json({ success: false, message: buildMissingRecipientMessage(invalid) });
+            return res.status(400).json({ success: false, message: 'No valid admin email configured' });
         }
 
-        const result = await calculateAndSendDailySummary(recipients);
-        const sentRecipients = recipients.filter((entry, index) => result.results?.[index]?.success);
-        const failedRecipients = recipients.filter((entry, index) => !result.results?.[index]?.success);
-        const success = sentRecipients.length > 0;
-        const baseMessage = success
-            ? `Daily summary sent to ${formatRecipientList(sentRecipients)}`
-            : (result.message || 'Failed to send daily summary');
-        const failureSuffix = failedRecipients.length > 0
-            ? `. Failed: ${formatRecipientList(failedRecipients)}`
-            : '';
+        // Trigger calculation and sending in background for speed
+        calculateAndSendDailySummary(recipients).catch(error => {
+            console.error('Background Daily Summary Error:', error);
+        });
 
         res.json({
-            success,
-            message: appendSkippedInvalidMessage(`${baseMessage}${failureSuffix}`, invalid),
-            data: result.data,
-            sentRecipients,
-            failedRecipients,
-            invalidRecipients: invalid
+            success: true,
+            message: `Daily summary is being sent to ${formatRecipientList(recipients)}. You will receive it shortly.`,
+            sentRecipients: recipients
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -167,9 +161,12 @@ router.post('/send-report', async (req, res) => {
             });
         }
 
-        const { recipients, invalidRecipients: invalid } = resolveRecipients(req);
+        // Force recipients to be the admin email only as per user request
+        const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
+        const recipients = [adminEmail].filter((e) => EMAIL_PATTERN.test(e));
+
         if (recipients.length === 0) {
-            return res.status(400).json({ success: false, message: buildMissingRecipientMessage(invalid) });
+            return res.status(400).json({ success: false, message: 'No valid admin email configured' });
         }
 
         const reportTitles = {
@@ -182,23 +179,15 @@ router.post('/send-report', async (req, res) => {
         const title = reportTitles[type] || 'Report';
         const options = { title, fromDate, toDate, type };
 
-        const results = await sendReportEmail(data, options, recipients);
-        const sentRecipients = recipients.filter((entry, index) => results[index]?.success);
-        const failedRecipients = recipients.filter((entry, index) => !results[index]?.success);
-        const sent = sentRecipients.length > 0;
-        const baseMessage = sent
-            ? `${title} sent to ${formatRecipientList(sentRecipients)}`
-            : 'Failed to send email report';
-        const failureSuffix = failedRecipients.length > 0
-            ? `. Failed: ${formatRecipientList(failedRecipients)}`
-            : '';
+        // Trigger PDF generation and sending in background for speed
+        sendReportEmail(data, options, recipients).catch(error => {
+            console.error(`Background ${title} Error:`, error);
+        });
 
         res.json({
-            success: sent,
-            message: appendSkippedInvalidMessage(`${baseMessage}${failureSuffix}`, invalid),
-            sentRecipients,
-            failedRecipients,
-            invalidRecipients: invalid
+            success: true,
+            message: `${title} is being processed and will be sent to ${formatRecipientList(recipients)} shortly.`,
+            sentRecipients: recipients
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -233,11 +222,28 @@ router.post('/send-bill/:billId', async (req, res) => {
         const results = await sendBillNotification(bill, recipients);
         const sentRecipients = recipients.filter((entry, index) => results[index]?.success);
         const failedRecipients = recipients.filter((entry, index) => !results[index]?.success);
+        
+        // At least one recipient was successful
         const sent = sentRecipients.length > 0;
+        
+        // Aggregate error messages from results if failed
+        let errorMessage = 'Failed to send email';
+        if (!sent && results.length > 0) {
+            const firstError = results.find(r => r.message)?.message;
+            if (firstError) {
+                if (firstError.includes('sandbox_not_allowed')) {
+                    errorMessage = 'Email rejected by provider (Resend Sandbox). You can only send to verified emails.';
+                } else {
+                    errorMessage = `Failed to send: ${firstError}`;
+                }
+            }
+        }
+
         const baseMessage = sent
             ? `Bill ${bill.billNumber} emailed to ${formatRecipientList(sentRecipients)}`
-            : 'Failed to send email';
-        const failureSuffix = failedRecipients.length > 0
+            : errorMessage;
+            
+        const failureSuffix = (sent && failedRecipients.length > 0)
             ? `. Failed: ${formatRecipientList(failedRecipients)}`
             : '';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Info, X, Loader2 } from 'lucide-react';
 
 // Toast Context
 const ToastContext = createContext(null);
@@ -14,6 +14,10 @@ export const ToastProvider = ({ children }) => {
         return id;
     }, []);
 
+    const updateToast = useCallback((id, updates) => {
+        setToasts(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    }, []);
+
     const removeToast = useCallback((id) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
     }, []);
@@ -23,6 +27,8 @@ export const ToastProvider = ({ children }) => {
         error: (message, duration) => addToast(message, 'error', duration),
         warning: (message, duration) => addToast(message, 'warning', duration),
         info: (message, duration) => addToast(message, 'info', duration),
+        loading: (message) => addToast(message, 'loading', 0), // 0 means manual close or update
+        update: (id, updates) => updateToast(id, updates),
     };
 
     return (
@@ -62,6 +68,8 @@ const ToastItem = ({ toast, onRemove }) => {
     const [isExiting, setIsExiting] = useState(false);
 
     useEffect(() => {
+        if (toast.duration === 0) return; // Persistent toast
+
         const timer = setTimeout(() => {
             setIsExiting(true);
             setTimeout(onRemove, 300);
@@ -80,6 +88,7 @@ const ToastItem = ({ toast, onRemove }) => {
         error: <XCircle size={20} />,
         warning: <AlertTriangle size={20} />,
         info: <Info size={20} />,
+        loading: <Loader2 size={20} className="animate-spin" />,
     };
 
     const styles = {
@@ -102,6 +111,11 @@ const ToastItem = ({ toast, onRemove }) => {
             background: 'rgba(59, 130, 246, 0.95)',
             borderColor: 'rgba(255, 255, 255, 0.3)',
             iconBg: 'rgba(255, 255, 255, 0.2)',
+        },
+        loading: {
+            background: 'rgba(31, 41, 55, 0.95)',
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            iconBg: 'rgba(255, 255, 255, 0.1)',
         },
     };
 

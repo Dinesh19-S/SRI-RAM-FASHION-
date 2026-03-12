@@ -138,30 +138,33 @@ const PurchaseBillingPage = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Purchase Billing</h1>
-                    <p className="text-sm text-gray-500">Auto-generated bills from purchase entries with email and PDF actions.</p>
+            <div className="page-header-shell">
+                <div className="page-header-copy">
+                    <p className="page-header-kicker">Purchase bill archive</p>
+                    <h1 className="page-header-title">Purchase Billing</h1>
+                    <p className="text-sm text-slate-600">Auto-generated bills from purchase entries with email and PDF actions.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="page-header-toolbar">
                     <button className="btn btn-ghost" onClick={handleReset}>
                         <RefreshCcw size={16} /> Reset
                     </button>
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="card p-4">
+            <div className="page-filter-card">
                 <div className="flex flex-wrap items-end gap-3">
-                    <div className="w-48">
+                    <div className="w-56">
                         <label className="form-label">Search</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Bill no / supplier"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                        <div className="page-search">
+                            <Search size={16} className="page-search-icon" />
+                            <input
+                                type="text"
+                                className="form-input pl-9"
+                                placeholder="Bill no / purchase inv no / supplier"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
                     </div>
                     <div>
                         <label className="form-label">From</label>
@@ -187,30 +190,29 @@ const PurchaseBillingPage = () => {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="card p-0">
+            <div className="page-table-card">
                 <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                    <table className="page-table">
                         <thead>
-                            <tr className="bg-gray-100 border-b-2 border-gray-200">
-                                <th className="p-3 text-left text-sm font-semibold text-gray-700">Bill No</th>
-                                <th className="p-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                                <th className="p-3 text-left text-sm font-semibold text-gray-700">Supplier</th>
-                                <th className="p-3 text-left text-sm font-semibold text-gray-700">Amount</th>
-                                <th className="p-3 text-left text-sm font-semibold text-gray-700">Payment</th>
-                                <th className="p-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                            <tr>
+                                <th>Bill No</th>
+                                <th>Date</th>
+                                <th>Supplier</th>
+                                <th>Amount</th>
+                                <th>Payment</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="6" className="p-6 text-center">
+                                    <td colSpan="6" className="page-empty-state">
                                         <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                                     </td>
                                 </tr>
                             ) : bills.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="p-6 text-center text-gray-600">
+                                    <td colSpan="6" className="page-empty-state">
                                         No purchase bills found for the selected filters.
                                     </td>
                                 </tr>
@@ -219,12 +221,19 @@ const PurchaseBillingPage = () => {
                                     const date = bill.date || bill.createdAt;
                                     const displayDate = date ? new Date(date).toLocaleDateString('en-GB') : '-';
                                     return (
-                                        <tr key={bill._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                            <td className="p-3 font-semibold text-gray-900">{bill.billNumber}</td>
-                                            <td className="p-3 text-sm text-gray-700">{displayDate}</td>
-                                            <td className="p-3 text-sm text-gray-900">{bill.customer?.name || bill.partyName || '-'}</td>
-                                            <td className="p-3 text-sm font-bold text-green-700">{formatCurrency(bill.grandTotal || 0)}</td>
-                                            <td className="p-3">
+                                        <tr key={bill._id}>
+                                            <td className="font-semibold text-gray-900">
+                                                <div>{bill.billNumber}</div>
+                                                {bill.referenceInvoiceNumber ? (
+                                                    <div className="text-xs font-medium text-gray-500">
+                                                        Inv: {bill.referenceInvoiceNumber}
+                                                    </div>
+                                                ) : null}
+                                            </td>
+                                            <td>{displayDate}</td>
+                                            <td className="text-gray-900">{bill.customer?.name || bill.partyName || '-'}</td>
+                                            <td className="font-bold text-green-700">{formatCurrency(bill.grandTotal || 0)}</td>
+                                            <td>
                                                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold"
                                                     style={{
                                                         backgroundColor: bill.paymentStatus === 'paid' ? '#dcfce7' : '#fef3c7',
@@ -233,15 +242,15 @@ const PurchaseBillingPage = () => {
                                                     {bill.paymentStatus ? bill.paymentStatus.toUpperCase() : 'PENDING'}
                                                 </span>
                                             </td>
-                                            <td className="p-3">
+                                            <td>
                                                 <div className="flex gap-2">
                                                     <button className="action-btn action-btn-blue" title="View" onClick={() => openPreview(bill)}>
                                                         <Eye size={18} />
                                                     </button>
-                                                    <button className="action-btn" title="Download PDF" onClick={() => handleDownloadPDF(bill)} style={{ backgroundColor: '#2563eb', color: 'white' }}>
+                                                    <button className="action-btn action-btn-green" title="Download PDF" onClick={() => handleDownloadPDF(bill)}>
                                                         <Download size={18} />
                                                     </button>
-                                                    <button className="action-btn" title="Email Bill" onClick={() => openEmailModal(bill)} style={{ backgroundColor: '#7c3aed', color: 'white' }}>
+                                                    <button className="action-btn action-btn-purple" title="Email Bill" onClick={() => openEmailModal(bill)}>
                                                         <Mail size={18} />
                                                     </button>
                                                 </div>
@@ -256,22 +265,22 @@ const PurchaseBillingPage = () => {
 
                 {/* Pagination */}
                 {pagination.pages > 1 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+                    <div className="page-pagination">
                         <div className="text-sm text-gray-600">
                             Showing {(pagination.page - 1) * pagination.limit + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="page-pagination-group">
                             <button
                                 onClick={() => paginate('prev')}
                                 disabled={pagination.page <= 1}
-                                className="px-3 py-1 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+                                className="page-pagination-btn"
                             >
                                 Previous
                             </button>
                             <button
                                 onClick={() => paginate('next')}
                                 disabled={pagination.page >= pagination.pages}
-                                className="px-3 py-1 text-sm rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
+                                className="page-pagination-btn"
                             >
                                 Next
                             </button>

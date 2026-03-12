@@ -59,6 +59,7 @@ router.get('/', async (req, res) => {
         if (search) {
             query.$or = [
                 { billNumber: { $regex: search, $options: 'i' } },
+                { referenceInvoiceNumber: { $regex: search, $options: 'i' } },
                 { 'customer.name': { $regex: search, $options: 'i' } },
                 { 'customer.phone': { $regex: search, $options: 'i' } },
                 { partyName: { $regex: search, $options: 'i' } }

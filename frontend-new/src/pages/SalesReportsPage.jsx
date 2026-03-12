@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Search, TrendingUp, X, Printer, FileSpreadsheet, Mail, FileText } from 'lucide-react';
-import DateRangeFilter from '../components/reports/DateRangeFilter';
 import ReportHeader from '../components/reports/ReportHeader';
 import { exportToExcelStyled } from '../utils/exportToExcel';
 import { printReport } from '../utils/printReport';
@@ -21,9 +20,6 @@ const SalesReportsPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-    const [showEmailModal, setShowEmailModal] = useState(false);
-    const [emailTo, setEmailTo] = useState(() => pickDefaultRecipient(user?.email));
-    const [defaultRecipient, setDefaultRecipient] = useState(() => pickDefaultRecipient(user?.email));
     const [emailConfigured, setEmailConfigured] = useState(null);
 
     // Initialize with current month dates
@@ -41,20 +37,9 @@ const SalesReportsPage = () => {
             try {
                 const response = await emailAPI.getStatus();
                 if (isCancelled) return;
-
-                const nextDefaultRecipient = pickDefaultRecipient(
-                    response?.data?.defaultRecipients,
-                    response?.data?.defaultRecipient,
-                    user?.email
-                );
-
                 setEmailConfigured(Boolean(response?.data?.configured));
-                setDefaultRecipient(nextDefaultRecipient);
-                setEmailTo((current) => current || nextDefaultRecipient);
             } catch (error) {
-                if (!isCancelled) {
-                    setDefaultRecipient((current) => current || pickDefaultRecipient(user?.email));
-                }
+                console.error('Error loading email status:', error);
             }
         };
 
@@ -63,7 +48,7 @@ const SalesReportsPage = () => {
         return () => {
             isCancelled = true;
         };
-    }, [user?.email]);
+    }, []);
 
     const handleSearch = async () => {
         setIsLoading(true);
@@ -129,47 +114,47 @@ const SalesReportsPage = () => {
         printReport('printable-report');
     };
 
-    const openEmailModal = () => {
+    const handleEmail = async () => {
         if (reportData.length === 0) {
             toast.warning('No data to email');
             return;
         }
 
-        setEmailTo((current) => pickDefaultRecipient(current, defaultRecipient, user?.email));
-        setShowEmailModal(true);
-    };
-
-    const handleEmail = async () => {
         if (emailConfigured === false) {
             toast.error('Email service is not configured on the server');
             return;
         }
 
-        const { hasValidRecipients } = getEmailRecipientValidation(emailTo);
-        if (!hasValidRecipients) {
-            toast.warning('Enter at least one valid email address');
-            return;
-        }
-
+        const toastId = toast.loading('Preparing sales report email...');
         try {
             setIsSendingEmail(true);
             const response = await emailAPI.sendReport({
                 type: 'sales',
                 fromDate,
                 toDate,
-                data: reportData,
-                to: emailTo
+                data: reportData
             });
 
             if (response.data.success) {
-                toast.success(response.data.message || 'Sales report emailed successfully');
-                setShowEmailModal(false);
+                toast.update(toastId, { 
+                    message: response.data.message || 'Sales report is being sent to admin', 
+                    type: 'success',
+                    duration: 5000 
+                });
             } else {
-                toast.error(response.data.message || 'Failed to email report');
+                toast.update(toastId, { 
+                    message: response.data.message || 'Failed to initiate email', 
+                    type: 'error',
+                    duration: 5000 
+                });
             }
         } catch (error) {
             console.error('Error emailing report:', error);
-            toast.error(error.response?.data?.message || 'Error emailing report');
+            toast.update(toastId, { 
+                message: error.response?.data?.message || 'Error emailing report', 
+                type: 'error',
+                duration: 5000 
+            });
         } finally {
             setIsSendingEmail(false);
         }
@@ -177,16 +162,19 @@ const SalesReportsPage = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Page Header */}
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="text-blue-600" size={20} />
+            <div className="page-header-shell">
+                <div className="flex items-start gap-4">
+                    <div className="page-icon-badge">
+                        <TrendingUp size={20} />
+                    </div>
+                    <div className="page-header-copy">
+                        <p className="page-header-kicker">Sales performance reports</p>
+                        <h1 className="page-header-title">Sales Reports</h1>
+                    </div>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">Sales Reports</h1>
             </div>
 
-            {/* Filters and Actions */}
-            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="page-filter-card">
                 <div className="flex flex-wrap items-end gap-3">
                     {/* Inv No */}
                     <div className="shrink-0 w-32">
@@ -267,9 +255,13 @@ const SalesReportsPage = () => {
                         Print
                     </button>
 
-                    <button className="btn text-white bg-blue-600 hover:bg-blue-700" onClick={openEmailModal}>
-                        <Mail size={16} />
-                        Mail
+                    <button 
+                        className="btn text-white bg-blue-600 hover:bg-blue-700" 
+                        onClick={handleEmail}
+                        disabled={isSendingEmail || isLoading}
+                    >
+                        <Mail size={16} className={isSendingEmail ? 'animate-spin' : ''} />
+                        {isSendingEmail ? 'Sending...' : 'Mail'}
                     </button>
 
                     <button className="btn btn-ghost border" onClick={() => setShowInvoiceModal(true)}>
@@ -279,7 +271,7 @@ const SalesReportsPage = () => {
             </div>
 
             {/* Report Content */}
-            <div className="card p-0 print:shadow-none" id="printable-report">
+            <div className="page-table-card print:shadow-none" id="printable-report">
                 <div className="p-6">
                     <ReportHeader
                         reportTitle="Sales Report"
@@ -289,16 +281,16 @@ const SalesReportsPage = () => {
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                    <table className="page-table">
                         <thead>
-                            <tr className="bg-gray-100 border-y-2 border-gray-300">
-                                <th className="text-left py-4 px-4 font-bold text-gray-900 print:text-black">S.No</th>
-                                <th className="text-left py-4 px-4 font-bold text-gray-900 print:text-black">Date</th>
-                                <th className="text-left py-4 px-4 font-bold text-gray-900 print:text-black">Inv No</th>
-                                <th className="text-left py-4 px-4 font-bold text-gray-900 print:text-black">Item</th>
-                                <th className="text-right py-4 px-4 font-bold text-gray-900 print:text-black">Rate</th>
-                                <th className="text-right py-4 px-4 font-bold text-gray-900 print:text-black">Qty</th>
-                                <th className="text-right py-4 px-4 font-bold text-gray-900 print:text-black">Total</th>
+                            <tr>
+                                <th className="print:text-black">S.No</th>
+                                <th className="print:text-black">Date</th>
+                                <th className="print:text-black">Inv No</th>
+                                <th className="print:text-black">Item</th>
+                                <th className="text-right print:text-black">Rate</th>
+                                <th className="text-right print:text-black">Qty</th>
+                                <th className="text-right print:text-black">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -387,17 +379,6 @@ const SalesReportsPage = () => {
                 </div>
             )}
 
-            <EmailActionModal
-                open={showEmailModal}
-                title="Email Sales Report"
-                description="Send the current sales report to one or more email addresses."
-                value={emailTo}
-                onChange={setEmailTo}
-                onClose={() => setShowEmailModal(false)}
-                onSubmit={handleEmail}
-                isSubmitting={isSendingEmail}
-                submitLabel="Send Report"
-            />
         </div>
     );
 };

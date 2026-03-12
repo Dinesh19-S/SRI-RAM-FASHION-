@@ -128,87 +128,73 @@ const InventoryPage = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
+            <div className="page-header-shell">
+                <div className="flex items-start gap-4">
+                    <div className="page-icon-badge">
+                        <Package size={20} />
+                    </div>
+                    <div className="page-header-copy">
+                        <p className="page-header-kicker">Live stock and movement control</p>
+                        <h1 className="page-header-title">Inventory</h1>
+                    </div>
+                </div>
+                <div className="page-header-toolbar">
+                    <button className="btn btn-secondary" onClick={() => setShowCategoryModal(true)}>
+                        <FolderPlus size={16} />
+                        Add Category
+                    </button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {/* Total Products */}
-                <div
-                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
-                    style={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        boxShadow: '0 10px 30px -5px rgba(102, 126, 234, 0.4)',
-                    }}
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
-                    <div className="relative z-1 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                            <Package size={24} className="text-white" />
+            <div className="metric-grid">
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Total Products</p>
+                            <p className="metric-card-value">{stats.totalProducts}</p>
+                            <p className="metric-card-note">Current page</p>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Products</p>
-                            <p className="text-2xl font-bold text-white mt-0.5">{stats.totalProducts}</p>
+                        <div className="metric-card-icon">
+                            <Package size={22} />
                         </div>
                     </div>
                 </div>
 
-                {/* Total Stock */}
-                <div
-                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
-                    style={{
-                        background: 'linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)',
-                        boxShadow: '0 10px 30px -5px rgba(14, 165, 233, 0.4)',
-                    }}
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
-                    <div className="relative z-1 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                            <Box size={24} className="text-white" />
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Page Stock</p>
+                            <p className="metric-card-value">{stats.totalStock.toLocaleString()}</p>
+                            <p className="metric-card-note">Units available</p>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Page Stock</p>
-                            <p className="text-2xl font-bold text-white mt-0.5">{stats.totalStock.toLocaleString()}</p>
+                        <div className="metric-card-icon">
+                            <Box size={22} />
                         </div>
                     </div>
                 </div>
 
-                {/* Low Stock */}
-                <div
-                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
-                    style={{
-                        background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
-                        boxShadow: '0 10px 30px -5px rgba(244, 63, 94, 0.4)',
-                    }}
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
-                    <div className="relative z-1 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                            <AlertTriangle size={24} className="text-white" />
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Low Stock</p>
+                            <p className="metric-card-value">{stats.lowStock}</p>
+                            <p className="metric-card-note">Needs attention</p>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Page Low Stock</p>
-                            <p className="text-2xl font-bold text-white mt-0.5">{stats.lowStock}</p>
+                        <div className="metric-card-icon">
+                            <AlertTriangle size={22} />
                         </div>
                     </div>
                 </div>
 
-                {/* Inventory Value */}
-                <div
-                    className="relative overflow-hidden rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-default"
-                    style={{
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        boxShadow: '0 10px 30px -5px rgba(16, 185, 129, 0.4)',
-                    }}
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ background: 'white', transform: 'translate(30%, -30%)' }} />
-                    <div className="relative z-1 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
-                            <TrendingUp size={24} className="text-white" />
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Inventory Value</p>
+                            <p className="metric-card-value">{formatCurrency(stats.inventoryValue)}</p>
+                            <p className="metric-card-note">Current page</p>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}>Page Value</p>
-                            <p className="text-2xl font-bold text-white mt-0.5">{formatCurrency(stats.inventoryValue)}</p>
+                        <div className="metric-card-icon">
+                            <TrendingUp size={22} />
                         </div>
                     </div>
                 </div>
@@ -227,20 +213,31 @@ const InventoryPage = () => {
                 </div>
             )}
 
-            <div className="flex gap-4">
-                <div className="relative flex-1"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="text" className="form-input pl-10" placeholder="Search product name or SKU..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
-                <select className="form-input w-48" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}><option value="all">All Categories</option>{categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select>
+            <div className="page-filter-card">
+                <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex-1 min-w-[240px]">
+                        <label className="form-label">Search</label>
+                        <div className="page-search">
+                            <Search size={18} className="page-search-icon" />
+                            <input type="text" className="form-input pl-10" placeholder="Search product name or SKU..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                        </div>
+                    </div>
+                    <div className="w-52">
+                        <label className="form-label">Category</label>
+                        <select className="form-input" value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}><option value="all">All Categories</option>{categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select>
+                    </div>
+                </div>
             </div>
 
-            <div className="card overflow-hidden p-0">
+            <div className="page-table-card">
                 {isLoading ? (
                     <div className="flex items-center justify-center h-32"><div className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#3b82f6', borderTopColor: 'transparent' }} /></div>
                 ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-12 text-gray-500"><Package size={48} className="mx-auto mb-2 opacity-50" /><p>No products found</p></div>
                 ) : (
                     <>
-                        <table className="table">
-                            <thead><tr className="bg-gray-50"><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Price</th><th>Status</th><th className="text-right">Stock Actions</th></tr></thead>
+                        <table className="page-table">
+                            <thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Price</th><th>Status</th><th className="text-right">Stock Actions</th></tr></thead>
                             <tbody>
                                 {filteredProducts.map(p => (
                                     <tr key={p._id}>
@@ -281,13 +278,13 @@ const InventoryPage = () => {
                         </table>
                         {/* Pagination Controls */}
                         {pagination && pagination.pages > 1 && (
-                            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100">
+                            <div className="page-pagination">
                                 <p className="text-sm text-gray-600">
                                     Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-medium">{pagination.total}</span> products
                                 </p>
-                                <div className="flex gap-2">
+                                <div className="page-pagination-group">
                                     <button
-                                        className="p-2 rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="page-pagination-btn"
                                         onClick={() => setPage(p => Math.max(1, p - 1))}
                                         disabled={page === 1}
                                     >
@@ -304,10 +301,7 @@ const InventoryPage = () => {
                                             return (
                                                 <button
                                                     key={pageNum}
-                                                    className={`w-10 h-10 rounded-lg border font-medium transition-colors ${page === pageNum
-                                                        ? 'bg-blue-600 border-blue-600 text-white shadow-md'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-500'
-                                                        }`}
+                                                    className={`page-pagination-btn ${page === pageNum ? 'is-active' : ''}`}
                                                     onClick={() => setPage(pageNum)}
                                                 >
                                                     {pageNum}
@@ -322,7 +316,7 @@ const InventoryPage = () => {
                                         return null;
                                     })}
                                     <button
-                                        className="p-2 rounded-lg border border-gray-200 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="page-pagination-btn"
                                         onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
                                         disabled={page === pagination.pages}
                                     >

@@ -45,6 +45,7 @@ const BillingPage = () => {
     const [customer, setCustomer] = useState({
         name: '',
         phone: '',
+        email: '',
         address: '',
         gstin: '',
         state: 'Tamilnadu',
@@ -170,6 +171,7 @@ const BillingPage = () => {
         setCustomer({
             name: selectedCustomer.companyName || '',
             phone: selectedCustomer.mobile || '',
+            email: selectedCustomer.email || '',
             address: selectedCustomer.address || '',
             gstin: selectedCustomer.gstin || '',
             state: selectedCustomer.state || 'Tamilnadu',
@@ -270,6 +272,7 @@ const BillingPage = () => {
                 customer: {
                     name: customer.name,
                     phone: customer.phone,
+                    email: customer.email,
                     address: customer.address,
                     gstin: customer.gstin,
                     state: customer.state,
@@ -313,7 +316,7 @@ const BillingPage = () => {
     };
 
     const resetForm = () => {
-        setCustomer({ name: '', phone: '', address: '', gstin: '', state: 'Tamilnadu', stateCode: '33' });
+        setCustomer({ name: '', phone: '', email: '', address: '', gstin: '', state: 'Tamilnadu', stateCode: '33' });
         setTransport('');
         setFromDate('');
         setToDate('');
@@ -385,10 +388,14 @@ const BillingPage = () => {
         setIsSendingEmail(true);
         try {
             const response = await emailAPI.sendBill(emailBill._id, emailTo);
-            toast.success(response?.data?.message || 'Email sent successfully');
-            setShowEmailModal(false);
-            setEmailBill(null);
-            setEmailTo('');
+            if (response.data.success) {
+                toast.success(response.data.message || 'Email sent successfully');
+                setShowEmailModal(false);
+                setEmailBill(null);
+                setEmailTo('');
+            } else {
+                toast.error(response.data.message || 'Failed to send email. Please check the recipient address.');
+            }
         } catch (error) {
             toast.error('Failed to send email: ' + (error.response?.data?.message || error.message));
         } finally {
@@ -667,7 +674,11 @@ const BillingPage = () => {
                                                 <input className="form-input" placeholder="Enter phone number" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs text-gray-500 mb-1 block">Email Address (optional)</label>
+                                            <input className="form-input" placeholder="Enter email address" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3 mt-4">
                                             <div>
                                                 <label className="text-xs text-gray-500 mb-1 block">GSTIN</label>
                                                 <input className="form-input" placeholder="Enter GSTIN" value={customer.gstin} onChange={(e) => setCustomer({ ...customer, gstin: e.target.value })} />

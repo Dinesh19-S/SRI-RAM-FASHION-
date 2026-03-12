@@ -221,13 +221,15 @@ const ItemsPage = () => {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            {/* Page Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                        <Package className="text-orange-600" size={20} />
+            <div className="page-header-shell">
+                <div className="flex items-start gap-4">
+                    <div className="page-icon-badge">
+                        <Package size={20} />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900">Items / Products</h1>
+                    <div className="page-header-copy">
+                        <p className="page-header-kicker">Manage your product catalog</p>
+                        <h1 className="page-header-title">Items / Products</h1>
+                    </div>
                 </div>
                 <button
                     className="btn btn-primary"
@@ -238,8 +240,7 @@ const ItemsPage = () => {
                 </button>
             </div>
 
-            {/* Search Section */}
-            <div className="w-full bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="page-filter-card">
                 <div className="flex flex-wrap items-end gap-3">
                     <div className="shrink-0 w-48">
                         <label className="form-label">Name</label>
@@ -283,9 +284,9 @@ const ItemsPage = () => {
             </div>
 
             {/* Table */}
-            <div className="card p-0 overflow-hidden">
+            <div className="page-table-card">
                 <div className="overflow-x-auto">
-                    <table className="table">
+                    <table className="page-table">
                         <thead>
                             <tr>
                                 <th>S No</th>
@@ -302,13 +303,13 @@ const ItemsPage = () => {
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="9" className="py-8 text-center">
+                                    <td colSpan="9" className="page-empty-state">
                                         <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                                     </td>
                                 </tr>
                             ) : items.length === 0 ? (
                                 <tr>
-                                    <td colSpan="9" className="py-8 text-center text-gray-500">
+                                    <td colSpan="9" className="page-empty-state">
                                         No products found. Click "ADD PRODUCT" to add one.
                                     </td>
                                 </tr>
@@ -350,12 +351,12 @@ const ItemsPage = () => {
 
                 {/* Pagination */}
                 {pagination.pages > 0 && (
-                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-                        <div className="flex items-center gap-2">
+                    <div className="page-pagination">
+                        <div className="page-pagination-group">
                             <button
                                 onClick={() => handlePageChange(pagination.page - 1)}
                                 disabled={pagination.page <= 1}
-                                className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50"
+                                className="page-pagination-btn"
                             >
                                 &lt;
                             </button>
@@ -366,7 +367,7 @@ const ItemsPage = () => {
                                     <button
                                         key={pageNum}
                                         onClick={() => handlePageChange(pageNum)}
-                                        className={`px-3 py-1 text-sm rounded font-medium ${pagination.page === pageNum ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                                        className={`page-pagination-btn ${pagination.page === pageNum ? 'is-active' : ''}`}
                                     >
                                         {pageNum}
                                     </button>
@@ -375,17 +376,17 @@ const ItemsPage = () => {
                             <button
                                 onClick={() => handlePageChange(pagination.page + 1)}
                                 disabled={pagination.page >= pagination.pages}
-                                className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-200 rounded disabled:opacity-50"
+                                className="page-pagination-btn"
                             >
                                 &gt;
                             </button>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="page-pagination-group">
                             {[10, 25, 50, 100].map(limit => (
                                 <button
                                     key={limit}
                                     onClick={() => handleLimitChange(limit)}
-                                    className={`px-3 py-1 text-sm rounded font-medium ${pagination.limit === limit ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200'}`}
+                                    className={`page-pagination-btn ${pagination.limit === limit ? 'is-active' : ''}`}
                                 >
                                     {limit}
                                 </button>

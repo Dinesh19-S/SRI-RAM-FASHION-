@@ -15,7 +15,7 @@ import {
 import { formatDate } from '../utils/dateUtils';
 import { EmailActionModal, useToast } from '../components/common';
 import { getEmailRecipientValidation, pickDefaultRecipient } from '../utils/emailUtils';
-import { Loader2, Mail, Clock as ClockIcon } from 'lucide-react';
+import { Loader2, Mail, Clock as ClockIcon, LayoutDashboard, IndianRupee, ShoppingCart, Package, Users } from 'lucide-react';
 
 // Static helpers outside component to prevent recreation
 const formatCurrency = (amount) =>
@@ -101,9 +101,6 @@ const DashboardPage = () => {
     const [allProducts, setAllProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sendingSummary, setSendingSummary] = useState(false);
-    const [showSummaryModal, setShowSummaryModal] = useState(false);
-    const [summaryRecipient, setSummaryRecipient] = useState(() => pickDefaultRecipient(user?.email));
-    const [defaultSummaryRecipient, setDefaultSummaryRecipient] = useState(() => pickDefaultRecipient(user?.email));
     const [emailConfigured, setEmailConfigured] = useState(null);
     const [chartPeriod, setChartPeriod] = useState('month');
 
@@ -214,21 +211,9 @@ const DashboardPage = () => {
             try {
                 const response = await emailAPI.getStatus();
                 if (isCancelled) return;
-
-                const configured = Boolean(response?.data?.configured);
-                const nextDefaultRecipient = pickDefaultRecipient(
-                    response?.data?.defaultRecipients,
-                    response?.data?.defaultRecipient,
-                    user?.email
-                );
-
-                setEmailConfigured(configured);
-                setDefaultSummaryRecipient(nextDefaultRecipient);
-                setSummaryRecipient((current) => current || nextDefaultRecipient);
+                setEmailConfigured(Boolean(response?.data?.configured));
             } catch (error) {
-                if (!isCancelled) {
-                    setDefaultSummaryRecipient((current) => current || pickDefaultRecipient(user?.email));
-                }
+                console.error('Error loading email status:', error);
             }
         };
 
@@ -237,17 +222,12 @@ const DashboardPage = () => {
         return () => {
             isCancelled = true;
         };
-    }, [user?.email]);
+    }, []);
 
     const maxStock = useMemo(
         () => Math.max(...allProducts.map((product) => product.stock || 0), 1),
         [allProducts]
     );
-
-    const openSummaryModal = () => {
-        setSummaryRecipient((current) => pickDefaultRecipient(current, defaultSummaryRecipient, user?.email));
-        setShowSummaryModal(true);
-    };
 
     const handleSendSummary = async () => {
         if (emailConfigured === false) {
@@ -255,19 +235,21 @@ const DashboardPage = () => {
             return;
         }
 
-        const { hasValidRecipients } = getEmailRecipientValidation(summaryRecipient);
-        if (!hasValidRecipients) {
-            toast.warning('Enter at least one valid email address');
-            return;
-        }
-
+        const toastId = toast.loading('Calculating and preparing daily summary...');
         try {
             setSendingSummary(true);
-            const response = await emailAPI.sendDailySummary(summaryRecipient);
-            toast.success(response?.data?.message || 'Daily summary email sent');
-            setShowSummaryModal(false);
+            const response = await emailAPI.sendDailySummary();
+            toast.update(toastId, { 
+                message: response?.data?.message || 'Daily summary is being sent to admin', 
+                type: 'success',
+                duration: 5000 
+            });
         } catch (err) {
-            toast.error(err?.response?.data?.message || 'Failed to send summary');
+            toast.update(toastId, { 
+                message: err?.response?.data?.message || 'Failed to send summary', 
+                type: 'error',
+                duration: 5000 
+            });
         } finally {
             setSendingSummary(false);
         }
@@ -282,62 +264,87 @@ const DashboardPage = () => {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in" style={{ background: 'linear-gradient(180deg,#f6f9ff 0%, #eef3ff 100%)' }}>
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                    <div className="flex items-center gap-3">
-                        <p className="text-sm text-gray-600">Here&apos;s what&apos;s happening with your store today.</p>
-                        <DigitalClock />
+        <div className="space-y-6 animate-fade-in">
+            <div className="page-header-shell">
+                <div className="flex items-start gap-4">
+                    <div className="page-icon-badge">
+                        <LayoutDashboard size={20} />
+                    </div>
+                    <div className="page-header-copy">
+                        <p className="page-header-kicker">Store performance overview</p>
+                        <h1 className="page-header-title">Dashboard</h1>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <p className="text-sm text-slate-600">Here&apos;s what&apos;s happening with your store today.</p>
+                            <DigitalClock />
+                        </div>
                     </div>
                 </div>
                 <button
-                    onClick={openSummaryModal}
+                    onClick={handleSendSummary}
                     disabled={sendingSummary}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-70"
-                    style={{ background: '#fff', color: '#1e40af', borderColor: '#bfdbfe' }}
+                    className="btn btn-primary"
                 >
                     {sendingSummary ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
                     {sendingSummary ? 'Sending...' : 'Email Daily Summary'}
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md" style={{ borderColor: 'var(--border-soft)' }}>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Revenue</p>
-                    <div className="flex items-center justify-between mt-2">
-                        <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
-                        <span className="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700">
-                            This month
-                        </span>
+            <div className="metric-grid">
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Total Revenue</p>
+                            <p className="metric-card-value">{formatCurrency(stats.totalRevenue)}</p>
+                            <p className="metric-card-note">This month</p>
+                        </div>
+                        <div className="metric-card-icon">
+                            <IndianRupee size={22} />
+                        </div>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{formatCurrency(stats.totalRevenue)}</p>
                 </div>
 
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md" style={{ borderColor: 'var(--border-soft)' }}>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Total Orders</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalOrders || 0}</p>
-                    <p className="text-sm text-gray-500 mt-1">{orderStatusCounts.pending} pending</p>
-                </div>
-
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md" style={{ borderColor: 'var(--border-soft)' }}>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Products</p>
-                    <div className="flex items-center justify-between mt-2">
-                        <p className="text-3xl font-bold text-gray-900">{productCount}</p>
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">{categoryData.length} categories</span>
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Total Orders</p>
+                            <p className="metric-card-value">{stats.totalOrders || 0}</p>
+                            <p className="metric-card-note">{orderStatusCounts.pending} pending</p>
+                        </div>
+                        <div className="metric-card-icon">
+                            <ShoppingCart size={22} />
+                        </div>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">Active in store</p>
                 </div>
 
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md" style={{ borderColor: 'var(--border-soft)' }}>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Customers</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{stats.totalCustomers || 0}</p>
-                    <p className="text-sm text-gray-500 mt-1">Registered users</p>
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Products</p>
+                            <p className="metric-card-value">{productCount}</p>
+                            <p className="metric-card-note">{categoryData.length} categories</p>
+                        </div>
+                        <div className="metric-card-icon">
+                            <Package size={22} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="metric-card">
+                    <div className="metric-card-header">
+                        <div className="metric-card-copy">
+                            <p className="metric-card-label">Customers</p>
+                            <p className="metric-card-value">{stats.totalCustomers || 0}</p>
+                            <p className="metric-card-note">Registered users</p>
+                        </div>
+                        <div className="metric-card-icon">
+                            <Users size={22} />
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md lg:col-span-2" style={{ borderColor: 'var(--border-soft)' }}>
+                <div className="card lg:col-span-2">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold text-gray-900">Sales & Purchase Analysis</h3>
                         <div className="flex items-center gap-2">
@@ -396,7 +403,7 @@ const DashboardPage = () => {
                     </ResponsiveContainer>
                 </div>
 
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md" style={{ borderColor: 'var(--border-soft)' }}>
+                <div className="card">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-semibold text-gray-900">Low Stock Alerts</h3>
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{lowStockAlerts.length} items</span>
@@ -420,7 +427,7 @@ const DashboardPage = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md flex flex-col" style={{ borderColor: 'var(--border-soft)' }}>
+                <div className="card flex flex-col">
                     <div className="flex items-center justify-between mb-3">
                         <h3 className="text-lg font-semibold text-gray-900">Products</h3>
                         <span className="text-xs text-gray-500">{allProducts.length} items</span>
@@ -456,37 +463,37 @@ const DashboardPage = () => {
                     </div>
                 </div>
 
-                <div className="bg-white/95 border rounded-2xl p-4 shadow-md lg:col-span-2" style={{ borderColor: 'var(--border-soft)' }}>
-                    <div className="flex items-center justify-between mb-3">
+                <div className="page-table-card lg:col-span-2">
+                    <div className="flex items-center justify-between p-4 pb-0">
                         <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
                         <Link to="/dashboard/billing" className="text-sm font-semibold text-indigo-600 hover:underline">View All →</Link>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="page-table">
                             <thead>
-                                <tr className="text-gray-500">
-                                    <th className="py-2 text-left font-semibold">Order</th>
-                                    <th className="py-2 text-left font-semibold">Customer</th>
-                                    <th className="py-2 text-left font-semibold">Amount</th>
-                                    <th className="py-2 text-left font-semibold">Status</th>
-                                    <th className="py-2 text-left font-semibold">Date</th>
+                                <tr>
+                                    <th>Order</th>
+                                    <th>Customer</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {recentBills.length === 0 ? (
-                                    <tr><td colSpan="5" className="py-6 text-center text-gray-500">No recent orders</td></tr>
+                                    <tr><td colSpan="5" className="page-empty-state">No recent orders</td></tr>
                                 ) : (
                                     recentBills.map((bill) => (
-                                        <tr key={bill._id} className="border-t" style={{ borderColor: 'var(--border-soft)' }}>
-                                            <td className="py-2 font-semibold text-gray-900">{bill.billNumber}</td>
-                                            <td className="py-2 text-gray-800">{bill.customer?.name || '-'}</td>
-                                            <td className="py-2 font-semibold text-gray-900">{formatCurrency(bill.grandTotal)}</td>
-                                            <td className="py-2">
+                                        <tr key={bill._id}>
+                                            <td className="font-semibold text-gray-900">{bill.billNumber}</td>
+                                            <td>{bill.customer?.name || '-'}</td>
+                                            <td className="font-semibold text-gray-900">{formatCurrency(bill.grandTotal)}</td>
+                                            <td>
                                                 <span className={`badge ${bill.paymentStatus === 'paid' ? 'badge-success' : bill.paymentStatus === 'cancelled' ? 'badge-error' : 'badge-warning'}`}>
                                                     {bill.paymentStatus || 'pending'}
                                                 </span>
                                             </td>
-                                            <td className="py-2 text-gray-700">{formatDate(bill.date || bill.createdAt)}</td>
+                                            <td>{formatDate(bill.date || bill.createdAt)}</td>
                                         </tr>
                                     ))
                                 )}
@@ -496,17 +503,6 @@ const DashboardPage = () => {
                 </div>
             </div>
 
-            <EmailActionModal
-                open={showSummaryModal}
-                title="Email Daily Summary"
-                description="Send today's business summary to one or more email addresses."
-                value={summaryRecipient}
-                onChange={setSummaryRecipient}
-                onClose={() => setShowSummaryModal(false)}
-                onSubmit={handleSendSummary}
-                isSubmitting={sendingSummary}
-                submitLabel="Send Summary"
-            />
         </div>
     );
 };

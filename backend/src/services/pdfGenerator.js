@@ -49,6 +49,11 @@ const formatDate = (date) => {
     return `${day}/${month}/${year}`;
 };
 
+const toAmount = (value, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 /**
  * Generate a bill PDF buffer using PDFKit.
  * Layout precisely matches BillTemplate.jsx + BillTemplate.css.
@@ -83,21 +88,79 @@ export const generateBillPDF = async (bill) => {
     const bankIfsc = settings?.bank?.ifscCode || 'SIBL0000338';
     const bankAccName = settings?.bank?.accountHolderName || 'SRI RAM FASHIONS';
 
-    // Tax calculations (from cached settings)
-    const productAmt = bill.subtotal || 0;
-    const discount = bill.discountAmount || 0;
-    const taxableAmt = productAmt - discount;
-    const cgstRate = settings?.tax?.cgstRate || 2.5;
-    const sgstRate = settings?.tax?.sgstRate || 2.5;
-    const cgstAmt = (taxableAmt * cgstRate) / 100;
-    const sgstAmt = (taxableAmt * sgstRate) / 100;
-    const totalGst = cgstAmt + sgstAmt;
-    const rawTotal = taxableAmt + totalGst;
-    const roundOff = bill.roundOff || (Math.round(rawTotal) - rawTotal);
-    const totalAmt = Math.round(rawTotal);
-    const totalPacks = bill.totalPacks || bill.items?.reduce((sum, item) => sum + (item.noOfPacks || item.quantity || 0), 0) || 0;
-    const numBundles = bill.numOfBundles || 1;
+    // Tax calculations / bill data
+    const fallbackCgstRate = settings?.tax?.cgstRate || 2.5;
+    const fallbackSgstRate = settings?.tax?.sgstRate || 2.5;
+    const isPurchase = bill.billType === 'PURCHASE';
     const items = bill.items || [];
+    const productAmt = toAmount(bill.subtotal);
+    const discount = toAmount(bill.discountAmount);
+    const taxableAmt = toAmount(bill.taxableAmount, productAmt - discount);
+    const cgstAmt = toAmount(
+        bill.cgst,
+        isPurchase ? 0 : (taxableAmt * fallbackCgstRate) / 100
+    );
+    const sgstAmt = toAmount(
+        bill.sgst,
+        isPurchase ? 0 : (taxableAmt * fallbackSgstRate) / 100
+    );
+    const igstAmt = toAmount(bill.igst);
+    const totalGst = toAmount(bill.totalTax, cgstAmt + sgstAmt + igstAmt);
+    const rawTotal = taxableAmt + totalGst;
+    const totalAmt = toAmount(bill.grandTotal, Math.round(rawTotal));
+    const roundOff = toAmount(bill.roundOff, totalAmt - rawTotal);
+    const cgstRate = taxableAmt > 0 && cgstAmt > 0 ? (cgstAmt * 100) / taxableAmt : (isPurchase ? 0 : fallbackCgstRate);
+    const sgstRate = taxableAmt > 0 && sgstAmt > 0 ? (sgstAmt * 100) / taxableAmt : (isPurchase ? 0 : fallbackSgstRate);
+    const totalQuantity = isPurchase
+        ? (bill.totalPacks || items.reduce((sum, item) => sum + toAmount(item.weightKg, toAmount(item.quantity)), 0) || 0)
+        : (bill.totalPacks || items.reduce((sum, item) => sum + toAmount(item.noOfPacks, toAmount(item.quantity)), 0) || 0);
+    const numBundles = bill.numOfBundles || 1;
+    const purchaseInvoiceNumber = bill.referenceInvoiceNumber || bill.fromText || '';
+
+    const detailRows = isPurchase
+        ? [
+            ['Bill Number', bill.billNumber || ''],
+            ['Bill Date', formatDate(bill.date || bill.createdAt)],
+            ['Purchase Inv No', purchaseInvoiceNumber],
+            ['Total Weight', `${totalQuantity}`]
+        ]
+        : [
+            ['Invoice Number', bill.billNumber || ''],
+            ['Invoice Date', formatDate(bill.date || bill.createdAt)],
+            ['From', bill.fromText || ''],
+            ['To', bill.toText || '']
+        ];
+
+    const buyerHeading = isPurchase ? 'Supplier Copy' : 'Consignee Copy';
+    const buyerPrimaryLabel = isPurchase ? 'SUPPLIER:' : 'BUYER:';
+    const buyerTertiaryLabel = isPurchase ? 'ADDRESS:' : 'TRANSPORT:';
+    const buyerTertiaryValue = isPurchase ? (bill.customer?.address || '') : (bill.transport || '');
+    const buyerBottomLabel = isPurchase ? 'INV NO:' : 'CODE:';
+    const buyerBottomValue = isPurchase ? purchaseInvoiceNumber : (bill.customer?.stateCode || '33');
+    const titleText = isPurchase ? 'PURCHASE INVOICE' : 'TAX INVOICE';
+    const quantityLabel = isPurchase ? 'Total Weight' : 'Total Packs';
+
+    const columns = isPurchase
+        ? [
+            { header: 'S.No', width: 0.06, align: 'center', value: (_, index) => `${index + 1}` },
+            { header: 'Particular', width: 0.30, align: 'left', value: (item) => item.productName || item.name || '' },
+            { header: 'HSN\nCode', width: 0.12, align: 'center', value: (item) => String(item.hsnCode || item.hsn || '') },
+            { header: 'Design /\nColor', width: 0.16, align: 'center', value: (item) => String(item.designColor || item.sizesOrPieces || '') },
+            { header: 'Weight\n(KG)', width: 0.12, align: 'center', value: (item) => `${toAmount(item.weightKg, toAmount(item.quantity))}` },
+            { header: 'Rate Per\nKG', width: 0.12, align: 'center', value: (item) => `${toAmount(item.ratePerKg, toAmount(item.price))}` },
+            { header: 'Amount\nRs.', width: 0.12, align: 'center', value: (item) => `${toAmount(item.total, toAmount(item.weightKg, toAmount(item.quantity)) * toAmount(item.ratePerKg, toAmount(item.price)))}` }
+        ]
+        : [
+            { header: 'S.No', width: 0.05, align: 'center', value: (_, index) => `${index + 1}` },
+            { header: 'Product', width: 0.18, align: 'left', value: (item) => item.productName || item.name || '' },
+            { header: 'HSN\nCode', width: 0.09, align: 'center', value: (item) => String(item.hsnCode || item.hsn || '') },
+            { header: 'Sizes/\nPieces', width: 0.10, align: 'center', value: (item) => String(item.sizesOrPieces || '') },
+            { header: 'Rate Per\nPiece', width: 0.10, align: 'center', value: (item) => item.ratePerPiece ? `${item.ratePerPiece}` : '' },
+            { header: 'Pcs in\nPack', width: 0.08, align: 'center', value: (item) => item.pcsInPack ? `${item.pcsInPack}` : '' },
+            { header: 'Rate Per\nPack', width: 0.11, align: 'center', value: (item) => `${toAmount(item.ratePerPack, toAmount(item.price))}` },
+            { header: 'No Of\nPacks', width: 0.09, align: 'center', value: (item) => `${toAmount(item.noOfPacks, toAmount(item.quantity))}` },
+            { header: 'Amount\nRs.', width: 0.20, align: 'center', value: (item) => `${toAmount(item.total, toAmount(item.ratePerPack, toAmount(item.price)) * toAmount(item.noOfPacks, toAmount(item.quantity)))}` }
+        ];
 
     // ===== Page dimensions =====
     const pageW = 595.28;
@@ -218,10 +281,7 @@ export const generateBillPDF = async (bill) => {
         detY += detRowH;
     };
 
-    drawDetailRow('Invoice Number', bill.billNumber || '');
-    drawDetailRow('Invoice Date', formatDate(bill.date || bill.createdAt));
-    drawDetailRow('From', bill.fromText || '');
-    drawDetailRow('To', bill.toText || '');
+    detailRows.forEach(([label, value]) => drawDetailRow(label, value));
 
     y += row2H;
     hLine(y);
@@ -230,7 +290,7 @@ export const generateBillPDF = async (bill) => {
     // ROW 3: TAX INVOICE Title Bar
     // =============================================
     doc.font('Helvetica-Bold').fontSize(14).fillColor(BLUE);
-    doc.text('TAX INVOICE', M, y + 4, {
+    doc.text(titleText, M, y + 4, {
         width: W,
         align: 'center',
         underline: true,
@@ -250,7 +310,7 @@ export const generateBillPDF = async (bill) => {
 
     // Left - Consignee Copy
     doc.font('Helvetica-Oblique').fontSize(7).fillColor(GRAY_LIGHT);
-    doc.text('Consignee Copy', M + PX, row4Top + PY);
+    doc.text(buyerHeading, M + PX, row4Top + PY);
 
     const bFieldX = M + PX;
     const bLabelW = 70;
@@ -265,13 +325,13 @@ export const generateBillPDF = async (bill) => {
         bFieldY += bFieldRowH;
     };
 
-    drawBuyerField('BUYER:', bill.customer?.name || '');
+    drawBuyerField(buyerPrimaryLabel, bill.customer?.name || '');
     drawBuyerField('STATE:', bill.customer?.state || 'Tamilnadu');
 
     doc.font('Helvetica-Bold').fontSize(9).fillColor(BLACK);
-    doc.text('TRANSPORT:', bFieldX, bFieldY, { width: bLabelW });
+    doc.text(buyerTertiaryLabel, bFieldX, bFieldY, { width: bLabelW });
     doc.font('Helvetica').fontSize(9).fillColor(BLACK);
-    doc.text((bill.transport || '').toUpperCase(), bFieldX + bLabelW + 8, bFieldY, { width: buyerLeftW - PX * 2 - bLabelW - 8 });
+    doc.text((buyerTertiaryValue || '').toUpperCase(), bFieldX + bLabelW + 8, bFieldY, { width: buyerLeftW - PX * 2 - bLabelW - 8 });
 
     // Right side
     const bRightX = M + buyerLeftW + PX;
@@ -289,7 +349,7 @@ export const generateBillPDF = async (bill) => {
 
     drawBuyerRight('MOB:', bill.customer?.phone || companyMob);
     drawBuyerRight('GSTIN:', bill.customer?.gstin || '');
-    drawBuyerRight('CODE:', bill.customer?.stateCode || '33');
+    drawBuyerRight(buyerBottomLabel, buyerBottomValue);
 
     y += row4H;
     hLine(y);
@@ -297,21 +357,16 @@ export const generateBillPDF = async (bill) => {
     // =============================================
     // ROW 5: Items Table (fills remaining A4 space)
     // =============================================
-    const colPct = [0.05, 0.18, 0.09, 0.10, 0.10, 0.08, 0.11, 0.09];
-    const colSum = colPct.reduce((a, b) => a + b, 0);
-    colPct.push(1 - colSum); // Amount column fills rest
-    const colW = colPct.map(p => W * p);
-
-    const headers = ['S.No', 'Product', 'HSN\nCode', 'Sizes/\nPieces', 'Rate Per\nPiece', 'Pcs in\nPack', 'Rate Per\nPack', 'No Of\nPacks', 'Amount\nRs.'];
+    const colW = columns.map((column) => W * column.width);
 
     // Table header
     let tY = y;
     let tX = M;
 
     doc.font('Helvetica-Bold').fontSize(8).fillColor(BLACK);
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < columns.length; i++) {
         doc.lineWidth(1).rect(tX, tY, colW[i], thH).stroke(GRAY_BORDER);
-        doc.text(headers[i], tX + 3, tY + 4, {
+        doc.text(columns[i].header, tX + 3, tY + 4, {
             width: colW[i] - 6,
             align: 'center',
             lineGap: 0
@@ -325,38 +380,23 @@ export const generateBillPDF = async (bill) => {
         tX = M;
         const item = items[r];
 
-        for (let c = 0; c < 9; c++) {
+        for (let c = 0; c < columns.length; c++) {
             // Left border
             doc.lineWidth(1)
                 .moveTo(tX, tY)
                 .lineTo(tX, tY + rowH)
                 .stroke(GRAY_BORDER);
             // Right border on last column
-            if (c === 8) {
+            if (c === columns.length - 1) {
                 doc.moveTo(tX + colW[c], tY)
                     .lineTo(tX + colW[c], tY + rowH)
                     .stroke(GRAY_BORDER);
             }
 
             if (item) {
-                const ratePerPack = item.ratePerPack || item.price || 0;
-                const noOfPacks = item.noOfPacks || item.quantity || 0;
-                const amount = item.total || (ratePerPack * noOfPacks);
-
-                let cellText = '';
-                let align = 'center';
-
-                switch (c) {
-                    case 0: cellText = `${r + 1}`; break;
-                    case 1: cellText = item.productName || item.name || ''; align = 'left'; break;
-                    case 2: cellText = item.hsnCode || item.hsn || ''; break;
-                    case 3: cellText = item.sizesOrPieces || ''; break;
-                    case 4: cellText = item.ratePerPiece ? `${item.ratePerPiece}` : ''; break;
-                    case 5: cellText = item.pcsInPack ? `${item.pcsInPack}` : ''; break;
-                    case 6: cellText = `${ratePerPack}`; break;
-                    case 7: cellText = `${noOfPacks}`; break;
-                    case 8: cellText = `${amount}`; break;
-                }
+                const column = columns[c];
+                const cellText = column.value(item, r);
+                const align = column.align || 'center';
 
                 if (cellText) {
                     doc.font('Helvetica').fontSize(8.5).fillColor(BLACK);
@@ -406,8 +446,8 @@ export const generateBillPDF = async (bill) => {
         sLY += sRowGap;
     };
 
-    drawSummaryField('Total Packs', `${totalPacks}`);
-    drawSummaryField('Bill Amount', `${totalAmt}`);
+    drawSummaryField(quantityLabel, `${totalQuantity}`);
+    drawSummaryField('Bill Amount', `${totalAmt.toFixed(2)}`);
     drawSummaryField('In words', `Rupees ${numberToWords(totalAmt)} Only`, true);
 
     // Middle column
@@ -434,8 +474,8 @@ export const generateBillPDF = async (bill) => {
         { label: 'Product Amt', value: productAmt.toFixed(2) },
         { label: 'Discount', value: discount.toFixed(2) },
         { label: 'Taxable Amt', value: taxableAmt.toFixed(2) },
-        { label: `CGST @ ${cgstRate}%`, value: cgstAmt.toFixed(2), highlight: true },
-        { label: `SGST @ ${sgstRate}%`, value: sgstAmt.toFixed(2), highlight: true },
+        { label: `CGST @ ${cgstRate.toFixed(2).replace(/\.00$/, '')}%`, value: cgstAmt.toFixed(2), highlight: true },
+        { label: `SGST @ ${sgstRate.toFixed(2).replace(/\.00$/, '')}%`, value: sgstAmt.toFixed(2), highlight: true },
         { label: 'Round Off', value: roundOff.toFixed(2) }
     ];
     const rightTop = y + 8;
@@ -457,7 +497,7 @@ export const generateBillPDF = async (bill) => {
     doc.lineWidth(1.5).moveTo(sRX - 4, totalLineY).lineTo(sRX + sRW + 4, totalLineY).stroke(BLACK);
     doc.font('Helvetica-Bold').fontSize(10).fillColor(BLACK);
     doc.text('Total Amt', sRX, totalTextY, { width: sRW * 0.58 });
-    doc.text(`${totalAmt}`, sRX + sRW * 0.58, totalTextY, { width: sRW * 0.42, align: 'right' });
+    doc.text(`${totalAmt.toFixed(2)}`, sRX + sRW * 0.58, totalTextY, { width: sRW * 0.42, align: 'right' });
 
     y += row6H;
     hLine(y, 1.5);

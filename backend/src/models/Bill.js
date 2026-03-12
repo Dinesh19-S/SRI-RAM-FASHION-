@@ -121,6 +121,11 @@ const billSchema = new mongoose.Schema({
         default: 'SALES',
         set: (value) => (value === 'DIRECT' ? 'SALES' : value)
     },
+    referenceInvoiceNumber: String,
+    sourcePurchaseEntry: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'PurchaseEntry'
+    },
     partyName: String,
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,

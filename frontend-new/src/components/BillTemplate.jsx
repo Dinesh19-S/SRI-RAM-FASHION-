@@ -38,6 +38,11 @@ const numberToWords = (num) => {
     return words.trim();
 };
 
+const toAmount = (value, fallback = 0) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 const BillTemplate = ({ bill, settings, forPrint = false }) => {
     if (!bill || !settings) return null;
 
@@ -50,23 +55,33 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
         return `${day}/${month}/${year}`;
     };
 
-    // Calculate totals
-    const productAmt = bill.subtotal || 0;
-    const discount = bill.discountAmount || 0;
-    const taxableAmt = productAmt - discount;
-    const cgstRate = settings?.tax?.cgstRate || 2.5;
-    const sgstRate = settings?.tax?.sgstRate || 2.5;
-    const cgstAmt = (taxableAmt * cgstRate) / 100;
-    const sgstAmt = (taxableAmt * sgstRate) / 100;
-    const totalGst = cgstAmt + sgstAmt;
-    const rawTotal = taxableAmt + totalGst;
-    const roundOff = bill.roundOff || (Math.round(rawTotal) - rawTotal);
-    const totalAmt = Math.round(rawTotal);
     const isPurchase = bill.billType === 'PURCHASE';
-    const totalPacks = isPurchase
-        ? (bill.items?.reduce((sum, item) => sum + (item.weightKg || item.quantity || 0), 0) || 0)
-        : (bill.totalPacks || bill.items?.reduce((sum, item) => sum + (item.noOfPacks || item.quantity || 0), 0) || 0);
+    const items = bill.items || [];
+    const productAmt = toAmount(bill.subtotal);
+    const discount = toAmount(bill.discountAmount);
+    const taxableAmt = toAmount(bill.taxableAmount, productAmt - discount);
+    const fallbackCgstRate = settings?.tax?.cgstRate || 2.5;
+    const fallbackSgstRate = settings?.tax?.sgstRate || 2.5;
+    const cgstAmt = toAmount(
+        bill.cgst,
+        isPurchase ? 0 : (taxableAmt * fallbackCgstRate) / 100
+    );
+    const sgstAmt = toAmount(
+        bill.sgst,
+        isPurchase ? 0 : (taxableAmt * fallbackSgstRate) / 100
+    );
+    const igstAmt = toAmount(bill.igst);
+    const totalGst = toAmount(bill.totalTax, cgstAmt + sgstAmt + igstAmt);
+    const rawTotal = taxableAmt + totalGst;
+    const totalAmt = toAmount(bill.grandTotal, Math.round(rawTotal));
+    const roundOff = toAmount(bill.roundOff, totalAmt - rawTotal);
+    const cgstRate = taxableAmt > 0 && cgstAmt > 0 ? (cgstAmt * 100) / taxableAmt : (isPurchase ? 0 : fallbackCgstRate);
+    const sgstRate = taxableAmt > 0 && sgstAmt > 0 ? (sgstAmt * 100) / taxableAmt : (isPurchase ? 0 : fallbackSgstRate);
+    const totalQuantity = isPurchase
+        ? (bill.totalPacks || items.reduce((sum, item) => sum + toAmount(item.weightKg, toAmount(item.quantity)), 0) || 0)
+        : (bill.totalPacks || items.reduce((sum, item) => sum + toAmount(item.noOfPacks, toAmount(item.quantity)), 0) || 0);
     const numBundles = bill.numOfBundles || 1;
+    const purchaseInvoiceNumber = bill.referenceInvoiceNumber || bill.fromText || '';
 
     // Company details
     const companyName = settings?.company?.name || 'SRI RAM FASHIONS';
@@ -86,16 +101,58 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
     const bankIfsc = settings?.bank?.ifscCode || settings?.bank?.ifsc || 'SIBL0000338';
     const bankAccName = settings?.bank?.accountHolderName || companyName;
 
-    // Empty rows to fill the table to A4 page height
+    const salesColumns = [
+        { key: 'sno', label: 'S.No', width: '5%', render: (_, index) => index + 1 },
+        { key: 'product', label: 'Product', width: '18%', align: 'left', render: (item) => item.productName || item.name || '' },
+        { key: 'hsn', label: 'HSN\nCode', width: '9%', render: (item) => item.hsnCode || item.hsn || '' },
+        { key: 'sizes', label: 'Sizes/\nPieces', width: '10%', render: (item) => item.sizesOrPieces || '' },
+        { key: 'ratePc', label: 'Rate Per\nPiece', width: '10%', render: (item) => item.ratePerPiece || '' },
+        { key: 'pcsPack', label: 'Pcs in\nPack', width: '8%', render: (item) => item.pcsInPack || '' },
+        { key: 'ratePack', label: 'Rate Per\nPack', width: '11%', render: (item) => toAmount(item.ratePerPack, toAmount(item.price)) },
+        { key: 'packs', label: 'No Of\nPacks', width: '9%', render: (item) => toAmount(item.noOfPacks, toAmount(item.quantity)) },
+        { key: 'amount', label: 'Amount\nRs.', width: '12%', render: (item) => toAmount(item.total, toAmount(item.ratePerPack, toAmount(item.price)) * toAmount(item.noOfPacks, toAmount(item.quantity))) }
+    ];
+
+    const purchaseColumns = [
+        { key: 'sno', label: 'S.No', width: '6%', render: (_, index) => index + 1 },
+        { key: 'particular', label: 'Particular', width: '30%', align: 'left', render: (item) => item.productName || item.name || '' },
+        { key: 'hsn', label: 'HSN\nCode', width: '12%', render: (item) => item.hsnCode || item.hsn || '' },
+        { key: 'design', label: 'Design /\nColor', width: '16%', render: (item) => item.designColor || item.sizesOrPieces || '' },
+        { key: 'weight', label: 'Weight\n(KG)', width: '12%', render: (item) => toAmount(item.weightKg, toAmount(item.quantity)) },
+        { key: 'rateKg', label: 'Rate Per\nKG', width: '12%', render: (item) => toAmount(item.ratePerKg, toAmount(item.price)) },
+        { key: 'amount', label: 'Amount\nRs.', width: '12%', render: (item) => toAmount(item.total, toAmount(item.weightKg, toAmount(item.quantity)) * toAmount(item.ratePerKg, toAmount(item.price))) }
+    ];
+
+    const columns = isPurchase ? purchaseColumns : salesColumns;
     const minRows = 20;
-    const items = bill.items || [];
     const emptyRowsCount = Math.max(0, minRows - items.length);
+
+    const detailRows = isPurchase
+        ? [
+            { label: 'Bill Number', value: bill.billNumber || '' },
+            { label: 'Bill Date', value: formatDate(bill.date || bill.createdAt) },
+            { label: 'Purchase Inv No', value: purchaseInvoiceNumber },
+            { label: 'Total Weight', value: `${totalQuantity}` }
+        ]
+        : [
+            { label: 'Invoice Number', value: bill.billNumber || '' },
+            { label: 'Invoice Date', value: formatDate(bill.date || bill.createdAt) },
+            { label: 'From', value: bill.fromText || bill.fromDate || '' },
+            { label: 'To', value: bill.toText || bill.toDate || '' }
+        ];
+
+    const buyerHeading = isPurchase ? 'Supplier Copy' : 'Consigner Copy';
+    const leftPrimaryLabel = isPurchase ? 'SUPPLIER:' : 'BUYER:';
+    const leftTertiaryLabel = isPurchase ? 'ADDRESS:' : 'TRANSPORT:';
+    const leftTertiaryValue = isPurchase ? (bill.customer?.address || '') : (bill.transport || '');
+    const rightBottomLabel = isPurchase ? 'INV NO:' : 'CODE:';
+    const rightBottomValue = isPurchase ? purchaseInvoiceNumber : (bill.customer?.stateCode || '33');
+    const quantityLabel = isPurchase ? 'Total Weight' : 'Total Packs';
+    const titleText = isPurchase ? 'PURCHASE INVOICE' : 'TAX INVOICE';
 
     return (
         <div className={`bill-template-tax ${forPrint ? 'for-print' : ''}`} id="bill-template">
             <div className="tax-invoice-page">
-
-                {/* ===== ROW 1: Company Name + GSTIN ===== */}
                 <div className="ti-header-row">
                     <div className="ti-company-name">
                         {companyName}
@@ -103,7 +160,6 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                     <div className="ti-gstin-header">GSTIN: {companyGstin}</div>
                 </div>
 
-                {/* ===== ROW 2: Company Address + Invoice Details ===== */}
                 <div className="ti-info-row">
                     <div className="ti-company-address">
                         <div>{companyAddress1}</div>
@@ -113,40 +169,25 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         <div>Mob : {companyPhone}</div>
                     </div>
                     <div className="ti-invoice-details">
-                        <div className="ti-detail-row">
-                            <span className="ti-detail-label">Invoice Number</span>
-                            <span className="ti-detail-sep">:</span>
-                            <span className="ti-detail-value">{bill.billNumber || ''}</span>
-                        </div>
-                        <div className="ti-detail-row">
-                            <span className="ti-detail-label">Invoice Date</span>
-                            <span className="ti-detail-sep">:</span>
-                            <span className="ti-detail-value">{formatDate(bill.date || bill.createdAt)}</span>
-                        </div>
-                        <div className="ti-detail-row">
-                            <span className="ti-detail-label">From</span>
-                            <span className="ti-detail-sep">:</span>
-                            <span className="ti-detail-value">{bill.fromText || bill.fromDate || ''}</span>
-                        </div>
-                        <div className="ti-detail-row">
-                            <span className="ti-detail-label">To</span>
-                            <span className="ti-detail-sep">:</span>
-                            <span className="ti-detail-value">{bill.toText || bill.toDate || ''}</span>
-                        </div>
+                        {detailRows.map((row) => (
+                            <div className="ti-detail-row" key={row.label}>
+                                <span className="ti-detail-label">{row.label}</span>
+                                <span className="ti-detail-sep">:</span>
+                                <span className="ti-detail-value">{row.value}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* ===== ROW 3: TAX INVOICE Title ===== */}
                 <div className="ti-title-row">
-                    <span className="ti-title-text">TAX INVOICE</span>
+                    <span className="ti-title-text">{titleText}</span>
                 </div>
 
-                {/* ===== ROW 4: Consignee / Buyer Details ===== */}
                 <div className="ti-buyer-row">
                     <div className="ti-buyer-left">
-                        <div className="ti-buyer-heading">Consigner Copy</div>
+                        <div className="ti-buyer-heading">{buyerHeading}</div>
                         <div className="ti-buyer-field">
-                            <span className="ti-buyer-label">BUYER:</span>
+                            <span className="ti-buyer-label">{leftPrimaryLabel}</span>
                             <span className="ti-buyer-value">{bill.customer?.name || ''}</span>
                         </div>
                         <div className="ti-buyer-field">
@@ -154,8 +195,8 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                             <span className="ti-buyer-value">{bill.customer?.state || 'Tamilnadu'}</span>
                         </div>
                         <div className="ti-buyer-field">
-                            <span className="ti-buyer-label">TRANSPORT:</span>
-                            <span className="ti-buyer-value">{bill.transport || ''}</span>
+                            <span className="ti-buyer-label">{leftTertiaryLabel}</span>
+                            <span className="ti-buyer-value">{leftTertiaryValue}</span>
                         </div>
                     </div>
                     <div className="ti-buyer-right">
@@ -170,74 +211,59 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                             <span className="ti-detail-value">{bill.customer?.gstin || ''}</span>
                         </div>
                         <div className="ti-detail-row">
-                            <span className="ti-detail-label">CODE:</span>
+                            <span className="ti-detail-label">{rightBottomLabel}</span>
                             <span className="ti-detail-sep"></span>
-                            <span className="ti-detail-value">{bill.customer?.stateCode || '33'}</span>
+                            <span className="ti-detail-value">{rightBottomValue}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* ===== ROW 5: Items Table ===== */}
                 <div className="ti-table-container">
                     <table className="ti-items-table">
                         <thead>
                             <tr>
-                                <th className="ti-col-sno">S.No</th>
-                                <th className="ti-col-product">Product</th>
-                                <th className="ti-col-hsn">HSN<br />Code</th>
-                                <th className="ti-col-sizes">Sizes/<br />Pieces</th>
-                                <th className="ti-col-ratepc">Rate Per<br />Piece</th>
-                                <th className="ti-col-pcsinpk">Pcs in<br />Pack</th>
-                                <th className="ti-col-ratepk">Rate Per<br />Pack</th>
-                                <th className="ti-col-nopacks">No Of<br />Packs</th>
-                                <th className="ti-col-amount">Amount<br />Rs.</th>
+                                {columns.map((column) => (
+                                    <th key={column.key} style={{ width: column.width }}>
+                                        {column.label.split('\n').map((line, index) => (
+                                            <span key={`${column.key}-${index}`}>
+                                                {line}
+                                                {index < column.label.split('\n').length - 1 ? <br /> : null}
+                                            </span>
+                                        ))}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {items.map((item, index) => {
-                                const ratePerPack = item.ratePerPack || item.price || 0;
-                                const noOfPacks = item.noOfPacks || item.quantity || 0;
-                                const amount = item.total || (ratePerPack * noOfPacks);
-                                return (
-                                    <tr key={index}>
-                                        <td className="ti-col-sno">{index + 1}</td>
-                                        <td className="ti-col-product ti-text-left">{item.productName || item.name || ''}</td>
-                                        <td className="ti-col-hsn">{item.hsnCode || item.hsn || ''}</td>
-                                        <td className="ti-col-sizes">{item.sizesOrPieces || ''}</td>
-                                        <td className="ti-col-ratepc">{item.ratePerPiece || ''}</td>
-                                        <td className="ti-col-pcsinpk">{item.pcsInPack || ''}</td>
-                                        <td className="ti-col-ratepk">{ratePerPack}</td>
-                                        <td className="ti-col-nopacks">{noOfPacks}</td>
-                                        <td className="ti-col-amount">{amount}</td>
-                                    </tr>
-                                );
-                            })}
-                            {/* Empty rows to fill table to A4 page */}
-                            {Array.from({ length: emptyRowsCount }).map((_, i) => (
-                                <tr key={`empty-${i}`} className="ti-empty-row">
-                                    <td className="ti-col-sno">&nbsp;</td>
-                                    <td className="ti-col-product">&nbsp;</td>
-                                    <td className="ti-col-hsn">&nbsp;</td>
-                                    <td className="ti-col-sizes">&nbsp;</td>
-                                    <td className="ti-col-ratepc">&nbsp;</td>
-                                    <td className="ti-col-pcsinpk">&nbsp;</td>
-                                    <td className="ti-col-ratepk">&nbsp;</td>
-                                    <td className="ti-col-nopacks">&nbsp;</td>
-                                    <td className="ti-col-amount">&nbsp;</td>
+                            {items.map((item, index) => (
+                                <tr key={index}>
+                                    {columns.map((column) => (
+                                        <td
+                                            key={`${column.key}-${index}`}
+                                            className={column.align === 'left' ? 'ti-text-left' : ''}
+                                        >
+                                            {column.render(item, index)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                            {Array.from({ length: emptyRowsCount }).map((_, rowIndex) => (
+                                <tr key={`empty-${rowIndex}`} className="ti-empty-row">
+                                    {columns.map((column) => (
+                                        <td key={`${column.key}-empty-${rowIndex}`}>&nbsp;</td>
+                                    ))}
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
 
-                {/* ===== ROW 6: Summary Section ===== */}
                 <div className="ti-summary-row">
-                    {/* Left: Total Packs, Bill Amount, In Words */}
                     <div className="ti-summary-left">
                         <div className="ti-summary-field">
-                            <span className="ti-summary-label">Total Packs</span>
+                            <span className="ti-summary-label">{quantityLabel}</span>
                             <span className="ti-summary-sep">:</span>
-                            <span className="ti-summary-value">{totalPacks}</span>
+                            <span className="ti-summary-value">{totalQuantity}</span>
                         </div>
                         <div className="ti-summary-field">
                             <span className="ti-summary-label">Bill Amount</span>
@@ -251,7 +277,6 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         </div>
                     </div>
 
-                    {/* Middle: Num of Bundles + Total GST */}
                     <div className="ti-summary-middle">
                         <div className="ti-bundles-box">
                             <span className="ti-bundles-label">NUM OF BUNDLES :</span>
@@ -263,7 +288,6 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         </div>
                     </div>
 
-                    {/* Right: Tax Breakdown */}
                     <div className="ti-summary-right">
                         <div className="ti-tax-row">
                             <span>Product Amt</span>
@@ -278,11 +302,11 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                             <span>{taxableAmt.toFixed(2)}</span>
                         </div>
                         <div className="ti-tax-row ti-tax-highlight">
-                            <span>CGST @{cgstRate}%</span>
+                            <span>CGST @{cgstRate.toFixed(2).replace(/\.00$/, '')}%</span>
                             <span>{cgstAmt.toFixed(2)}</span>
                         </div>
                         <div className="ti-tax-row ti-tax-highlight">
-                            <span>SGST @{sgstRate}%</span>
+                            <span>SGST @{sgstRate.toFixed(2).replace(/\.00$/, '')}%</span>
                             <span>{sgstAmt.toFixed(2)}</span>
                         </div>
                         <div className="ti-tax-row">
@@ -291,12 +315,11 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         </div>
                         <div className="ti-tax-row ti-tax-total">
                             <span>Total Amt</span>
-                            <span>{totalAmt}</span>
+                            <span>{totalAmt.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* ===== ROW 7: Footer - Terms, Bank, Certification ===== */}
                 <div className="ti-footer-row">
                     <div className="ti-footer-left">
                         <div className="ti-terms-title">Terms and Conditions</div>
@@ -323,7 +346,6 @@ const BillTemplate = ({ bill, settings, forPrint = false }) => {
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
     );

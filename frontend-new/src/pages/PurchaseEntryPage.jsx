@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X, Printer } from 'lucide-react';
+import { Search, Plus, ArrowLeft, FileText, Save, Eye, Edit, Trash2, X, Printer, Mail } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
-import { purchaseEntriesAPI, suppliersAPI, settingsAPI } from '../services/api';
-import { useToast } from '../components/common';
+import { purchaseEntriesAPI, suppliersAPI, settingsAPI, emailAPI } from '../services/api';
+import { EmailActionModal, useToast } from '../components/common';
 import BillTemplate from '../components/BillTemplate';
+import { getEmailRecipientValidation, pickDefaultRecipient } from '../utils/emailUtils';
+import { useSelector } from 'react-redux';
+
 
 // Common textile/fabric HSN codes
 const TEXTILE_HSN_CODES = [
@@ -42,6 +45,7 @@ const FABRIC_COLORS = [
 const PurchaseEntryPage = () => {
     const toast = useToast();
     const navigate = useNavigate();
+    const { user } = useSelector((state) => state.auth);
     const [showNewEntry, setShowNewEntry] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +66,9 @@ const PurchaseEntryPage = () => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
     const [showBillModal, setShowBillModal] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailTo, setEmailTo] = useState('');
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [billData, setBillData] = useState(null);
     const [settings, setSettings] = useState(null);
     const [newPurchase, setNewPurchase] = useState({
@@ -287,8 +294,10 @@ const PurchaseEntryPage = () => {
     const handleGenerateBill = (entry) => {
         const totalWeight = entry.items?.reduce((sum, item) => sum + (item.weightKg || 0), 0) || 0;
         const bill = {
+            _id: entry._id, // Added for email functionality
             billNumber: `PUR-${entry.invoiceNumber}`,
             billType: 'PURCHASE',
+            referenceInvoiceNumber: entry.invoiceNumber,
             date: entry.date,
             customer: {
                 name: entry.supplier?.name || '',
@@ -296,11 +305,13 @@ const PurchaseEntryPage = () => {
                 address: entry.supplier?.address || '',
                 gstin: entry.supplier?.gstin || '',
                 state: 'Tamilnadu',
-                stateCode: '33'
+                stateCode: '33',
+                email: entry.supplier?.email || '' // Added for email functionality
             },
             items: entry.items?.map(item => ({
                 productName: item.particular,
                 hsnCode: item.hsnCode || '',
+                designColor: item.designColor || '',
                 sizesOrPieces: item.designColor || '',
                 weightKg: item.weightKg || 0,
                 ratePerKg: item.ratePerKg || 0,
@@ -308,8 +319,12 @@ const PurchaseEntryPage = () => {
                 price: item.ratePerKg || 0,
                 total: item.total || (item.weightKg || 0) * (item.ratePerKg || 0)
             })) || [],
-            subtotal: entry.grandTotal || 0,
+            subtotal: entry.subtotal || entry.grandTotal || 0,
             discountAmount: 0,
+            taxableAmount: entry.subtotal || entry.grandTotal || 0,
+            totalTax: 0,
+            cgst: 0,
+            sgst: 0,
             totalPacks: totalWeight,
             numOfBundles: 1,
             roundOff: 0,
@@ -342,6 +357,33 @@ const PurchaseEntryPage = () => {
         printWindow.document.close();
         setTimeout(() => { printWindow.print(); }, 500);
     };
+
+    const handleEmailBill = async () => {
+        if (!billData) return;
+        const { hasValidRecipients } = getEmailRecipientValidation(emailTo);
+        if (!hasValidRecipients) {
+            toast.warning('Please enter at least one valid recipient email');
+            return;
+        }
+
+        setIsSendingEmail(true);
+        try {
+            const response = await emailAPI.sendBill(billData._id, emailTo);
+            if (response.data.success) {
+                toast.success(response.data.message || 'Email sent successfully');
+                setShowEmailModal(false);
+                setBillData(null);
+                setEmailTo('');
+            } else {
+                toast.error(response.data.message || 'Failed to send email. Please check the recipient address.');
+            }
+        } catch (error) {
+            toast.error('Failed to send email: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
+
 
     const handleDelete = async () => {
         try {
@@ -849,7 +891,19 @@ const PurchaseEntryPage = () => {
                                     <Printer size={16} />
                                     Print
                                 </button>
+                                <button
+                                    onClick={() => {
+                                        setEmailTo(pickDefaultRecipient(billData.customer?.email, user?.email));
+                                        setShowBillModal(false);
+                                        setShowEmailModal(true);
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    <Mail size={16} />
+                                    Email
+                                </button>
                                 <button onClick={() => setShowBillModal(false)} className="text-white hover:text-gray-200">
+
                                     <X size={20} />
                                 </button>
                             </div>
@@ -860,6 +914,17 @@ const PurchaseEntryPage = () => {
                     </div>
                 </div>
             )}
+
+            <EmailActionModal
+                open={showEmailModal}
+                title="Email Purchase Bill"
+                description={`Send purchase bill details to the supplier or other recipients.`}
+                value={emailTo}
+                onChange={setEmailTo}
+                onClose={() => setShowEmailModal(false)}
+                onSubmit={handleEmailBill}
+                isSubmitting={isSendingEmail}
+            />
         </div>
     );
 };
